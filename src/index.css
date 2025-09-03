@@ -159,4 +159,43 @@
   .transition-bounce {
     transition: var(--transition-bounce);
   }
+
+  .hover-3d {
+    @apply transition-all duration-300 hover:scale-105 hover:-translate-y-2 hover:shadow-2xl;
+    transform-style: preserve-3d;
+  }
+
+  .hover-tilt {
+    @apply transition-all duration-300;
+    transform-style: preserve-3d;
+  }
+
+  .hover-tilt:hover {
+    transform: perspective(1000px) rotateX(10deg) rotateY(10deg) scale(1.02);
+  }
+
+  .parallax-slow {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .floating-element {
+    @apply animate-float;
+    transform-style: preserve-3d;
+  }
+
+  .interactive-card {
+    @apply transition-all duration-500 hover:scale-105 hover:-translate-y-4 hover:shadow-2xl cursor-pointer;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+
+  .interactive-card:hover {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 40px rgba(30, 64, 175, 0.3);
+  }
+
+  .perspective-container {
+    perspective: 1000px;
+    transform-style: preserve-3d;
+  }
 }

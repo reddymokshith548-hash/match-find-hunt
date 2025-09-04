@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Globe, Phone, Mail } from "lucide-react";
 
-const Auth = () => {
-  const [isSignIn, setIsSignIn] = useState(true);
+const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,33 +27,17 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (isSignIn) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-        toast({ title: "Welcome back!", description: "You've successfully signed in." });
-      } else {
-        const redirectUrl = `${window.location.origin}/`;
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: redirectUrl
-          }
-        });
-        if (error) throw error;
-        toast({ 
-          title: "Account created!", 
-          description: "Please check your email to confirm your account." 
-        });
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      toast({ title: "Welcome back!", description: "You've successfully signed in." });
     } catch (error: any) {
       toast({
         title: "Authentication Error",
@@ -103,7 +86,7 @@ const Auth = () => {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/login`,
       });
       if (error) throw error;
       toast({
@@ -130,9 +113,9 @@ const Auth = () => {
             <span className="text-2xl font-bold text-white">FB</span>
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold text-foreground">FindBaee</CardTitle>
+            <CardTitle className="text-2xl font-bold text-foreground">Welcome Back</CardTitle>
             <CardDescription className="text-muted-foreground">
-              {isSignIn ? "Welcome back! Sign in to your account" : "Create your account to get started"}
+              Sign in to your FindBaee account
             </CardDescription>
           </div>
         </CardHeader>
@@ -198,7 +181,7 @@ const Auth = () => {
           </div>
 
           {/* Email Form */}
-          <form onSubmit={handleEmailAuth} className="space-y-4">
+          <form onSubmit={handleEmailLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <div className="relative">
@@ -228,44 +211,42 @@ const Auth = () => {
               />
             </div>
 
-            <div className="flex flex-col space-y-3">
-              <Button
-                type="submit"
-                className={`w-full hover-3d transition-all duration-300 ${
-                  isSignIn ? "bg-primary" : "bg-accent"
-                }`}
-                disabled={loading}
-                size="lg"
-              >
-                {loading ? "Please wait..." : isSignIn ? "Sign In" : "Get Started"}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full hover-tilt"
-                onClick={() => setIsSignIn(!isSignIn)}
-              >
-                {isSignIn ? "Get Started" : "Sign In"}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              className="w-full hover-3d transition-all duration-300 bg-primary"
+              disabled={loading}
+              size="lg"
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
           </form>
 
-          {isSignIn && (
-            <div className="text-center">
-              <button
-                onClick={handleForgotPassword}
-                className="text-sm text-primary hover:text-primary/80 transition-colors underline"
-              >
-                Forgot Password?
-              </button>
-            </div>
-          )}
+          <div className="text-center">
+            <button
+              onClick={handleForgotPassword}
+              className="text-sm text-primary hover:text-primary/80 transition-colors underline"
+            >
+              Forgot Password?
+            </button>
+          </div>
 
           {/* Language Toggle (Optional) */}
           <div className="flex items-center justify-center text-sm text-muted-foreground">
             <Globe className="w-4 h-4 mr-1" />
             <span>English</span>
+          </div>
+
+          {/* Small Sign Up Link */}
+          <div className="text-center pt-4 border-t border-border/20">
+            <p className="text-xs text-muted-foreground">
+              Don't have an account?{" "}
+              <Link 
+                to="/signup" 
+                className="text-primary hover:text-primary/80 underline font-medium transition-colors"
+              >
+                sign up
+              </Link>
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -273,4 +254,4 @@ const Auth = () => {
   );
 };
 
-export default Auth;
+export default Login;

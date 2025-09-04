@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Users, MessageCircle, Settings, Search, Menu, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   const navItems = [
     { name: "Find Co-founders", href: "#", icon: Search },
@@ -43,8 +45,8 @@ const Navigation = () => {
 
           {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" className="hover-tilt">Sign In</Button>
-            <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow">Get Started</Button>
+            <Button variant="ghost" className="hover-tilt" onClick={() => navigate('/auth')}>Sign In</Button>
+            <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow" onClick={() => navigate('/auth')}>Get Started</Button>
           </div>
 
           {/* Mobile menu button */}
@@ -76,8 +78,8 @@ const Navigation = () => {
                 </a>
               ))}
               <div className="flex flex-col space-y-2 pt-4 opacity-0 animate-slide-up" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
-                <Button variant="ghost" className="justify-start hover-tilt">Sign In</Button>
-                <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow">Get Started</Button>
+                <Button variant="ghost" className="justify-start hover-tilt" onClick={() => navigate('/auth')}>Sign In</Button>
+                <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow" onClick={() => navigate('/auth')}>Get Started</Button>
               </div>
             </div>
           </div>

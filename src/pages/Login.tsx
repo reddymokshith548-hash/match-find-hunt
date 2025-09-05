@@ -20,7 +20,7 @@ const Login = () => {
     // Check if user is already logged in
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        navigate("/");
+        navigate("/dashboard");
       }
     });
 
@@ -38,6 +38,7 @@ const Login = () => {
       });
       if (error) throw error;
       toast({ title: "Welcome back!", description: "You've successfully signed in." });
+      navigate('/dashboard');
     } catch (error: any) {
       toast({
         title: "Authentication Error",
@@ -54,7 +55,7 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/`
+          redirectTo: `${window.location.origin}/dashboard`
         }
       });
       if (error) throw error;

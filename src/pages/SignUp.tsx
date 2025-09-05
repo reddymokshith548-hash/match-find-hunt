@@ -22,7 +22,7 @@ const SignUp = () => {
     // Check if user is already logged in
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        navigate("/");
+        navigate("/dashboard");
       }
     });
 
@@ -53,7 +53,7 @@ const SignUp = () => {
     setLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${window.location.origin}/onboarding`;
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -69,6 +69,7 @@ const SignUp = () => {
         title: "Account Created!", 
         description: "Please check your email to confirm your account." 
       });
+      navigate('/onboarding');
     } catch (error: any) {
       toast({
         title: "Sign Up Error",
@@ -85,7 +86,7 @@ const SignUp = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/`
+          redirectTo: `${window.location.origin}/onboarding`
         }
       });
       if (error) throw error;

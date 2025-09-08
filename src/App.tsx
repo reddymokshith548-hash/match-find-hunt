@@ -51,19 +51,16 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <div className="relative">
-              <ThemeToggle />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
-                <Route path="/signup" element={<AuthRoute><SignUp /></AuthRoute>} />
-                <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/auth" element={<Navigate to="/login" />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </div>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
+              <Route path="/signup" element={<AuthRoute><SignUp /></AuthRoute>} />
+              <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/auth" element={<Navigate to="/login" />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

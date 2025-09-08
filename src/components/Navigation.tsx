@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Users, MessageCircle, Settings, Search, Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -45,6 +46,7 @@ const Navigation = () => {
 
           {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-4">
+            <ThemeToggle />
             <Button variant="ghost" className="hover-tilt" onClick={() => navigate('/login')}>Sign In</Button>
             <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow" onClick={() => navigate('/signup')}>Get Started</Button>
           </div>
@@ -78,6 +80,9 @@ const Navigation = () => {
                 </a>
               ))}
               <div className="flex flex-col space-y-2 pt-4 opacity-0 animate-slide-up" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
+                <div className="flex justify-center mb-2">
+                  <ThemeToggle />
+                </div>
                 <Button variant="ghost" className="justify-start hover-tilt" onClick={() => navigate('/login')}>Sign In</Button>
                 <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow" onClick={() => navigate('/signup')}>Get Started</Button>
               </div>

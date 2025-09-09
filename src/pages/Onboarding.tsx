@@ -151,6 +151,7 @@ export default function Onboarding() {
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter your full name"
+                  className="hover-tilt"
                 />
               </div>
 
@@ -162,6 +163,7 @@ export default function Onboarding() {
                   onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
                   placeholder="Tell us about yourself in a few sentences..."
                   rows={3}
+                  className="hover-tilt"
                 />
               </div>
 
@@ -172,6 +174,7 @@ export default function Onboarding() {
                   value={formData.profile_pic_url}
                   onChange={(e) => setFormData(prev => ({ ...prev, profile_pic_url: e.target.value }))}
                   placeholder="https://example.com/your-photo.jpg"
+                  className="hover-tilt"
                 />
               </div>
             </div>

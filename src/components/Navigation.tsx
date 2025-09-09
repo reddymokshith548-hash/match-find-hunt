@@ -46,8 +46,8 @@ const Navigation = () => {
 
           {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <ThemeToggle />
             <Button variant="ghost" className="hover-tilt" onClick={() => navigate('/login')}>Sign In</Button>
+            <ThemeToggle />
             <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow" onClick={() => navigate('/signup')}>Get Started</Button>
           </div>
 

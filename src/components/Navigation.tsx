@@ -47,7 +47,7 @@ const Navigation = () => {
           {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <ThemeToggle />
-            <Button variant="ghost" className="" onClick={() => navigate('/login')}>Sign In</Button>
+            <Button variant="ghost" className="hover-tilt" onClick={() => navigate('/login')}>Sign In</Button>
             <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow" onClick={() => navigate('/signup')}>Get Started</Button>
           </div>
 
@@ -83,7 +83,7 @@ const Navigation = () => {
                 <div className="flex justify-center mb-2">
                   <ThemeToggle />
                 </div>
-                <Button variant="ghost" className="justify-start" onClick={() => navigate('/login')}>Sign In</Button>
+                <Button variant="ghost" className="justify-start hover-tilt" onClick={() => navigate('/login')}>Sign In</Button>
                 <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow" onClick={() => navigate('/signup')}>Get Started</Button>
               </div>
             </div>

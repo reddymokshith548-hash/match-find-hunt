@@ -1,4 +1,4 @@
-import { Heart, Twitter, Linkedin, Github } from "lucide-react";
+import { Heart, Twitter, Linkedin, Github, Instagram } from "lucide-react";
 
 const Footer = () => {
   const footerLinks = {
@@ -32,6 +32,7 @@ const Footer = () => {
     { icon: Twitter, href: "#", label: "Twitter" },
     { icon: Linkedin, href: "#", label: "LinkedIn" },
     { icon: Github, href: "#", label: "GitHub" },
+    { icon: Instagram, href: "https://www.instagram.com/____thechaoscrew?igsh=MWQzNTA2eTV0NHFxNA==", label: "Instagram" },
   ];
 
   return (

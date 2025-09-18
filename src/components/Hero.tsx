@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Users, Zap, Heart, Sparkles, Rocket, Star } from "lucide-react";
+import { useAuthRouting } from "@/hooks/useAuthRouting";
 import heroImage from "@/assets/hero-image.jpg";
 const Hero = () => {
+  const { handleStartFindingPartners, handleGetStarted } = useAuthRouting();
   const [mousePosition, setMousePosition] = useState({
     x: 0,
     y: 0
@@ -71,7 +73,12 @@ const Hero = () => {
             animationDelay: '0.4s',
             animationFillMode: 'forwards'
           }}>
-              <Button variant="hero" size="lg" className="group hover-3d animate-pulse-glow">
+              <Button 
+                variant="hero" 
+                size="lg" 
+                className="group hover-3d animate-pulse-glow"
+                onClick={handleStartFindingPartners}
+              >
                 Start Finding Partners
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>

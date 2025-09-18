@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Users, MessageCircle, Settings, Search, Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuthRouting } from "@/hooks/useAuthRouting";
 
 const Navigation = () => {
+  const { handleGetStarted } = useAuthRouting();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -48,7 +50,14 @@ const Navigation = () => {
           {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <Button variant="ghost" className="hover-tilt" onClick={() => navigate('/login')}>Sign In</Button>
-            <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow" onClick={() => navigate('/signup')}>Get Started</Button>
+            <Button 
+              variant="hero" 
+              size="sm" 
+              className="hover-3d animate-pulse-glow" 
+              onClick={handleGetStarted}
+            >
+              Get Started
+            </Button>
           </div>
 
           {/* Mobile menu button */}
@@ -84,7 +93,14 @@ const Navigation = () => {
                   <ThemeToggle />
                 </div>
                 <Button variant="ghost" className="justify-start hover-tilt" onClick={() => navigate('/login')}>Sign In</Button>
-                <Button variant="hero" size="sm" className="hover-3d animate-pulse-glow" onClick={() => navigate('/signup')}>Get Started</Button>
+                <Button 
+                  variant="hero" 
+                  size="sm" 
+                  className="hover-3d animate-pulse-glow" 
+                  onClick={handleGetStarted}
+                >
+                  Get Started
+                </Button>
               </div>
             </div>
           </div>

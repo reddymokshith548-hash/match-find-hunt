@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, X, MapPin, Briefcase, Star, Sparkles } from "lucide-react";
+import { useAuthRouting } from "@/hooks/useAuthRouting";
 
 const MatchPreview = () => {
+  const { handleConnect, handlePass, handleStartMatching } = useAuthRouting();
   const [draggedCard, setDraggedCard] = useState<number | null>(null);
   const [cardRotation, setCardRotation] = useState<{ [key: number]: { x: number, y: number } }>({});
   const cardRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
@@ -153,11 +155,21 @@ const MatchPreview = () => {
                   </div>
 
                   <div className="flex gap-3">
-                    <Button variant="outline" size="sm" className="flex-1 hover-tilt hover:border-destructive hover:text-destructive transition-all duration-300">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 hover-tilt hover:border-destructive hover:text-destructive transition-all duration-300"
+                      onClick={handlePass}
+                    >
                       <X className="w-4 h-4 mr-2 group-hover:animate-pulse" />
                       Pass
                     </Button>
-                    <Button variant="hero" size="sm" className="flex-1 hover-3d animate-pulse-glow">
+                    <Button 
+                      variant="hero" 
+                      size="sm" 
+                      className="flex-1 hover-3d animate-pulse-glow"
+                      onClick={handleConnect}
+                    >
                       <Heart className="w-4 h-4 mr-2 group-hover:animate-scale-pulse" />
                       Connect
                     </Button>
@@ -168,7 +180,12 @@ const MatchPreview = () => {
           </div>
 
           <div className="text-center mt-12 opacity-0 animate-slide-up" style={{ animationDelay: '0.8s', animationFillMode: 'forwards' }}>
-            <Button variant="hero" size="lg" className="hover-3d animate-pulse-glow group">
+            <Button 
+              variant="hero" 
+              size="lg" 
+              className="hover-3d animate-pulse-glow group"
+              onClick={handleStartMatching}
+            >
               Start Matching Now
               <Sparkles className="w-5 h-5 ml-2 group-hover:animate-scale-pulse" />
             </Button>

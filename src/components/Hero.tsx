@@ -4,7 +4,10 @@ import { ArrowRight, Play, Users, Zap, Heart, Sparkles, Rocket, Star } from "luc
 import { useAuthRouting } from "@/hooks/useAuthRouting";
 import heroImage from "@/assets/hero-image.jpg";
 const Hero = () => {
-  const { handleStartFindingPartners, handleGetStarted } = useAuthRouting();
+  const {
+    handleStartFindingPartners,
+    handleGetStarted
+  } = useAuthRouting();
   const [mousePosition, setMousePosition] = useState({
     x: 0,
     y: 0
@@ -67,18 +70,13 @@ const Hero = () => {
             <p className="text-xl text-muted-foreground mb-8 leading-relaxed opacity-0 animate-slide-up" style={{
             animationDelay: '0.2s',
             animationFillMode: 'forwards'
-          }}>Connect with passionate entrepreneurs who share your vision. Build next big thing together with AI-powered matching that understands your skills, personality, and startup goals.</p>
+          }}>Connect with passionate entrepreneurs who share your vision. Build the next big thing together with AI-powered matching that understands your skills, personality, and startup goals.</p>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-12 opacity-0 animate-slide-up" style={{
             animationDelay: '0.4s',
             animationFillMode: 'forwards'
           }}>
-              <Button 
-                variant="hero" 
-                size="lg" 
-                className="group hover-3d animate-pulse-glow"
-                onClick={handleStartFindingPartners}
-              >
+              <Button variant="hero" size="lg" className="group hover-3d animate-pulse-glow" onClick={handleStartFindingPartners}>
                 Start Finding Partners
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>

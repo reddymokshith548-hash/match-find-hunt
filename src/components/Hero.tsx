@@ -96,7 +96,7 @@ const Hero = () => {
                   <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-foreground">10K+</div>
+                  <div className="text-2xl font-bold text-foreground">0K+</div>
                   <div className="text-sm text-muted-foreground">Entrepreneurs</div>
                 </div>
               </div>
@@ -108,7 +108,7 @@ const Hero = () => {
                   <Heart className="w-5 h-5 text-secondary group-hover:scale-110 transition-transform" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-foreground">2.5K+</div>
+                  <div className="text-2xl font-bold text-foreground">0K+</div>
                   <div className="text-sm text-muted-foreground">Successful Matches</div>
                 </div>
               </div>

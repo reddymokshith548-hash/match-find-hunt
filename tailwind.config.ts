@@ -140,6 +140,12 @@ export default {
 				'tilt': 'tilt 10s ease-in-out infinite',
 				'slide-up': 'slide-up 0.6s ease-out',
 				'scale-pulse': 'scale-pulse 2s ease-in-out infinite'
+			},
+			backdropBlur: {
+				xs: '2px',
+			},
+			lineClamp: {
+				3: '3',
 			}
 		}
 	},

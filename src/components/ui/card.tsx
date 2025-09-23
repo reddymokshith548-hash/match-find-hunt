@@ -12,6 +12,7 @@ const cardVariants = cva(
         glass: "glass-card border-white/20",
         match: "border-border hover:shadow-lg hover:scale-[1.02] cursor-pointer",
         profile: "border-border hover:shadow-lg transition-smooth",
+        liquid: "liquid-glass border-white/20 dark:border-gray-700/20",
       },
     },
     defaultVariants: {

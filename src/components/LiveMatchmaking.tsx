@@ -44,9 +44,34 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hoveredProfile, setHoveredProfile] = useState<string | null>(null);
+  const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const wsRef = useRef<WebSocket | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle touch events for mobile
+  const handleTouchStart = (profileId: string) => {
+    const timer = setTimeout(() => {
+      setHoveredProfile(profileId);
+    }, 500); // 500ms long press
+    setTouchTimer(timer);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      setTouchTimer(null);
+    }
+    setHoveredProfile(null);
+  };
+
+  const handleMouseEnter = (profileId: string) => {
+    setHoveredProfile(profileId);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredProfile(null);
+  };
 
   // Fetch matches from API
   const fetchMatches = async () => {
@@ -381,9 +406,15 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
               >
                 <Card 
                   variant="match"
-                  className="overflow-hidden interactive-card-3d group relative transition-all duration-500"
-                  onMouseEnter={() => setHoveredProfile(profile.id)}
-                  onMouseLeave={() => setHoveredProfile(null)}
+                  className={`overflow-hidden group relative transition-all duration-500 cursor-pointer ${
+                    hoveredProfile === profile.id 
+                      ? 'scale-110 z-20 shadow-2xl' 
+                      : 'hover:scale-105 hover:-translate-y-2'
+                  }`}
+                  onMouseEnter={() => handleMouseEnter(profile.id)}
+                  onMouseLeave={handleMouseLeave}
+                  onTouchStart={() => handleTouchStart(profile.id)}
+                  onTouchEnd={handleTouchEnd}
                 >
                   {/* Match Score Badge */}
                   <div className="absolute top-4 right-4 z-10">
@@ -395,80 +426,127 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                   {/* Profile Image */}
                   <div className="relative h-48 overflow-hidden">
                     <img 
-                      src={profile.profile_pic_url || `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face`}
+                      src={profile.profile_pic_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face"}
                       alt={profile.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      className={`w-full h-full object-cover transition-all duration-700 ${
+                        hoveredProfile === profile.id 
+                          ? 'scale-110 brightness-105' 
+                          : 'group-hover:scale-105'
+                      }`}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    
+                    {/* Gradient overlay for better text readability */}
+                    <div className={`absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent transition-opacity duration-300 ${
+                      hoveredProfile === profile.id ? 'opacity-60' : 'opacity-0 group-hover:opacity-40'
+                    }`} />
+                    
+                    {/* Enhanced info overlay on hover/long press */}
+                    {hoveredProfile === profile.id && (
+                      <div className="absolute inset-0 flex flex-col justify-between p-4 text-white animate-fade-in">
+                        {/* Top section - Match score and status */}
+                        <div className="flex justify-between items-start">
+                          <div className="bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1">
+                            <span className="text-xs font-medium">Online now</span>
+                          </div>
+                        </div>
+                        
+                        {/* Bottom section - Bio preview */}
+                        <div className="bg-black/60 backdrop-blur-sm rounded-lg p-3 space-y-2">
+                          <h3 className="font-semibold text-lg">{profile.name}</h3>
+                          <p className="text-sm opacity-90 line-clamp-2">
+                            {profile.bio || "Passionate entrepreneur looking for co-founders"}
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {profile.interests.slice(0, 3).map((interest, idx) => (
+                              <span key={idx} className="bg-white/20 rounded-full px-2 py-1 text-xs">
+                                {interest}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Floating elements */}
                     <Sparkles className="absolute top-2 left-2 w-4 h-4 text-white/60 opacity-0 group-hover:opacity-100 animate-float transition-opacity duration-300" />
                     <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                   </div>
 
-                  <CardHeader className="pb-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-semibold mb-1 group-hover:gradient-text transition-all duration-300">
-                          {profile.name}
-                        </h3>
-                        <p className="text-muted-foreground text-sm mb-2">
-                          {profile.role || profile.type}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          {profile.location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              {profile.location}
-                            </div>
-                          )}
-                          {profile.experience && (
-                            <div className="flex items-center gap-1">
-                              <Briefcase className="w-4 h-4" />
-                              {profile.experience}
-                            </div>
-                          )}
+                  {/* Card Header - Only show when not hovered */}
+                  {hoveredProfile !== profile.id && (
+                    <CardHeader className="pb-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-semibold mb-1 group-hover:gradient-text transition-all duration-300">
+                            {profile.name}
+                          </h3>
+                          <p className="text-muted-foreground text-sm mb-2">
+                            {profile.role || profile.type}
+                          </p>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {profile.location && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-4 h-4" />
+                                {profile.location}
+                              </div>
+                            )}
+                            {profile.experience && (
+                              <div className="flex items-center gap-1">
+                                <Briefcase className="w-4 h-4" />
+                                {profile.experience}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-secondary">
+                          <Star className="w-4 h-4 fill-current" />
+                          <span className="text-sm font-medium">4.9</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-secondary">
-                        <Star className="w-4 h-4 fill-current" />
-                        <span className="text-sm font-medium">4.9</span>
-                      </div>
-                    </div>
-                  </CardHeader>
+                    </CardHeader>
+                  )}
 
-                  <CardContent className="pt-0 space-y-4">
-                    {/* Bio */}
-                    {profile.bio && (
-                      <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">
-                        {profile.bio.length > 120 ? `${profile.bio.substring(0, 120)}...` : profile.bio}
-                      </p>
-                    )}
-
-                    {/* Skills Preview */}
-                    <div className="flex flex-wrap gap-2">
-                      {profile.skills.slice(0, 3).map((skill, skillIndex) => (
-                        <Badge 
-                          key={skillIndex}
-                          variant="secondary"
-                          className="text-xs hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                        >
-                          {skill}
-                        </Badge>
-                      ))}
-                      {profile.skills.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{profile.skills.length - 3}
-                        </Badge>
+                  {/* Card Content - Only show when not hovered */}
+                  {hoveredProfile !== profile.id && (
+                    <CardContent className="pt-0 space-y-4">
+                      {/* Bio */}
+                      {profile.bio && (
+                        <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">
+                          {profile.bio.length > 120 ? `${profile.bio.substring(0, 120)}...` : profile.bio}
+                        </p>
                       )}
-                    </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 pt-2">
+                      {/* Skills Preview */}
+                      <div className="flex flex-wrap gap-2">
+                        {profile.skills.slice(0, 3).map((skill, skillIndex) => (
+                          <Badge 
+                            key={skillIndex}
+                            variant="secondary"
+                            className="text-xs hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                          >
+                            {skill}
+                          </Badge>
+                        ))}
+                        {profile.skills.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{profile.skills.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  )}
+
+                  {/* Action Buttons - Always visible */}
+                  <div className={`p-4 ${hoveredProfile === profile.id ? 'absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm' : ''}`}>
+                    <div className="flex gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="flex-1 hover:border-destructive hover:text-destructive transition-all duration-300"
+                        className={`flex-1 transition-all duration-300 ${
+                          hoveredProfile === profile.id 
+                            ? 'bg-white/20 border-white/30 text-white hover:bg-white/30' 
+                            : 'hover:border-destructive hover:text-destructive'
+                        }`}
                         onClick={() => handlePass(profile.id)}
                       >
                         <X className="w-4 h-4 mr-2" />
@@ -477,6 +555,10 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                       <Button 
                         variant="outline" 
                         size="sm" 
+                        className={hoveredProfile === profile.id 
+                          ? 'bg-white/20 border-white/30 text-white hover:bg-white/30' 
+                          : ''
+                        }
                         onClick={() => handleViewProfile(profile.id)}
                       >
                         <Eye className="w-4 h-4" />
@@ -491,27 +573,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                         Connect
                       </Button>
                     </div>
-                  </CardContent>
-
-                  {/* Liquid Glass Hover Effect */}
-                  {hoveredProfile === profile.id && (
-                    <div className="absolute inset-0 pointer-events-none">
-                      <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-sm rounded-lg border border-white/20 shadow-2xl">
-                        <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-white/20 to-transparent rounded-t-lg"></div>
-                        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/10 to-transparent rounded-b-lg"></div>
-                      </div>
-                      
-                      {/* Expanded Info on Hover */}
-                      <div className="absolute bottom-4 left-4 right-4 p-4 bg-black/60 backdrop-blur-md rounded-lg border border-white/20 text-white text-xs space-y-2">
-                        <div>
-                          <strong>Interests:</strong> {profile.interests.join(", ")}
-                        </div>
-                        <div>
-                          <strong>All Skills:</strong> {profile.skills.join(", ")}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </Card>
               </div>
             ))}

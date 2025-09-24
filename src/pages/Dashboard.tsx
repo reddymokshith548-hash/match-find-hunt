@@ -20,6 +20,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import LiveMatchmaking from '@/components/LiveMatchmaking';
 
 interface Profile {
   id: string;
@@ -248,57 +249,9 @@ export default function Dashboard() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Suggested Matches */}
+          {/* Live AI Matchmaking */}
           <TabsContent value="matches" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold">Suggested Matches</h2>
-              <div className="flex items-center space-x-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search matches..." className="w-64" />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {matches.map((match) => (
-                <Card key={match.id} className="hover-3d">
-                  <CardHeader className="text-center">
-                    <Avatar className="h-16 w-16 mx-auto mb-4">
-                      <AvatarImage src={match.profile_pic_url} />
-                      <AvatarFallback>{match.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <CardTitle className="text-lg">{match.name}</CardTitle>
-                    <Badge variant="secondary">{match.role}</Badge>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">{match.bio}</p>
-                    
-                    <div>
-                      <h4 className="font-semibold text-sm mb-2">Skills</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {match.skills.slice(0, 3).map((skill) => (
-                          <Badge key={skill} variant="outline" className="text-xs">
-                            {skill}
-                          </Badge>
-                        ))}
-                        {match.skills.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{match.skills.length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <Button 
-                      className="w-full" 
-                      variant="hero"
-                      onClick={() => handleConnect(match.id)}
-                    >
-                      Connect
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <LiveMatchmaking />
           </TabsContent>
 
           {/* Projects */}

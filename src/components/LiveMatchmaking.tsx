@@ -440,113 +440,116 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                       hoveredProfile === profile.id ? 'opacity-60' : 'opacity-0 group-hover:opacity-40'
                     }`} />
                     
-                    {/* Enhanced info overlay on hover/long press */}
+                    {/* Enhanced info overlay on hover/long press - Additional details */}
                     {hoveredProfile === profile.id && (
-                      <div className="absolute inset-0 flex flex-col justify-between p-4 text-white animate-fade-in">
-                        {/* Top section - Match score and status */}
-                        <div className="flex justify-between items-start">
-                          <div className="bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1">
-                            <span className="text-xs font-medium">Online now</span>
+                      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col justify-center items-center p-4 text-white animate-fade-in">
+                        <div className="text-center space-y-3 max-w-full">
+                          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 space-y-2">
+                            <h4 className="font-semibold text-sm text-green-400">Additional Details</h4>
+                            <div className="text-xs space-y-1">
+                              <p><span className="font-medium">Age:</span> {profile.age || 'Not specified'}</p>
+                              <p><span className="font-medium">Match Score:</span> {profile.match_score}% compatibility</p>
+                              <p><span className="font-medium">Type:</span> {profile.type}</p>
+                            </div>
                           </div>
-                        </div>
-                        
-                        {/* Bottom section - Bio preview */}
-                        <div className="bg-black/60 backdrop-blur-sm rounded-lg p-3 space-y-2">
-                          <h3 className="font-semibold text-lg">{profile.name}</h3>
-                          <p className="text-sm opacity-90 line-clamp-2">
-                            {profile.bio || "Passionate entrepreneur looking for co-founders"}
-                          </p>
-                          <div className="flex flex-wrap gap-1">
-                            {profile.interests.slice(0, 3).map((interest, idx) => (
-                              <span key={idx} className="bg-white/20 rounded-full px-2 py-1 text-xs">
-                                {interest}
-                              </span>
-                            ))}
+                          
+                          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 space-y-2">
+                            <h4 className="font-semibold text-sm text-blue-400">All Interests</h4>
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {profile.interests.map((interest, idx) => (
+                                <span key={idx} className="bg-blue-500/30 rounded-full px-2 py-1 text-xs">
+                                  {interest}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 space-y-2">
+                            <h4 className="font-semibold text-sm text-purple-400">All Skills</h4>
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {profile.skills.map((skill, idx) => (
+                                <span key={idx} className="bg-purple-500/30 rounded-full px-2 py-1 text-xs">
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
                     )}
                     
-                    {/* Floating elements */}
+                    {/* Floating elements - always visible */}
                     <Sparkles className="absolute top-2 left-2 w-4 h-4 text-white/60 opacity-0 group-hover:opacity-100 animate-float transition-opacity duration-300" />
                     <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                   </div>
 
-                  {/* Card Header - Only show when not hovered */}
-                  {hoveredProfile !== profile.id && (
-                    <CardHeader className="pb-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold mb-1 group-hover:gradient-text transition-all duration-300">
-                            {profile.name}
-                          </h3>
-                          <p className="text-muted-foreground text-sm mb-2">
-                            {profile.role || profile.type}
-                          </p>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            {profile.location && (
-                              <div className="flex items-center gap-1">
-                                <MapPin className="w-4 h-4" />
-                                {profile.location}
-                              </div>
-                            )}
-                            {profile.experience && (
-                              <div className="flex items-center gap-1">
-                                <Briefcase className="w-4 h-4" />
-                                {profile.experience}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 text-secondary">
-                          <Star className="w-4 h-4 fill-current" />
-                          <span className="text-sm font-medium">4.9</span>
-                        </div>
-                      </div>
-                    </CardHeader>
-                  )}
-
-                  {/* Card Content - Only show when not hovered */}
-                  {hoveredProfile !== profile.id && (
-                    <CardContent className="pt-0 space-y-4">
-                      {/* Bio */}
-                      {profile.bio && (
-                        <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">
-                          {profile.bio.length > 120 ? `${profile.bio.substring(0, 120)}...` : profile.bio}
+                  {/* Card Header - Always visible */}
+                  <CardHeader className="pb-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold mb-1 group-hover:gradient-text transition-all duration-300">
+                          {profile.name}
+                        </h3>
+                        <p className="text-muted-foreground text-sm mb-2">
+                          {profile.role || profile.type}
                         </p>
-                      )}
-
-                      {/* Skills Preview */}
-                      <div className="flex flex-wrap gap-2">
-                        {profile.skills.slice(0, 3).map((skill, skillIndex) => (
-                          <Badge 
-                            key={skillIndex}
-                            variant="secondary"
-                            className="text-xs hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                          >
-                            {skill}
-                          </Badge>
-                        ))}
-                        {profile.skills.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{profile.skills.length - 3}
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          {profile.location && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-4 h-4" />
+                              {profile.location}
+                            </div>
+                          )}
+                          {profile.experience && (
+                            <div className="flex items-center gap-1">
+                              <Briefcase className="w-4 h-4" />
+                              {profile.experience}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </CardContent>
-                  )}
+                      <div className="flex items-center gap-1 text-secondary">
+                        <Star className="w-4 h-4 fill-current" />
+                        <span className="text-sm font-medium">4.9</span>
+                      </div>
+                    </div>
+                  </CardHeader>
 
-                  {/* Action Buttons - Always visible */}
-                  <div className={`p-4 ${hoveredProfile === profile.id ? 'absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm' : ''}`}>
+                  {/* Card Content - Always visible */}
+                  <CardContent className="pt-0 space-y-4">
+                    {/* Bio */}
+                    {profile.bio && (
+                      <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">
+                        {profile.bio.length > 120 ? `${profile.bio.substring(0, 120)}...` : profile.bio}
+                      </p>
+                    )}
+
+                    {/* Skills Preview */}
+                    <div className="flex flex-wrap gap-2">
+                      {profile.skills.slice(0, 3).map((skill, skillIndex) => (
+                        <Badge 
+                          key={skillIndex}
+                          variant="secondary"
+                          className="text-xs hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                        >
+                          {skill}
+                        </Badge>
+                      ))}
+                      {profile.skills.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{profile.skills.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+
+                  {/* Action Buttons - Always visible at bottom */}
+                  <div className="p-4">
                     <div className="flex gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className={`flex-1 transition-all duration-300 ${
-                          hoveredProfile === profile.id 
-                            ? 'bg-white/20 border-white/30 text-white hover:bg-white/30' 
-                            : 'hover:border-destructive hover:text-destructive'
-                        }`}
+                        className="flex-1 hover:border-destructive hover:text-destructive transition-all duration-300"
                         onClick={() => handlePass(profile.id)}
                       >
                         <X className="w-4 h-4 mr-2" />
@@ -555,10 +558,6 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className={hoveredProfile === profile.id 
-                          ? 'bg-white/20 border-white/30 text-white hover:bg-white/30' 
-                          : ''
-                        }
                         onClick={() => handleViewProfile(profile.id)}
                       >
                         <Eye className="w-4 h-4" />

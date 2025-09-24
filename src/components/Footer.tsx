@@ -83,7 +83,6 @@ const Footer = () => {
               Find<span className="text-secondary">Baee</span>
             </h3>
             <p className="text-background/80 dark:text-background/90 mb-6 leading-relaxed">We match skills ! 
-not star signs 💫 </p>
             <div className="flex gap-4">
               {socialLinks.map(social => <a key={social.label} href={social.href} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-background/10 rounded-lg flex items-center justify-center hover:bg-background/20 transition-smooth" aria-label={social.label}>
                   <social.icon className="w-5 h-5" />
@@ -116,3 +115,4 @@ not star signs 💫 </p>
     </footer>;
 };
 export default Footer;
+}

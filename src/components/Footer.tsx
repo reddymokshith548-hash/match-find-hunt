@@ -72,14 +72,18 @@ const Footer = () => {
     label: "Instagram"
   }];
   return <footer className="bg-foreground text-background">
+      {/* Dark mode gradient overlay */}
+      <div className="absolute inset-0 dark:bg-gradient-to-br dark:from-foreground dark:via-foreground/95 dark:to-primary/10 pointer-events-none" />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 relative z-10">
           {/* Brand */}
           <div className="col-span-2">
             <h3 className="text-2xl font-bold mb-4">
               Find<span className="text-secondary">Baee</span>
             </h3>
-            <p className="text-background/70 mb-6 leading-relaxed">We match skills ! not star signs 💫 </p>
+            <p className="text-background/80 dark:text-background/90 mb-6 leading-relaxed">We match skills ! 
+not star signs 💫 </p>
             <div className="flex gap-4">
               {socialLinks.map(social => <a key={social.label} href={social.href} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-background/10 rounded-lg flex items-center justify-center hover:bg-background/20 transition-smooth" aria-label={social.label}>
                   <social.icon className="w-5 h-5" />
@@ -92,7 +96,7 @@ const Footer = () => {
               <h4 className="font-semibold mb-4">{category}</h4>
               <ul className="space-y-3">
                 {links.map(link => <li key={link.name}>
-                    <a href={link.href} className="text-background/70 hover:text-background transition-smooth text-sm">
+                    <a href={link.href} className="text-background/80 dark:text-background/90 hover:text-background transition-smooth text-sm">
                       {link.name}
                     </a>
                   </li>)}
@@ -100,11 +104,11 @@ const Footer = () => {
             </div>)}
         </div>
 
-        <div className="border-t border-background/20 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-background/60 text-sm">
+        <div className="border-t border-background/20 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center relative z-10">
+          <p className="text-background/70 dark:text-background/80 text-sm">
             © 2024 FindBaee. All rights reserved.
           </p>
-          <p className="text-background/60 text-sm flex items-center gap-1 mt-4 md:mt-0">
+          <p className="text-background/70 dark:text-background/80 text-sm flex items-center gap-1 mt-4 md:mt-0">
             Made with <Heart className="w-4 h-4 text-red-400 fill-current" /> for entrepreneurs
           </p>
         </div>

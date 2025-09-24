@@ -50,7 +50,7 @@ const Features = () => {
   ];
 
   return (
-    <section className="py-24 bg-accent/30 relative overflow-hidden">
+    <section className="py-24 bg-accent/30 dark:bg-gradient-to-br dark:from-background dark:via-background/98 dark:to-secondary/5 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 opacity-30">
         <div className="absolute top-10 left-10 w-32 h-32 bg-primary/10 rounded-full animate-float" />

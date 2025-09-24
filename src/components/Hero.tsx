@@ -23,6 +23,9 @@ const Hero = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
   return <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20 overflow-hidden perspective-container">
+      {/* Dark mode gradient overlay */}
+      <div className="absolute inset-0 dark:bg-gradient-to-br dark:from-background dark:via-background/95 dark:to-primary/5" />
+      
       {/* Animated Background Elements */}
       <div className="absolute inset-0 bg-[linear-gradient(45deg,hsl(var(--primary)/0.05)_1px,transparent_1px),linear-gradient(-45deg,hsl(var(--secondary)/0.05)_1px,transparent_1px)] bg-[size:64px_64px]" />
       

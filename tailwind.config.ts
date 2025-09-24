@@ -81,6 +81,8 @@ export default {
 				'gradient-primary': 'var(--gradient-primary)',
 				'gradient-hero': 'var(--gradient-hero)',
 				'gradient-card': 'var(--gradient-card)',
+				'gradient-dark-bg': 'var(--gradient-dark-bg)',
+				'gradient-dark-section': 'var(--gradient-dark-section)',
 			},
 			boxShadow: {
 				'glow': 'var(--shadow-glow)',
@@ -140,12 +142,6 @@ export default {
 				'tilt': 'tilt 10s ease-in-out infinite',
 				'slide-up': 'slide-up 0.6s ease-out',
 				'scale-pulse': 'scale-pulse 2s ease-in-out infinite'
-			},
-			backdropBlur: {
-				xs: '2px',
-			},
-			lineClamp: {
-				3: '3',
 			}
 		}
 	},

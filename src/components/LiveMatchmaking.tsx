@@ -408,7 +408,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                   variant="match"
                   className={`overflow-hidden group relative transition-all duration-500 cursor-pointer ${
                     hoveredProfile === profile.id 
-                      ? 'scale-110 z-20 shadow-2xl' 
+                      ? 'scale-125 z-20 shadow-2xl transform' 
                       : 'hover:scale-105 hover:-translate-y-2'
                   }`}
                   onMouseEnter={() => handleMouseEnter(profile.id)}
@@ -430,7 +430,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                       alt={profile.name}
                       className={`w-full h-full object-cover transition-all duration-700 ${
                         hoveredProfile === profile.id 
-                          ? 'scale-110 brightness-105' 
+                          ? 'scale-125 brightness-110' 
                           : 'group-hover:scale-105'
                       }`}
                     />

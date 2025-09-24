@@ -222,7 +222,7 @@
   }
 
   .interactive-card-3d {
-    @apply transition-all duration-500 hover:scale-105 hover:-translate-y-2;
+    @apply transition-all duration-500 hover:scale-110 hover:-translate-y-2;
     transform-style: preserve-3d;
     perspective: 1000px;
   }
@@ -232,7 +232,7 @@
       0 25px 50px -12px rgba(0, 0, 0, 0.25), 
       0 0 40px hsl(var(--primary) / 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    transform: translateY(-8px) rotateX(2deg) rotateY(2deg) scale(1.02);
+    transform: translateY(-8px) rotateX(2deg) rotateY(2deg) scale(1.15);
   }
 
   .liquid-glass {

@@ -104,9 +104,9 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 dark:bg-gradient-to-br dark:from-background dark:via-background/95 dark:to-primary/8 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(0,191,165,0.1),transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(28,61,90,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_70%_80%,rgba(28,61,90,0.2),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(28,61,90,0.1),transparent_50%)]" />
       
       <Card className="w-full max-w-md hover-tilt relative bg-card/80 backdrop-blur-sm border-accent/20 shadow-elegant">
         <CardHeader className="text-center space-y-4">

@@ -198,9 +198,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background dark:bg-gradient-to-br dark:from-background dark:via-background/98 dark:to-primary/5">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card dark:bg-card/80 dark:backdrop-blur-sm shadow-sm relative z-10">
+      <header className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <h1 className="text-2xl font-bold gradient-text">FindBaee</h1>

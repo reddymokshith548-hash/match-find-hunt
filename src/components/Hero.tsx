@@ -4,10 +4,7 @@ import { ArrowRight, Play, Users, Zap, Heart, Sparkles, Rocket, Star } from "luc
 import { useAuthRouting } from "@/hooks/useAuthRouting";
 import heroImage from "@/assets/hero-image.jpg";
 const Hero = () => {
-  const {
-    handleStartFindingPartners,
-    handleGetStarted
-  } = useAuthRouting();
+  const { handleStartFindingPartners, handleGetStarted } = useAuthRouting();
   const [mousePosition, setMousePosition] = useState({
     x: 0,
     y: 0
@@ -23,9 +20,6 @@ const Hero = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
   return <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20 overflow-hidden perspective-container">
-      {/* Dark mode gradient overlay */}
-      <div className="absolute inset-0 dark:bg-gradient-to-br dark:from-background dark:via-background/95 dark:to-primary/5" />
-      
       {/* Animated Background Elements */}
       <div className="absolute inset-0 bg-[linear-gradient(45deg,hsl(var(--primary)/0.05)_1px,transparent_1px),linear-gradient(-45deg,hsl(var(--secondary)/0.05)_1px,transparent_1px)] bg-[size:64px_64px]" />
       
@@ -73,13 +67,18 @@ const Hero = () => {
             <p className="text-xl text-muted-foreground mb-8 leading-relaxed opacity-0 animate-slide-up" style={{
             animationDelay: '0.2s',
             animationFillMode: 'forwards'
-          }}>Connect with passionate entrepreneurs who share your vision. Build the next big thing together with AI-powered matching that understands your skills, personality, and startup goals.</p>
+          }}>Connect with passionate entrepreneurs who share your vision. Build next big thing together with AI-powered matching that understands your skills, personality, and startup goals.</p>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-12 opacity-0 animate-slide-up" style={{
             animationDelay: '0.4s',
             animationFillMode: 'forwards'
           }}>
-              <Button variant="hero" size="lg" className="group hover-3d animate-pulse-glow" onClick={handleStartFindingPartners}>
+              <Button 
+                variant="hero" 
+                size="lg" 
+                className="group hover-3d animate-pulse-glow"
+                onClick={handleStartFindingPartners}
+              >
                 Start Finding Partners
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
@@ -99,7 +98,7 @@ const Hero = () => {
                   <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-foreground">0K+</div>
+                  <div className="text-2xl font-bold text-foreground">10K+</div>
                   <div className="text-sm text-muted-foreground">Entrepreneurs</div>
                 </div>
               </div>
@@ -111,7 +110,7 @@ const Hero = () => {
                   <Heart className="w-5 h-5 text-secondary group-hover:scale-110 transition-transform" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-foreground">0K+</div>
+                  <div className="text-2xl font-bold text-foreground">2.5K+</div>
                   <div className="text-sm text-muted-foreground">Successful Matches</div>
                 </div>
               </div>

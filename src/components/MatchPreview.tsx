@@ -60,7 +60,7 @@ const MatchPreview = () => {
   ];
 
   return (
-    <section className="py-24 bg-background dark:bg-gradient-to-br dark:from-background dark:via-background/95 dark:to-primary/5 relative overflow-hidden">
+    <section className="py-24 bg-background relative overflow-hidden">
       {/* Floating decorative elements */}
       <div className="absolute inset-0 pointer-events-none">
         <Sparkles className="absolute top-20 right-1/4 w-6 h-6 text-primary/20 animate-float" />

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { ProfileHoverCard } from "@/components/ProfileHoverCard";
 
 interface MatchProfile {
   id: string;
@@ -404,18 +405,18 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                 className="relative"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <Card 
-                  variant="match"
-                  className={`overflow-hidden group relative transition-all duration-500 cursor-pointer ${
-                    hoveredProfile === profile.id 
-                      ? 'scale-125 z-20 shadow-2xl transform' 
-                      : 'hover:scale-105 hover:-translate-y-2'
-                  }`}
-                  onMouseEnter={() => handleMouseEnter(profile.id)}
-                  onMouseLeave={handleMouseLeave}
-                  onTouchStart={() => handleTouchStart(profile.id)}
-                  onTouchEnd={handleTouchEnd}
+                <ProfileHoverCard 
+                  profile={{
+                    ...profile,
+                    rating: 4.9,
+                    intro_video_url: profile.id === "1" ? "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" : undefined
+                  }}
+                  side="top"
                 >
+                  <Card 
+                    variant="match"
+                    className="overflow-hidden group relative transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-2 hover:shadow-xl"
+                  >
                   {/* Match Score Badge */}
                   <div className="absolute top-4 right-4 z-10">
                     <Badge className="bg-primary text-primary-foreground font-semibold animate-pulse">
@@ -428,58 +429,14 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                     <img 
                       src={profile.profile_pic_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face"}
                       alt={profile.name}
-                      className={`w-full h-full object-cover transition-all duration-700 ${
-                        hoveredProfile === profile.id 
-                          ? 'scale-125 brightness-110' 
-                          : 'group-hover:scale-105'
-                      }`}
+                      className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
                     />
                     
                     {/* Gradient overlay for better text readability */}
-                    <div className={`absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent transition-opacity duration-300 ${
-                      hoveredProfile === profile.id ? 'opacity-60' : 'opacity-0 group-hover:opacity-40'
-                    }`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-40 transition-opacity duration-300" />
                     
-                    {/* Enhanced info overlay on hover/long press - Additional details */}
-                    {hoveredProfile === profile.id && (
-                      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col justify-center items-center p-4 text-white animate-fade-in">
-                        <div className="text-center space-y-3 max-w-full">
-                          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 space-y-2">
-                            <h4 className="font-semibold text-sm text-green-400">Additional Details</h4>
-                            <div className="text-xs space-y-1">
-                              <p><span className="font-medium">Age:</span> {profile.age || 'Not specified'}</p>
-                              <p><span className="font-medium">Match Score:</span> {profile.match_score}% compatibility</p>
-                              <p><span className="font-medium">Type:</span> {profile.type}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 space-y-2">
-                            <h4 className="font-semibold text-sm text-blue-400">All Interests</h4>
-                            <div className="flex flex-wrap gap-1 justify-center">
-                              {profile.interests.map((interest, idx) => (
-                                <span key={idx} className="bg-blue-500/30 rounded-full px-2 py-1 text-xs">
-                                  {interest}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                          
-                          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 space-y-2">
-                            <h4 className="font-semibold text-sm text-purple-400">All Skills</h4>
-                            <div className="flex flex-wrap gap-1 justify-center">
-                              {profile.skills.map((skill, idx) => (
-                                <span key={idx} className="bg-purple-500/30 rounded-full px-2 py-1 text-xs">
-                                  {skill}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Floating elements - always visible */}
-                    <Sparkles className="absolute top-2 left-2 w-4 h-4 text-white/60 opacity-0 group-hover:opacity-100 animate-float transition-opacity duration-300" />
+                    {/* Floating elements */}
+                    <Sparkles className="absolute top-2 left-2 w-4 h-4 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                   </div>
 
@@ -574,6 +531,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                     </div>
                   </div>
                 </Card>
+                </ProfileHoverCard>
               </div>
             ))}
           </div>

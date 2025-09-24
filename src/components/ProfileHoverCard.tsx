@@ -29,7 +29,7 @@ interface ProfileHoverCardProps {
 export const ProfileHoverCard = ({ 
   profile, 
   children, 
-  side = "top" 
+  side = "right" 
 }: ProfileHoverCardProps) => {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);

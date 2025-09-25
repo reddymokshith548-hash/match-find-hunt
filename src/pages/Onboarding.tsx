@@ -11,6 +11,7 @@ import { X, Plus, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { profileSchema, type ProfileFormData } from '@/lib/validationSchemas';
 
 const SKILLS_OPTIONS = [
   'React', 'JavaScript', 'Python', 'Marketing', 'Design', 'Product Management',
@@ -74,12 +75,22 @@ export default function Onboarding() {
     
     setLoading(true);
     try {
+      // Validate form data
+      const validatedData = profileSchema.parse(formData);
+      
       const { error } = await supabase
         .from('profiles')
-        .insert([{
+        .insert({
           user_id: user.id,
-          ...formData
-        }]);
+          name: validatedData.name,
+          bio: validatedData.bio,
+          role: validatedData.role,
+          skills: validatedData.skills,
+          interests: validatedData.interests,
+          stage: validatedData.stage,
+          looking_for: validatedData.looking_for,
+          profile_pic_url: validatedData.profile_pic_url || null
+        });
 
       if (error) throw error;
 
@@ -89,13 +100,22 @@ export default function Onboarding() {
       });
 
       navigate('/dashboard');
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save profile. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      if (error.issues) {
+        // Zod validation errors
+        const firstError = error.issues[0];
+        toast({
+          title: "Validation Error",
+          description: firstError.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to save profile. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }

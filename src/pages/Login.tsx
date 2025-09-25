@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Globe, Phone, Mail } from "lucide-react";
+import { loginSchema, type LoginFormData } from "@/lib/validationSchemas";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -32,19 +33,32 @@ const Login = () => {
     setLoading(true);
 
     try {
+      // Validate input data
+      const validatedData = loginSchema.parse({ email, password });
+      
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: validatedData.email,
+        password: validatedData.password,
       });
       if (error) throw error;
       toast({ title: "Welcome back!", description: "You've successfully signed in." });
       navigate('/dashboard');
     } catch (error: any) {
-      toast({
-        title: "Authentication Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error.issues) {
+        // Zod validation errors
+        const firstError = error.issues[0];
+        toast({
+          title: "Validation Error",
+          description: firstError.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Authentication Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }

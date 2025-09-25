@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Globe, Phone, Mail, User } from "lucide-react";
+import { signUpSchema, type SignUpFormData } from "@/lib/validationSchemas";
 
 const SignUp = () => {
   const [email, setEmail] = useState("");
@@ -31,36 +32,25 @@ const SignUp = () => {
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (password !== confirmPassword) {
-      toast({
-        title: "Password Mismatch",
-        description: "Passwords do not match. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (password.length < 6) {
-      toast({
-        title: "Password Too Short",
-        description: "Password must be at least 6 characters long.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/onboarding`;
-      const { error } = await supabase.auth.signUp({
+      // Validate input data
+      const validatedData = signUpSchema.parse({
         email,
         password,
+        confirmPassword,
+        fullName
+      });
+
+      const redirectUrl = `${window.location.origin}/onboarding`;
+      const { error } = await supabase.auth.signUp({
+        email: validatedData.email,
+        password: validatedData.password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            full_name: fullName,
+            full_name: validatedData.fullName,
           }
         }
       });
@@ -71,11 +61,21 @@ const SignUp = () => {
       });
       navigate('/onboarding');
     } catch (error: any) {
-      toast({
-        title: "Sign Up Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error.issues) {
+        // Zod validation errors
+        const firstError = error.issues[0];
+        toast({
+          title: "Validation Error",
+          description: firstError.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sign Up Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }

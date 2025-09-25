@@ -53,6 +53,33 @@ export type Database = {
           },
         ]
       }
+      matches: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          match_score: number | null
+          user1_id: string | null
+          user2_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          match_score?: number | null
+          user1_id?: string | null
+          user2_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          match_score?: number | null
+          user1_id?: string | null
+          user2_id?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -122,14 +149,51 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      photos: {
         Row: {
-          bio: string | null
           created_at: string | null
           id: string
+          is_primary: boolean | null
+          photo_url: string
+          upload_order: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          photo_url: string
+          upload_order?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          photo_url?: string
+          upload_order?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          age: number | null
+          bio: string | null
+          created_at: string | null
+          gender: string | null
+          id: string
           interests: string[] | null
+          is_verified: boolean | null
+          last_active: string | null
+          location: string | null
           looking_for: string[] | null
+          max_distance: number | null
           name: string
+          preferred_age_max: number | null
+          preferred_age_min: number | null
+          preferred_gender: string | null
+          profile_completed: boolean | null
           profile_pic_url: string | null
           role: string | null
           skills: string[] | null
@@ -137,12 +201,22 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          age?: number | null
           bio?: string | null
           created_at?: string | null
+          gender?: string | null
           id?: string
           interests?: string[] | null
+          is_verified?: boolean | null
+          last_active?: string | null
+          location?: string | null
           looking_for?: string[] | null
+          max_distance?: number | null
           name: string
+          preferred_age_max?: number | null
+          preferred_age_min?: number | null
+          preferred_gender?: string | null
+          profile_completed?: boolean | null
           profile_pic_url?: string | null
           role?: string | null
           skills?: string[] | null
@@ -150,12 +224,22 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          age?: number | null
           bio?: string | null
           created_at?: string | null
+          gender?: string | null
           id?: string
           interests?: string[] | null
+          is_verified?: boolean | null
+          last_active?: string | null
+          location?: string | null
           looking_for?: string[] | null
+          max_distance?: number | null
           name?: string
+          preferred_age_max?: number | null
+          preferred_age_min?: number | null
+          preferred_gender?: string | null
+          profile_completed?: boolean | null
           profile_pic_url?: string | null
           role?: string | null
           skills?: string[] | null
@@ -198,6 +282,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_interactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          interaction_type: string | null
+          target_user_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          interaction_type?: string | null
+          target_user_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          interaction_type?: string | null
+          target_user_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

@@ -312,7 +312,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_matchmaking_candidates: {
+        Args: { exclude_interacted?: boolean; limit_count?: number }
+        Returns: {
+          age: number
+          bio: string
+          gender: string
+          id: string
+          interests: string[]
+          location: string
+          looking_for: string[]
+          match_score: number
+          name: string
+          profile_pic_url: string
+          role: string
+          skills: string[]
+          stage: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

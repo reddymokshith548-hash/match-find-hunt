@@ -108,10 +108,10 @@ export default function Dashboard() {
   const fetchMatches = async () => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .neq('user_id', user?.id)
-        .limit(10);
+        .rpc('get_matchmaking_candidates', { 
+          limit_count: 10,
+          exclude_interacted: true 
+        });
 
       if (error) throw error;
       setMatches(data || []);

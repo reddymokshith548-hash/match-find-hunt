@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Heart, 
   X, 
@@ -107,35 +108,35 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         is_verified: false
       };
 
-      const response = await fetch('/api/match', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || ''}`
-        },
-        body: JSON.stringify({
-          user_profile: userProfile,
-          preferences: {
-            max_matches: 10,
-            min_score: 70
-          }
-        })
-      });
+      // Fetch real matches using secure matchmaking function
+      const { data, error } = await supabase
+        .rpc('get_matchmaking_candidates', { 
+          limit_count: 10,
+          exclude_interacted: true 
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (error) {
+        console.error('Error fetching matches:', error);
+        throw error;
       }
 
-      const data = await response.json();
+      // Map database results to MatchProfile interface
+      const matches: MatchProfile[] = (data || []).map((profile: any) => ({
+        id: profile.id,
+        name: profile.name,
+        type: profile.role || 'User', // Map role to type
+        age: profile.age,
+        interests: profile.interests || [],
+        skills: profile.skills || [],
+        match_score: profile.match_score || 0,
+        bio: profile.bio,
+        location: profile.location,
+        profile_pic_url: profile.profile_pic_url,
+        role: profile.role
+      }));
       
-      if (data.matches && Array.isArray(data.matches)) {
-        setMatches(data.matches);
-        animateNewMatches(data.matches);
-      } else {
-        // Fallback mock data for development
-        setMatches(getMockMatches());
-        animateNewMatches(getMockMatches());
-      }
+      setMatches(matches);
+      animateNewMatches(matches);
     } catch (error) {
       console.error('Error fetching matches:', error);
       setError('Failed to fetch matches. Showing sample matches.');

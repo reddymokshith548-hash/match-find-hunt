@@ -12,7 +12,6 @@ const Navigation = () => {
 
   const navItems = [
     { name: "Find Co-founders", href: "#", icon: Search },
-    { name: "About Us", href: "/about", icon: Users },
     { name: "Matches", href: "#", icon: Users },
     { name: "Messages", href: "#", icon: MessageCircle },
     { name: "Profile", href: "#", icon: Settings },
@@ -32,9 +31,9 @@ const Navigation = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {navItems.map((item, index) => (
-              <button
+              <a
                 key={item.name}
-                onClick={() => item.href.startsWith('/') ? navigate(item.href) : window.location.href = item.href}
+                href={item.href}
                 className="text-muted-foreground hover:text-foreground transition-smooth flex items-center gap-2 hover-3d group relative overflow-hidden"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
@@ -43,7 +42,7 @@ const Navigation = () => {
                   {item.name}
                   <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300" />
                 </span>
-              </button>
+              </a>
             ))}
             <ThemeToggle />
           </div>
@@ -79,15 +78,15 @@ const Navigation = () => {
           <div className="md:hidden py-4 border-t border-border animate-slide-up">
             <div className="flex flex-col space-y-3">
               {navItems.map((item, index) => (
-                <button
+                <a
                   key={item.name}
-                  onClick={() => item.href.startsWith('/') ? navigate(item.href) : window.location.href = item.href}
+                  href={item.href}
                   className="text-muted-foreground hover:text-foreground transition-smooth flex items-center gap-2 px-2 py-2 hover-3d group opacity-0 animate-slide-up"
                   style={{ animationDelay: `${index * 0.1}s`, animationFillMode: 'forwards' }}
                 >
                   <item.icon className="w-4 h-4 group-hover:text-primary transition-colors" />
                   {item.name}
-                </button>
+                </a>
               ))}
               <div className="flex flex-col space-y-2 pt-4 opacity-0 animate-slide-up" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
                 <div className="flex justify-center mb-2">

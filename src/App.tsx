@@ -11,7 +11,6 @@ import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
-import About from "./pages/About";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const queryClient = new QueryClient();
@@ -54,7 +53,6 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/about" element={<About />} />
               <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
               <Route path="/signup" element={<AuthRoute><SignUp /></AuthRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

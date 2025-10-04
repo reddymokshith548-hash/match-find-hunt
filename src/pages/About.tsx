@@ -13,7 +13,8 @@ const About = () => {
           (entries) => {
             entries.forEach((entry) => {
               if (entry.isIntersecting) {
-                entry.target.classList.add("animate-slide-up");
+                entry.target.classList.remove("opacity-0");
+                entry.target.classList.add("opacity-100");
               }
             });
           },
@@ -55,7 +56,7 @@ const About = () => {
       {/* Hero Section */}
       <section 
         ref={(el) => { if (el) sectionsRef.current[0] = el as HTMLDivElement; }}
-        className="relative min-h-screen flex flex-col items-center justify-center px-6 py-32 overflow-hidden opacity-0"
+        className="relative min-h-screen flex flex-col items-center justify-center px-6 py-32 overflow-hidden opacity-0 transition-opacity duration-1000"
         style={{
           background: "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(220 25% 10%) 100%)"
         }}
@@ -94,7 +95,7 @@ const About = () => {
       {/* Company Manifesto */}
       <section 
         ref={(el) => { if (el) sectionsRef.current[1] = el as HTMLDivElement; }}
-        className="relative px-6 py-32 opacity-0"
+        className="relative px-6 py-32 opacity-0 transition-opacity duration-1000"
       >
         <div className="max-w-5xl mx-auto">
           <div className="space-y-8 text-lg md:text-xl leading-relaxed text-foreground/90">
@@ -124,7 +125,7 @@ const About = () => {
       {/* Founders Section */}
       <section 
         ref={(el) => { if (el) sectionsRef.current[2] = el as HTMLDivElement; }}
-        className="relative px-6 py-32 opacity-0"
+        className="relative px-6 py-32 opacity-0 transition-opacity duration-1000"
       >
         <div className="max-w-7xl mx-auto">
           <h2 className="text-5xl md:text-7xl font-bold text-center mb-20 tracking-tight">

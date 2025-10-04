@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
+import About from "./pages/About";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const queryClient = new QueryClient();

@@ -12,6 +12,7 @@ const Navigation = () => {
 
   const navItems = [
     { name: "Find Co-founders", href: "#", icon: Search },
+    { name: "About Us", href: "/about", icon: Users },
     { name: "Matches", href: "#", icon: Users },
     { name: "Messages", href: "#", icon: MessageCircle },
     { name: "Profile", href: "#", icon: Settings },

@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 
 const About = () => {
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
 
   useEffect(() => {
     const observers = sectionsRef.current
@@ -127,26 +128,42 @@ const About = () => {
             The Architects
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 perspective-container">
             {founders.map((founder, index) => (
               <Card
                 key={index}
-                className="group border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-border"
+                variant="glass"
+                className={`group interactive-card border-white/30 overflow-hidden ${
+                  hoveredCard === index ? 'z-10' : ''
+                }`}
+                style={{ 
+                  transform: hoveredCard === index ? 'scale(1.05) translateY(-10px)' : ''
+                }}
+                onMouseEnter={() => setHoveredCard(index)}
+                onMouseLeave={() => setHoveredCard(null)}
               >
                 <CardContent className="p-4 md:p-5">
                   <div className="flex gap-4 items-start">
-                    <div className="w-20 h-20 md:w-24 md:h-24 flex-shrink-0 bg-muted/30 rounded-lg flex items-center justify-center border border-border/30">
-                      <div className="text-xl md:text-2xl font-bold text-muted-foreground/50">
+                    <div className={`w-20 h-20 md:w-24 md:h-24 flex-shrink-0 bg-primary/10 rounded-lg flex items-center justify-center border border-primary/20 transition-all duration-500 ${
+                      hoveredCard === index 
+                        ? 'scale-110 animate-pulse-glow bg-primary/20' 
+                        : 'group-hover:scale-110'
+                    }`}>
+                      <div className={`text-xl md:text-2xl font-bold transition-all duration-300 ${
+                        hoveredCard === index ? 'text-primary animate-scale-pulse' : 'text-primary/70'
+                      }`}>
                         {founder.name.split(' ').map(n => n[0]).join('')}
                       </div>
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base md:text-lg font-bold mb-2">
+                      <h3 className={`text-base md:text-lg font-bold mb-2 transition-all duration-300 ${
+                        hoveredCard === index ? 'gradient-text' : ''
+                      }`}>
                         {founder.name}
                       </h3>
                       
-                      <p className="text-xs md:text-sm leading-relaxed text-muted-foreground line-clamp-6">
+                      <p className="text-xs md:text-sm leading-relaxed text-muted-foreground group-hover:text-foreground/80 transition-colors line-clamp-6">
                         {founder.bio}
                       </p>
                     </div>

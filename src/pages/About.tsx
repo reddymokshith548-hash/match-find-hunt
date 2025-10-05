@@ -57,22 +57,19 @@ const About = () => {
       {/* Hero Section */}
       <section 
         ref={(el) => { if (el) sectionsRef.current[0] = el as HTMLDivElement; }}
-        className="relative min-h-screen flex flex-col items-center justify-center px-6 py-32 overflow-hidden opacity-0 transition-opacity duration-1000 bg-gradient-to-br from-background via-background to-accent/20"
+        className="relative flex flex-col items-center justify-center px-6 py-20 overflow-hidden opacity-0 transition-opacity duration-1000"
       >
-        {/* Animated Background Grid */}
-        <div className="absolute inset-0 bg-[linear-gradient(45deg,hsl(var(--primary)/0.05)_1px,transparent_1px),linear-gradient(-45deg,hsl(var(--secondary)/0.05)_1px,transparent_1px)] bg-[size:64px_64px]" />
-        
-        <div className="relative z-10 max-w-7xl mx-auto text-center space-y-8">
-          <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold tracking-tighter mb-6">
-            ABOUT US
+        <div className="relative z-10 max-w-5xl mx-auto text-center space-y-4">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
+            About Us
           </h1>
           
-          <p className="text-2xl md:text-3xl lg:text-4xl font-light text-muted-foreground max-w-4xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
             Lexach is the meeting point of vision and opportunity.
           </p>
           
-          <div className="mt-16 w-full max-w-5xl mx-auto">
-            <Card className="overflow-hidden hover-3d border-border/50 bg-card/80 backdrop-blur-sm">
+          <div className="mt-8 w-full max-w-4xl mx-auto">
+            <Card className="overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm">
               <CardContent className="p-0">
                 <div className="aspect-video bg-muted/30">
                   <video 
@@ -88,17 +85,15 @@ const About = () => {
             </Card>
           </div>
         </div>
-        
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background pointer-events-none" />
       </section>
 
       {/* Company Manifesto */}
       <section 
         ref={(el) => { if (el) sectionsRef.current[1] = el as HTMLDivElement; }}
-        className="relative px-6 py-24 md:py-32 opacity-0 transition-opacity duration-1000"
+        className="relative px-6 py-16 md:py-20 opacity-0 transition-opacity duration-1000"
       >
-        <div className="max-w-5xl mx-auto">
-          <div className="space-y-6 md:space-y-8 text-lg md:text-xl leading-relaxed text-muted-foreground">
+        <div className="max-w-4xl mx-auto">
+          <div className="space-y-4 md:space-y-6 text-base md:text-lg leading-relaxed text-muted-foreground">
             <p>
               Founded by four co-founders who believe India's startup ecosystem deserves a sharper edge, we are building a platform that does more than connect—it curates.
             </p>
@@ -115,7 +110,7 @@ const About = () => {
               Precision in design, intelligence in matching, and purpose in every detail—this is the ethos that drives us.
             </p>
             
-            <p className="text-2xl md:text-3xl font-bold gradient-text pt-8">
+            <p className="text-lg md:text-xl font-semibold text-foreground pt-4">
               Our mission is simple: to empower the bold. With Lexach, startups don't just find partners—they find their future.
             </p>
           </div>
@@ -125,36 +120,36 @@ const About = () => {
       {/* Founders Section */}
       <section 
         ref={(el) => { if (el) sectionsRef.current[2] = el as HTMLDivElement; }}
-        className="relative px-6 py-24 md:py-32 opacity-0 transition-opacity duration-1000"
+        className="relative px-6 py-16 md:py-20 opacity-0 transition-opacity duration-1000"
       >
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold text-center mb-16 md:mb-20 tracking-tight">
-            THE ARCHITECTS
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold mb-8 md:mb-12 tracking-tight">
+            The Architects
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {founders.map((founder, index) => (
               <Card
                 key={index}
-                className="group hover-3d border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden"
+                className="group border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-border"
               >
-                <CardContent className="p-6 md:p-8 lg:p-10">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  
-                  <div className="relative space-y-4 md:space-y-6">
-                    <div className="w-full aspect-square bg-muted/30 rounded-xl overflow-hidden mb-4 md:mb-6 flex items-center justify-center border border-border/30">
-                      <div className="text-5xl md:text-6xl font-bold text-muted-foreground/50">
+                <CardContent className="p-4 md:p-5">
+                  <div className="flex gap-4 items-start">
+                    <div className="w-20 h-20 md:w-24 md:h-24 flex-shrink-0 bg-muted/30 rounded-lg flex items-center justify-center border border-border/30">
+                      <div className="text-xl md:text-2xl font-bold text-muted-foreground/50">
                         {founder.name.split(' ').map(n => n[0]).join('')}
                       </div>
                     </div>
                     
-                    <h3 className="text-xl md:text-2xl lg:text-3xl font-bold">
-                      {founder.name}
-                    </h3>
-                    
-                    <p className="text-sm md:text-base lg:text-lg leading-relaxed text-muted-foreground">
-                      {founder.bio}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base md:text-lg font-bold mb-2">
+                        {founder.name}
+                      </h3>
+                      
+                      <p className="text-xs md:text-sm leading-relaxed text-muted-foreground line-clamp-6">
+                        {founder.bio}
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

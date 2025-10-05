@@ -163,7 +163,9 @@ const About = () => {
                         {founder.name}
                       </h3>
                       
-                      <p className="text-xs md:text-sm leading-relaxed text-muted-foreground group-hover:text-foreground/80 transition-colors line-clamp-6">
+                      <p className={`text-xs md:text-sm leading-relaxed text-muted-foreground group-hover:text-foreground/80 transition-colors ${
+                        hoveredCard === index ? '' : 'line-clamp-6'
+                      }`}>
                         {founder.bio}
                       </p>
                     </div>

@@ -6,22 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { 
-  Users, 
-  Briefcase, 
-  MessageSquare, 
-  Calendar, 
-  Settings, 
-  LogOut,
-  Search,
-  Plus,
-  ExternalLink
-} from 'lucide-react';
+import { Users, Briefcase, MessageSquare, Calendar, Settings, LogOut, Search, Plus, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import LiveMatchmaking from '@/components/LiveMatchmaking';
-
 interface Profile {
   id: string;
   name: string;
@@ -33,7 +22,6 @@ interface Profile {
   looking_for: string[];
   profile_pic_url?: string;
 }
-
 interface Project {
   id: string;
   title: string;
@@ -46,7 +34,6 @@ interface Project {
     profile_pic_url?: string;
   };
 }
-
 interface Opportunity {
   id: string;
   title: string;
@@ -55,17 +42,20 @@ interface Opportunity {
   event_date: string;
   link: string;
 }
-
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user, signOut } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    user,
+    signOut
+  } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [matches, setMatches] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     if (user) {
       fetchUserProfile();
@@ -74,17 +64,13 @@ export default function Dashboard() {
       fetchOpportunities();
     }
   }, [user]);
-
   const fetchUserProfile = async () => {
     if (!user) return;
-    
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       if (error) {
         if (error.code === 'PGRST116') {
           // No profile found, redirect to onboarding
@@ -93,58 +79,54 @@ export default function Dashboard() {
         }
         throw error;
       }
-
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast({
         title: "Error",
         description: "Failed to load profile",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const fetchMatches = async () => {
     try {
-      const { data, error } = await supabase
-        .rpc('get_matchmaking_candidates', { 
-          limit_count: 10,
-          exclude_interacted: true 
-        });
-
+      const {
+        data,
+        error
+      } = await supabase.rpc('get_matchmaking_candidates', {
+        limit_count: 10,
+        exclude_interacted: true
+      });
       if (error) throw error;
       setMatches(data || []);
     } catch (error) {
       console.error('Error fetching matches:', error);
     }
   };
-
   const fetchProjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select(`
+      const {
+        data,
+        error
+      } = await supabase.from('projects').select(`
           *,
           profiles(name, role, profile_pic_url)
-        `)
-        .limit(10);
-
+        `).limit(10);
       if (error) throw error;
       setProjects(data || []);
     } catch (error) {
       console.error('Error fetching projects:', error);
     }
   };
-
   const fetchOpportunities = async () => {
     try {
-      const { data, error } = await supabase
-        .from('opportunities')
-        .select('*')
-        .order('event_date', { ascending: true })
-        .limit(10);
-
+      const {
+        data,
+        error
+      } = await supabase.from('opportunities').select('*').order('event_date', {
+        ascending: true
+      }).limit(10);
       if (error) throw error;
       setOpportunities(data || []);
     } catch (error) {
@@ -153,53 +135,43 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
-
   const handleConnect = async (targetUserId: string) => {
     if (!user) return;
-
     try {
-      const { error } = await supabase
-        .from('connections')
-        .insert([{
-          user1_id: user.id,
-          user2_id: targetUserId,
-          status: 'pending'
-        }]);
-
+      const {
+        error
+      } = await supabase.from('connections').insert([{
+        user1_id: user.id,
+        user2_id: targetUserId,
+        status: 'pending'
+      }]);
       if (error) throw error;
-
       toast({
         title: "Connection request sent!",
-        description: "We'll notify you when they respond.",
+        description: "We'll notify you when they respond."
       });
     } catch (error) {
       console.error('Error sending connection:', error);
       toast({
         title: "Error",
         description: "Failed to send connection request",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
-
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+    return <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading your dashboard...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -235,10 +207,7 @@ export default function Dashboard() {
               <Users className="h-4 w-4" />
               Matches
             </TabsTrigger>
-            <TabsTrigger value="projects" className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4" />
-              Projects
-            </TabsTrigger>
+            
             <TabsTrigger value="messages" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               Messages
@@ -265,8 +234,7 @@ export default function Dashboard() {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {projects.map((project) => (
-                <Card key={project.id} className="hover-3d">
+              {projects.map(project => <Card key={project.id} className="hover-3d">
                   <CardHeader>
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-10 w-10">
@@ -287,11 +255,9 @@ export default function Dashboard() {
                     <div>
                       <h4 className="font-semibold text-sm mb-2">Looking for</h4>
                       <div className="flex flex-wrap gap-1">
-                        {project.needs?.map((need) => (
-                          <Badge key={need} variant="secondary" className="text-xs">
+                        {project.needs?.map(need => <Badge key={need} variant="secondary" className="text-xs">
                             {need}
-                          </Badge>
-                        ))}
+                          </Badge>)}
                       </div>
                     </div>
 
@@ -299,8 +265,7 @@ export default function Dashboard() {
                       Learn More
                     </Button>
                   </CardContent>
-                </Card>
-              ))}
+                </Card>)}
             </div>
           </TabsContent>
 
@@ -325,8 +290,7 @@ export default function Dashboard() {
             <h2 className="text-3xl font-bold">Opportunities Board</h2>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {opportunities.map((opportunity) => (
-                <Card key={opportunity.id} className="hover-3d">
+              {opportunities.map(opportunity => <Card key={opportunity.id} className="hover-3d">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
@@ -343,21 +307,15 @@ export default function Dashboard() {
                   <CardContent className="space-y-4">
                     <p className="text-sm">{opportunity.description}</p>
                     
-                    <Button 
-                      className="w-full" 
-                      variant="outline"
-                      onClick={() => window.open(opportunity.link, '_blank')}
-                    >
+                    <Button className="w-full" variant="outline" onClick={() => window.open(opportunity.link, '_blank')}>
                       <ExternalLink className="h-4 w-4 mr-2" />
                       Learn More
                     </Button>
                   </CardContent>
-                </Card>
-              ))}
+                </Card>)}
             </div>
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>;
 }

@@ -287,7 +287,7 @@ export default function Dashboard() {
 
           {/* Opportunities */}
           <TabsContent value="opportunities" className="space-y-6">
-            <h2 className="text-3xl font-bold">Spark Rooms</h2>
+            <h2 className="font-bold text-3xl text-[#29c6af]/0">Spark Rooms</h2>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {opportunities.map(opportunity => <Card key={opportunity.id} className="hover-3d">

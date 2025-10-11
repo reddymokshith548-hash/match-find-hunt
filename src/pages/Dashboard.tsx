@@ -214,7 +214,7 @@ export default function Dashboard() {
             </TabsTrigger>
             <TabsTrigger value="opportunities" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Opportunities
+              Spark Rooms
             </TabsTrigger>
           </TabsList>
 
@@ -287,7 +287,7 @@ export default function Dashboard() {
 
           {/* Opportunities */}
           <TabsContent value="opportunities" className="space-y-6">
-            <h2 className="text-3xl font-bold">Opportunities Board</h2>
+            <h2 className="text-3xl font-bold">Spark Rooms</h2>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {opportunities.map(opportunity => <Card key={opportunity.id} className="hover-3d">

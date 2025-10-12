@@ -91,27 +91,44 @@ const About = () => {
       {/* Company Manifesto */}
       <section 
         ref={(el) => { if (el) sectionsRef.current[1] = el as HTMLDivElement; }}
-        className="relative px-6 py-16 md:py-20 opacity-0 transition-opacity duration-1000"
+        className="relative px-6 py-16 md:py-20 opacity-0 transition-opacity duration-1000 overflow-hidden"
       >
-        <div className="max-w-4xl mx-auto">
-          <div className="space-y-4 md:space-y-6 text-base md:text-lg leading-relaxed text-muted-foreground">
-            <p>
-              Founded by four co-founders who believe India's startup ecosystem deserves a sharper edge, we are building a platform that does more than connect—it curates.
+        {/* Background Video */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background/95 z-10" />
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover opacity-20"
+          >
+            <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-futuristic-tunnel-with-neon-lines-28888-large.mp4" type="video/mp4" />
+          </video>
+        </div>
+
+        <div className="max-w-4xl mx-auto relative z-20">
+          <div className="space-y-6 md:space-y-8">
+            <p className="text-base md:text-lg leading-relaxed text-foreground/90 animate-fade-in">
+              Founded by four co-founders who believe India's startup ecosystem deserves a sharper edge, we are building a platform that does more than connect—<span className="gradient-text font-semibold">it curates</span>.
             </p>
             
-            <p>
-              At our core, Lexach is designed to match entrepreneurs, innovators, and creators with the partners, resources, and ventures that align with their ambitions. In a landscape crowded with noise, we bring clarity: the right profile meets the right opportunity, at the right moment.
+            <p className="text-base md:text-lg leading-relaxed text-foreground/90 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+              At our core, Lexach is designed to match entrepreneurs, innovators, and creators with the partners, resources, and ventures that align with their ambitions. In a landscape crowded with noise, we bring <span className="gradient-text font-semibold">clarity</span>: the right profile meets the right opportunity, at the right moment.
             </p>
             
-            <p>
-              We are not just shaping connections—we are shaping culture. By rethinking how startups discover and collaborate, Lexach is setting a new standard for how India builds.
+            <p className="text-base md:text-lg leading-relaxed text-foreground/90 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+              We are not just shaping connections—we are shaping <span className="gradient-text font-semibold">culture</span>. By rethinking how startups discover and collaborate, Lexach is setting a new standard for how India builds.
             </p>
             
-            <p className="font-semibold text-foreground">
-              Precision in design, intelligence in matching, and purpose in every detail—this is the ethos that drives us.
-            </p>
+            <div className="relative py-6 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent blur-xl" />
+              <p className="relative text-base md:text-lg font-semibold text-foreground leading-relaxed">
+                <span className="gradient-text">Precision in design, intelligence in matching, and purpose in every detail</span>—this is the ethos that drives us.
+              </p>
+            </div>
             
-            <p className="text-lg md:text-xl font-semibold text-foreground pt-4">
+            <p className="text-lg md:text-2xl font-bold gradient-text pt-4 animate-fade-in" style={{ animationDelay: '0.8s' }}>
               Our mission is simple: to empower the bold. With Lexach, startups don't just find partners—they find their future.
             </p>
           </div>

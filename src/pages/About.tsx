@@ -2,10 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
+import { Sparkles, Users, Rocket, Target } from "lucide-react";
 
 const About = () => {
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     const observers = sectionsRef.current
@@ -15,8 +26,8 @@ const About = () => {
           (entries) => {
             entries.forEach((entry) => {
               if (entry.isIntersecting) {
-                entry.target.classList.remove("opacity-0");
-                entry.target.classList.add("opacity-100");
+                entry.target.classList.remove("opacity-0", "translate-y-20");
+                entry.target.classList.add("opacity-100", "translate-y-0");
               }
             });
           },
@@ -55,133 +66,193 @@ const About = () => {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      {/* Hero Section */}
+      {/* Hero Section - Apple Style */}
       <section 
         ref={(el) => { if (el) sectionsRef.current[0] = el as HTMLDivElement; }}
-        className="relative flex flex-col items-center justify-center px-6 py-20 overflow-hidden opacity-0 transition-opacity duration-1000"
+        className="relative flex flex-col items-center justify-center px-6 py-32 overflow-hidden opacity-0 translate-y-20 transition-all duration-1000 min-h-screen"
+        style={{
+          transform: `translateY(${scrollY * 0.3}px)`,
+        }}
       >
-        <div className="relative z-10 max-w-5xl mx-auto text-center space-y-4">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
-            About Us
-          </h1>
-          
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Lexach is the meeting point of vision and opportunity.
-          </p>
-          
-          <div className="mt-8 w-full max-w-4xl mx-auto">
-            <Card className="overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm">
-              <CardContent className="p-0">
-                <div className="aspect-video bg-muted/30">
-                  <video 
-                    className="w-full h-full object-cover"
-                    poster="/placeholder.svg"
-                    controls
-                  >
-                    <source src="" type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Gradient Orb Background */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div 
+            className="absolute top-1/4 -left-1/4 w-96 h-96 bg-primary/30 rounded-full blur-3xl animate-pulse-glow"
+            style={{ transform: `translate(${scrollY * 0.1}px, ${scrollY * 0.15}px)` }}
+          />
+          <div 
+            className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-secondary/30 rounded-full blur-3xl animate-pulse-glow"
+            style={{ transform: `translate(-${scrollY * 0.1}px, -${scrollY * 0.15}px)` }}
+          />
+        </div>
+
+        <div className="relative z-10 max-w-5xl mx-auto text-center space-y-8">
+          <div className="space-y-4">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
+              <span className="block animate-fade-in">About</span>
+              <span className="block gradient-text animate-fade-in" style={{ animationDelay: '0.2s' }}>Lexach</span>
+            </h1>
+            
+            <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground max-w-3xl mx-auto animate-fade-in font-light" style={{ animationDelay: '0.4s' }}>
+              The meeting point of vision and opportunity.
+            </p>
+          </div>
+
+          {/* Floating Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+            {[
+              { icon: Users, label: "Co-founders", value: "1000+" },
+              { icon: Rocket, label: "Startups", value: "500+" },
+              { icon: Target, label: "Matches", value: "2000+" },
+              { icon: Sparkles, label: "Success Rate", value: "95%" },
+            ].map((stat, i) => (
+              <div 
+                key={i}
+                className="glass-card p-6 rounded-2xl hover-3d"
+                style={{ 
+                  animationDelay: `${0.8 + i * 0.1}s`,
+                  transform: `translateY(${Math.sin(scrollY * 0.01 + i) * 10}px)`
+                }}
+              >
+                <stat.icon className="w-8 h-8 mx-auto mb-3 text-primary" />
+                <div className="text-3xl font-bold gradient-text">{stat.value}</div>
+                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Company Manifesto */}
+      {/* Company Manifesto - Scroll Reveal */}
       <section 
         ref={(el) => { if (el) sectionsRef.current[1] = el as HTMLDivElement; }}
-        className="relative px-6 py-16 md:py-20 opacity-0 transition-opacity duration-1000 overflow-hidden"
+        className="relative px-6 py-32 opacity-0 translate-y-20 transition-all duration-1000 overflow-hidden"
       >
-        {/* Background Video */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background/95 z-10" />
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover opacity-20"
-          >
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-futuristic-tunnel-with-neon-lines-28888-large.mp4" type="video/mp4" />
-          </video>
+        {/* Animated Background Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/5 to-background" />
+        
+        {/* Parallax Lines */}
+        <div className="absolute inset-0 opacity-10">
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute h-px bg-gradient-to-r from-transparent via-primary to-transparent"
+              style={{
+                top: `${20 + i * 15}%`,
+                left: 0,
+                right: 0,
+                transform: `translateX(${scrollY * (0.05 + i * 0.02)}px)`,
+              }}
+            />
+          ))}
         </div>
 
-        <div className="max-w-4xl mx-auto relative z-20">
-          <div className="space-y-6 md:space-y-8">
-            <p className="text-base md:text-lg leading-relaxed text-foreground/90 animate-fade-in">
-              Founded by four co-founders who believe India's startup ecosystem deserves a sharper edge, we are building a platform that does more than connect—<span className="gradient-text font-semibold">it curates</span>.
-            </p>
-            
-            <p className="text-base md:text-lg leading-relaxed text-foreground/90 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              At our core, Lexach is designed to match entrepreneurs, innovators, and creators with the partners, resources, and ventures that align with their ambitions. In a landscape crowded with noise, we bring <span className="gradient-text font-semibold">clarity</span>: the right profile meets the right opportunity, at the right moment.
-            </p>
-            
-            <p className="text-base md:text-lg leading-relaxed text-foreground/90 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-              We are not just shaping connections—we are shaping <span className="gradient-text font-semibold">culture</span>. By rethinking how startups discover and collaborate, Lexach is setting a new standard for how India builds.
-            </p>
-            
-            <div className="relative py-6 animate-fade-in" style={{ animationDelay: '0.6s' }}>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent blur-xl" />
-              <p className="relative text-base md:text-lg font-semibold text-foreground leading-relaxed">
-                <span className="gradient-text">Precision in design, intelligence in matching, and purpose in every detail</span>—this is the ethos that drives us.
+        <div className="max-w-4xl mx-auto relative z-10">
+          <div className="space-y-8">
+            <div className="overflow-hidden">
+              <p className="text-lg md:text-2xl leading-relaxed font-light animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                Founded by four co-founders who believe India's startup ecosystem deserves a sharper edge, we are building a platform that does more than connect—<span className="gradient-text font-semibold text-2xl md:text-3xl">it curates</span>.
               </p>
             </div>
             
-            <p className="text-lg md:text-2xl font-bold gradient-text pt-4 animate-fade-in" style={{ animationDelay: '0.8s' }}>
-              Our mission is simple: to empower the bold. With Lexach, startups don't just find partners—they find their future.
-            </p>
+            <div className="overflow-hidden">
+              <p className="text-lg md:text-2xl leading-relaxed font-light animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                At our core, Lexach is designed to match entrepreneurs, innovators, and creators with the partners, resources, and ventures that align with their ambitions. In a landscape crowded with noise, we bring <span className="gradient-text font-semibold text-2xl md:text-3xl">clarity</span>: the right profile meets the right opportunity, at the right moment.
+              </p>
+            </div>
+            
+            <div className="overflow-hidden">
+              <p className="text-lg md:text-2xl leading-relaxed font-light animate-fade-in" style={{ animationDelay: '0.6s' }}>
+                We are not just shaping connections—we are shaping <span className="gradient-text font-semibold text-2xl md:text-3xl">culture</span>. By rethinking how startups discover and collaborate, Lexach is setting a new standard for how India builds.
+              </p>
+            </div>
+            
+            <div className="relative py-8 my-8 animate-fade-in" style={{ animationDelay: '0.8s' }}>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent blur-2xl" />
+              <p className="relative text-xl md:text-3xl font-medium leading-relaxed text-center">
+                <span className="gradient-text block mb-2">Precision in design.</span>
+                <span className="gradient-text block mb-2">Intelligence in matching.</span>
+                <span className="gradient-text block">Purpose in every detail.</span>
+              </p>
+            </div>
+            
+            <div className="text-center pt-8 animate-fade-in" style={{ animationDelay: '1s' }}>
+              <p className="text-2xl md:text-4xl lg:text-5xl font-bold gradient-text leading-tight">
+                Our mission is simple: to empower the bold.
+              </p>
+              <p className="text-xl md:text-2xl text-muted-foreground mt-4 font-light">
+                With Lexach, startups don't just find partners—they find their future.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Founders Section */}
+      {/* Founders Section - Interactive Cards */}
       <section 
         ref={(el) => { if (el) sectionsRef.current[2] = el as HTMLDivElement; }}
-        className="relative px-6 py-16 md:py-20 opacity-0 transition-opacity duration-1000"
+        className="relative px-6 py-32 opacity-0 translate-y-20 transition-all duration-1000 bg-gradient-to-b from-background to-primary/5"
       >
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold mb-8 md:mb-12 tracking-tight">
-            The Architects
-          </h2>
+          <div className="text-center mb-16 space-y-4">
+            <h2 className="text-4xl md:text-6xl font-bold gradient-text animate-fade-in">
+              The Architects
+            </h2>
+            <p className="text-lg md:text-xl text-muted-foreground animate-fade-in" style={{ animationDelay: '0.2s' }}>
+              Meet the visionaries building the future of startup collaboration
+            </p>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 perspective-container">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             {founders.map((founder, index) => (
               <Card
                 key={index}
                 variant="glass"
-                className={`group interactive-card border-white/30 overflow-hidden ${
-                  hoveredCard === index ? 'z-10' : ''
+                className={`group interactive-card border-primary/20 overflow-hidden backdrop-blur-xl transition-all duration-500 ${
+                  hoveredCard === index ? 'z-10 scale-105 shadow-2xl shadow-primary/20' : 'hover:border-primary/40'
                 }`}
                 style={{ 
-                  transform: hoveredCard === index ? 'scale(1.05) translateY(-10px)' : ''
+                  transform: hoveredCard === index 
+                    ? 'scale(1.05) translateY(-10px) rotateX(2deg)' 
+                    : `translateY(${Math.sin(scrollY * 0.01 + index) * 5}px)`,
+                  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
                 onMouseEnter={() => setHoveredCard(index)}
                 onMouseLeave={() => setHoveredCard(null)}
               >
-                <CardContent className="p-4 md:p-5">
-                  <div className="flex gap-4 items-start">
-                    <div className={`w-20 h-20 md:w-24 md:h-24 flex-shrink-0 bg-primary/10 rounded-lg flex items-center justify-center border border-primary/20 transition-all duration-500 ${
-                      hoveredCard === index 
-                        ? 'scale-110 animate-pulse-glow bg-primary/20' 
-                        : 'group-hover:scale-110'
-                    }`}>
-                      <div className={`text-xl md:text-2xl font-bold transition-all duration-300 ${
-                        hoveredCard === index ? 'text-primary animate-scale-pulse' : 'text-primary/70'
+                <CardContent className="p-6 md:p-8">
+                  <div className="flex gap-6 items-start">
+                    <div 
+                      className={`w-24 h-24 md:w-32 md:h-32 flex-shrink-0 rounded-2xl flex items-center justify-center relative overflow-hidden transition-all duration-700 ${
+                        hoveredCard === index 
+                          ? 'scale-110 shadow-lg shadow-primary/50' 
+                          : 'group-hover:scale-105'
+                      }`}
+                      style={{
+                        background: hoveredCard === index 
+                          ? 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))' 
+                          : 'linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.05))',
+                      }}
+                    >
+                      {hoveredCard === index && (
+                        <div className="absolute inset-0 bg-primary/20 animate-pulse-glow" />
+                      )}
+                      <div className={`text-2xl md:text-4xl font-bold z-10 transition-all duration-300 ${
+                        hoveredCard === index ? 'text-white scale-110' : 'text-primary'
                       }`}>
                         {founder.name.split(' ').map(n => n[0]).join('')}
                       </div>
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <h3 className={`text-base md:text-lg font-bold mb-2 transition-all duration-300 ${
-                        hoveredCard === index ? 'gradient-text' : ''
+                      <h3 className={`text-xl md:text-2xl font-bold mb-3 transition-all duration-300 ${
+                        hoveredCard === index ? 'gradient-text scale-105' : ''
                       }`}>
                         {founder.name}
                       </h3>
                       
-                      <p className={`text-xs md:text-sm leading-relaxed text-muted-foreground group-hover:text-foreground/80 transition-colors ${
-                        hoveredCard === index ? '' : 'line-clamp-6'
+                      <p className={`text-sm md:text-base leading-relaxed text-muted-foreground group-hover:text-foreground/90 transition-all duration-500 ${
+                        hoveredCard === index ? 'text-foreground' : 'line-clamp-6'
                       }`}>
                         {founder.bio}
                       </p>

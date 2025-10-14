@@ -48,12 +48,11 @@ const Hero = () => {
   }, []);
 
   return (
-    <section 
+    <section
       ref={sectionRef}
       className="relative min-h-screen flex items-center justify-center overflow-hidden perspective-container"
       style={{
         background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, hsl(var(--primary) / 0.15), transparent 50%), linear-gradient(135deg, hsl(var(--background)), hsl(var(--accent) / 0.2))`,
-        transform: `translateY(${scrollY * 0.5}px)`,
       }}
     >
       {/* Dynamic Grid Background */}

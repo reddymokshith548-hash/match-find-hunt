@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Users, MessageCircle, Star, Zap, Shield } from "lucide-react";
+import { Brain, Users, MessageCircle, Star, Zap, Shield, Sparkles, Rocket, Heart, Target, TrendingUp, Award } from "lucide-react";
 
 
 const Features = () => {
@@ -90,7 +90,7 @@ const Features = () => {
     >
       {/* Animated Gradient Background */}
       <div className="absolute inset-0 overflow-hidden">
-        <div 
+        <div
           className="absolute top-20 left-10 w-96 h-96 rounded-full blur-3xl animate-pulse-glow"
           style={{
             background: 'radial-gradient(circle, hsl(var(--primary) / 0.3), transparent)',
@@ -99,7 +99,7 @@ const Features = () => {
             transition: 'all 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         />
-        <div 
+        <div
           className="absolute bottom-20 right-20 w-96 h-96 rounded-full blur-3xl animate-pulse-glow"
           style={{
             background: 'radial-gradient(circle, hsl(var(--secondary) / 0.3), transparent)',
@@ -107,6 +107,70 @@ const Features = () => {
             opacity: isVisible ? 0.6 : 0,
             transition: 'all 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.3s',
             animationDelay: '1s',
+          }}
+        />
+
+        {/* Floating Icons */}
+        <Sparkles
+          className="absolute top-32 right-1/4 w-10 h-10 text-primary/40 floating-element animate-pulse-glow"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.01) * 15}px) rotate(${scrollY * 0.1}deg) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s',
+          }}
+        />
+        <Rocket
+          className="absolute bottom-1/3 left-20 w-12 h-12 text-secondary/50 floating-element animate-tilt"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.008 + 2) * 20}px) rotate(${isVisible ? 0 : -45}deg) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s',
+            animationDelay: '2s',
+          }}
+        />
+        <Heart
+          className="absolute top-1/2 right-32 w-8 h-8 text-primary/35 floating-element animate-scale-pulse"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.012 + 4) * 12}px) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s',
+            animationDelay: '1.5s',
+          }}
+        />
+        <Target
+          className="absolute bottom-1/4 right-1/3 w-9 h-9 text-secondary/45 floating-element"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.009 + 1) * 18}px) rotate(${scrollY * 0.05}deg) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.8s',
+            animationDelay: '3s',
+          }}
+        />
+        <TrendingUp
+          className="absolute top-2/3 left-1/4 w-10 h-10 text-primary/40 floating-element animate-pulse-glow"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.011 + 3) * 14}px) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 1s',
+            animationDelay: '2.5s',
+          }}
+        />
+        <Award
+          className="absolute top-1/3 left-32 w-11 h-11 text-secondary/40 floating-element animate-scale-pulse"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.01 + 5) * 16}px) rotate(${scrollY * -0.08}deg) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 1.2s',
+            animationDelay: '1s',
+          }}
+        />
+        <Star
+          className="absolute bottom-40 left-1/3 w-7 h-7 text-primary/45 floating-element"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.013 + 2) * 10}px) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 1.4s',
+            animationDelay: '0.5s',
           }}
         />
       </div>

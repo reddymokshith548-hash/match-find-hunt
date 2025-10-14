@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles, Users, Rocket, Target } from "lucide-react";
+import { Sparkles, Users, Rocket, Target, Heart, Star, Zap, Award, TrendingUp, Brain, MessageCircle } from "lucide-react";
 
 const About = () => {
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
@@ -76,13 +76,50 @@ const About = () => {
       >
         {/* Gradient Orb Background */}
         <div className="absolute inset-0 overflow-hidden">
-          <div 
+          <div
             className="absolute top-1/4 -left-1/4 w-96 h-96 bg-primary/30 rounded-full blur-3xl animate-pulse-glow"
             style={{ transform: `translate(${scrollY * 0.1}px, ${scrollY * 0.15}px)` }}
           />
-          <div 
+          <div
             className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-secondary/30 rounded-full blur-3xl animate-pulse-glow"
             style={{ transform: `translate(-${scrollY * 0.1}px, -${scrollY * 0.15}px)` }}
+          />
+
+          {/* Floating Icons */}
+          <Heart
+            className="absolute top-1/4 right-1/4 w-10 h-10 text-primary/40 floating-element animate-scale-pulse"
+            style={{
+              transform: `translateY(${Math.sin(scrollY * 0.01) * 15}px) scale(1)`,
+              animationDelay: '0.5s',
+            }}
+          />
+          <Star
+            className="absolute top-1/3 left-20 w-8 h-8 text-secondary/45 floating-element animate-pulse-glow"
+            style={{
+              transform: `translateY(${Math.sin(scrollY * 0.012 + 2) * 12}px) rotate(${scrollY * 0.1}deg)`,
+              animationDelay: '1s',
+            }}
+          />
+          <Zap
+            className="absolute bottom-1/3 right-32 w-12 h-12 text-primary/35 floating-element"
+            style={{
+              transform: `translateY(${Math.sin(scrollY * 0.009 + 3) * 18}px) rotate(${scrollY * -0.08}deg)`,
+              animationDelay: '1.5s',
+            }}
+          />
+          <Award
+            className="absolute top-2/3 left-1/3 w-9 h-9 text-secondary/40 floating-element animate-tilt"
+            style={{
+              transform: `translateY(${Math.sin(scrollY * 0.011 + 4) * 14}px)`,
+              animationDelay: '2s',
+            }}
+          />
+          <TrendingUp
+            className="absolute bottom-40 right-1/4 w-10 h-10 text-primary/45 floating-element animate-scale-pulse"
+            style={{
+              transform: `translateY(${Math.sin(scrollY * 0.013 + 5) * 16}px)`,
+              animationDelay: '2.5s',
+            }}
           />
         </div>
 
@@ -146,6 +183,26 @@ const About = () => {
             />
           ))}
         </div>
+
+        {/* Floating Icons for Manifesto Section */}
+        <Brain
+          className="absolute top-1/4 left-16 w-11 h-11 text-primary/35 floating-element animate-pulse-glow"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.008 + 1) * 20}px)`,
+          }}
+        />
+        <MessageCircle
+          className="absolute bottom-1/3 right-24 w-9 h-9 text-secondary/40 floating-element animate-tilt"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.01 + 6) * 15}px) rotate(${scrollY * 0.05}deg)`,
+          }}
+        />
+        <Rocket
+          className="absolute top-1/2 right-1/4 w-10 h-10 text-primary/40 floating-element"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.011 + 7) * 17}px) rotate(-15deg)`,
+          }}
+        />
 
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="space-y-8">

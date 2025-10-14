@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, X, MapPin, Briefcase, Star, Sparkles } from "lucide-react";
+import { Heart, X, MapPin, Briefcase, Star, Sparkles, Zap, Users, MessageCircle, Rocket, Target, Award } from "lucide-react";
 import { useAuthRouting } from "@/hooks/useAuthRouting";
 
 const MatchPreview = () => {
@@ -98,7 +98,7 @@ const MatchPreview = () => {
     >
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div 
+        <div
           className="absolute top-20 right-1/4 w-80 h-80 rounded-full blur-3xl animate-pulse-glow"
           style={{
             background: 'radial-gradient(circle, hsl(var(--primary) / 0.25), transparent)',
@@ -107,7 +107,7 @@ const MatchPreview = () => {
             transition: 'all 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         />
-        <div 
+        <div
           className="absolute bottom-1/3 left-10 w-96 h-96 rounded-full blur-3xl animate-pulse-glow"
           style={{
             background: 'radial-gradient(circle, hsl(var(--secondary) / 0.25), transparent)',
@@ -117,12 +117,77 @@ const MatchPreview = () => {
             animationDelay: '2s',
           }}
         />
-        <Sparkles 
-          className="absolute top-20 right-1/4 w-8 h-8 text-primary/30"
+
+        {/* Floating Icons */}
+        <Sparkles
+          className="absolute top-20 right-1/4 w-8 h-8 text-primary/40 floating-element animate-pulse-glow"
           style={{
-            transform: `translateY(${Math.sin(scrollY * 0.01) * 20}px) scale(${isVisible ? 1 : 0})`,
+            transform: `translateY(${Math.sin(scrollY * 0.01) * 20}px) rotate(${scrollY * 0.1}deg) scale(${isVisible ? 1 : 0})`,
             opacity: isVisible ? 1 : 0,
             transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s',
+          }}
+        />
+        <Heart
+          className="absolute top-1/3 left-20 w-10 h-10 text-secondary/45 floating-element animate-scale-pulse"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.012 + 3) * 15}px) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s',
+            animationDelay: '1s',
+          }}
+        />
+        <Zap
+          className="absolute bottom-1/4 right-32 w-9 h-9 text-primary/40 floating-element animate-pulse-glow"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.011 + 1) * 18}px) rotate(${scrollY * 0.08}deg) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s',
+            animationDelay: '2s',
+          }}
+        />
+        <Users
+          className="absolute top-2/3 right-1/3 w-11 h-11 text-secondary/35 floating-element"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.009 + 4) * 12}px) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.8s',
+            animationDelay: '1.5s',
+          }}
+        />
+        <MessageCircle
+          className="absolute bottom-40 left-1/4 w-8 h-8 text-primary/45 floating-element animate-tilt"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.013 + 2) * 14}px) rotate(${scrollY * -0.05}deg) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 1s',
+            animationDelay: '0.5s',
+          }}
+        />
+        <Rocket
+          className="absolute top-40 left-1/3 w-10 h-10 text-secondary/40 floating-element"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.01 + 5) * 16}px) rotate(${isVisible ? 0 : -30}deg) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 1.2s',
+            animationDelay: '3s',
+          }}
+        />
+        <Target
+          className="absolute bottom-1/2 right-20 w-9 h-9 text-primary/35 floating-element animate-scale-pulse"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.008 + 6) * 11}px) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 1.4s',
+            animationDelay: '2.5s',
+          }}
+        />
+        <Award
+          className="absolute top-1/2 left-40 w-10 h-10 text-secondary/50 floating-element animate-pulse-glow"
+          style={{
+            transform: `translateY(${Math.sin(scrollY * 0.012 + 7) * 13}px) rotate(${scrollY * 0.06}deg) scale(${isVisible ? 1 : 0})`,
+            opacity: isVisible ? 1 : 0,
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 1.6s',
+            animationDelay: '1.2s',
           }}
         />
       </div>

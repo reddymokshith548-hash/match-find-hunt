@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import LiveMatchmaking from '@/components/LiveMatchmaking';
 import SparkMatch from '@/components/SparkMatch';
+import ProfileEditor from '@/components/ProfileEditor';
 interface Profile {
   id: string;
   name: string;
@@ -57,6 +58,7 @@ export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   useEffect(() => {
     if (user) {
       fetchUserProfile();
@@ -179,7 +181,10 @@ export default function Dashboard() {
           <div className="flex items-center space-x-4">
             <h1 className="text-2xl font-bold gradient-text">FindBaee</h1>
             <div className="hidden md:flex items-center space-x-2">
-              <Avatar className="h-8 w-8">
+              <Avatar 
+                className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                onClick={() => setProfileEditorOpen(true)}
+              >
                 <AvatarImage src={profile?.profile_pic_url} />
                 <AvatarFallback>{profile?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
@@ -327,5 +332,15 @@ export default function Dashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Profile Editor Dialog */}
+      {profile && (
+        <ProfileEditor
+          open={profileEditorOpen}
+          onOpenChange={setProfileEditorOpen}
+          profile={profile}
+          onProfileUpdate={fetchUserProfile}
+        />
+      )}
     </div>;
 }

@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Users, Briefcase, MessageSquare, Calendar, Settings, LogOut, Search, Plus, ExternalLink } from 'lucide-react';
+import { Users, Briefcase, MessageSquare, Calendar, Settings, LogOut, Search, Plus, ExternalLink, Zap } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import LiveMatchmaking from '@/components/LiveMatchmaking';
+import SparkMatch from '@/components/SparkMatch';
 interface Profile {
   id: string;
   name: string;
@@ -201,8 +202,12 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="matches" className="space-y-6">
+        <Tabs defaultValue="spark" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 lg:w-fit">
+            <TabsTrigger value="spark" className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              Spark Match
+            </TabsTrigger>
             <TabsTrigger value="matches" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Matches
@@ -217,6 +222,11 @@ export default function Dashboard() {
               Spark Rooms
             </TabsTrigger>
           </TabsList>
+
+          {/* Spark Match - Swipe Feature */}
+          <TabsContent value="spark" className="space-y-6">
+            <SparkMatch />
+          </TabsContent>
 
           {/* Live AI Matchmaking */}
           <TabsContent value="matches" className="space-y-6">

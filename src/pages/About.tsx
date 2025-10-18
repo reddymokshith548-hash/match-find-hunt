@@ -220,7 +220,7 @@ const About = () => {
             
             <div className="overflow-hidden">
               <p className="text-lg md:text-2xl leading-relaxed font-light animate-fade-in" style={{ animationDelay: '0.6s' }}>
-                We are not just shaping connections—we are shaping <span className="gradient-text font-semibold text-2xl md:text-3xl">culture</span>. By rethinking how startups discover and collaborate, Lexach is setting a new standard for how India builds.
+                We are not just shaping connections—we are shaping <span className="gradient-text font-semibold text-2xl md:text-3xl">culture</span>. By rethinking how startups discover and collaborate, <span className="gradient-text font-semibold text-2xl md:text-3xl">Lexach</span> is setting a new standard for how India builds.
               </p>
             </div>
             

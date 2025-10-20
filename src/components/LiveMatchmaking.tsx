@@ -34,17 +34,38 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  // ✨ FIX: New state to store the WebSocket API secret
+  const [apiSecret, setApiSecret] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  const tokenRes = await fetch("/api/get_ws_token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: user.id })
-    });
-    const { token: API_SECRET } = await tokenRes.json();
+  // 0️⃣ FIX: Fetch WebSocket API Token inside useEffect
+  useEffect(() => {
+    // Only proceed if the user is authenticated
+    if (!user) return;
+
+    const fetchToken = async () => {
+      try {
+        const tokenRes = await fetch("/api/get_ws_token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: user.id }),
+        });
+        
+        if (!tokenRes.ok) throw new Error("Failed to fetch WS token.");
+
+        const data = await tokenRes.json();
+        setApiSecret(data.token);
+      } catch (err) {
+        console.error("Failed to fetch WebSocket token:", err);
+        setError("Failed to secure connection. Live updates may not work.");
+      }
+    };
+
+    fetchToken();
+  }, [user]); // Run when the user object is available or changes
 
   // 1️⃣ Fetch logged-in user's profile ID from Supabase
   useEffect(() => {
@@ -67,6 +88,38 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
 
     fetchProfile();
   }, [user]);
+
+  // Mock data function (remains the same)
+  const getMockMatches = (): MatchProfile[] => [
+    {
+      id: "1",
+      name: "Sarah Chen",
+      type: "Co-Founder",
+      age: 28,
+      interests: ["AI", "Healthcare", "Sustainability"],
+      skills: ["React", "Python", "UI/UX", "Product Strategy"],
+      match_score: 94,
+      bio: "Passionate about building consumer apps. Looking for a business-minded co-founder.",
+      location: "San Francisco, CA",
+      experience: "5+ years",
+      profile_pic_url: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
+      role: "Full-Stack Developer & Product Designer",
+    },
+    {
+      id: "2",
+      name: "Marcus Johnson",
+      type: "Business Partner",
+      age: 32,
+      interests: ["Fintech", "B2B SaaS", "Growth"],
+      skills: ["Growth Marketing", "Sales", "Business Strategy", "Fundraising"],
+      match_score: 89,
+      bio: "Experienced in scaling B2B SaaS companies. Seeking a technical co-founder.",
+      location: "New York, NY",
+      experience: "8+ years",
+      profile_pic_url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
+      role: "Business Development & Marketing Expert",
+    },
+  ];
 
   // 2️⃣ Fetch matches from backend (Supabase RPC or fallback)
   const fetchMatches = async () => {
@@ -111,38 +164,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     }
   };
 
-  const getMockMatches = (): MatchProfile[] => [
-    {
-      id: "1",
-      name: "Sarah Chen",
-      type: "Co-Founder",
-      age: 28,
-      interests: ["AI", "Healthcare", "Sustainability"],
-      skills: ["React", "Python", "UI/UX", "Product Strategy"],
-      match_score: 94,
-      bio: "Passionate about building consumer apps. Looking for a business-minded co-founder.",
-      location: "San Francisco, CA",
-      experience: "5+ years",
-      profile_pic_url: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
-      role: "Full-Stack Developer & Product Designer",
-    },
-    {
-      id: "2",
-      name: "Marcus Johnson",
-      type: "Business Partner",
-      age: 32,
-      interests: ["Fintech", "B2B SaaS", "Growth"],
-      skills: ["Growth Marketing", "Sales", "Business Strategy", "Fundraising"],
-      match_score: 89,
-      bio: "Experienced in scaling B2B SaaS companies. Seeking a technical co-founder.",
-      location: "New York, NY",
-      experience: "8+ years",
-      profile_pic_url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
-      role: "Business Development & Marketing Expert",
-    },
-  ];
-
-  // 3️⃣ Animate new matches
+  // 3️⃣ Animate new matches (remains the same)
   const animateNewMatches = (newMatches: MatchProfile[]) => {
     newMatches.forEach((match, index) => {
       setTimeout(() => {
@@ -160,22 +182,27 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     });
   };
 
-  // 4️⃣ WebSocket for live updates
+  // 4️⃣ WebSocket for live updates - UPDATED to use apiSecret state
   const setupWebSocket = () => {
-    if (!profileId) return;
+    // Only proceed if both profileId and apiSecret are available
+    if (!profileId || !apiSecret) {
+        console.log("WebSocket setup deferred: Missing profileId or API secret.");
+        return;
+    }
 
     try {
       const CLIENT_ID = user?.id || `client_${Math.random().toString(36).slice(2)}`;
-      const API_SECRET = "<PUT_API_SECRET_HERE>";
-
+      
       const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+      // Assuming your websocket endpoint is at the root of your host under /ws/:clientId
       const wsUrl = `${scheme}://${window.location.host}/ws/${CLIENT_ID}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
         console.log("WebSocket connected");
-        ws.send(JSON.stringify({ type: "auth", token: API_SECRET }));
+        // Use the fetched apiSecret for authentication
+        ws.send(JSON.stringify({ type: "auth", token: apiSecret }));
         ws.send(JSON.stringify({ type: "subscribe", profile_id: profileId }));
       };
 
@@ -202,18 +229,26 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     }
   };
 
-  // 5️⃣ Component init
+  // 5️⃣ Component init - UPDATED dependency array
   useEffect(() => {
-    fetchMatches();
-    setupWebSocket();
+    // Fetch initial matches once profileId is known
+    if (profileId) {
+      fetchMatches();
+    }
+    
+    // Set up WebSocket once both profileId and apiSecret are ready
+    if (profileId && apiSecret) {
+        setupWebSocket();
+    }
 
+    // Cleanup function
     return () => {
       if (wsRef.current) wsRef.current.close();
       if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     };
-  }, [profileId]);
+  }, [profileId, apiSecret]); // Trigger on changes to profileId OR apiSecret
 
-  // 6️⃣ Auto-refresh every 5 minutes
+  // 6️⃣ Auto-refresh every 5 minutes (remains the same)
   useEffect(() => {
     const interval = setInterval(() => {
       if (!loading) fetchMatches();
@@ -221,13 +256,13 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     return () => clearInterval(interval);
   }, [loading]);
 
-  // 7️⃣ Handle actions
-  const handleConnect = (profileId: string) => {
+  // 7️⃣ Handle actions (remains the same)
+  const handleConnect = (id: string) => {
     toast({ title: "Connection sent!", description: "We'll notify you when they respond." });
-    removeMatch(profileId, "right");
+    removeMatch(id, "right");
   };
 
-  const handlePass = (profileId: string) => removeMatch(profileId, "left");
+  const handlePass = (id: string) => removeMatch(id, "left");
 
   const removeMatch = (id: string, direction: "left" | "right") => {
     const el = cardRefs.current[id];
@@ -238,13 +273,13 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     }
   };
 
-  const handleViewProfile = (profileId: string) => {
-    window.location.href = `/profile/${profileId}`;
+  const handleViewProfile = (id: string) => {
+    window.location.href = `/profile/${id}`;
   };
 
   const handleRefresh = () => fetchMatches();
 
-  // 8️⃣ Render UI
+  // 8️⃣ Render UI (remains the same)
   return (
     <section className={`py-12 ${className}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -266,8 +301,8 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         </div>}
 
         {loading && matches.length === 0 && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />
             <p className="text-muted-foreground">Finding your perfect matches...</p>
           </div>
         )}

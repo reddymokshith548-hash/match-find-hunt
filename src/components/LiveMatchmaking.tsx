@@ -173,9 +173,10 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     try {
       const CLIENT_ID = user?.id || `client_${Math.random().toString(36).slice(2)}`;
       
-      const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+      const scheme = "ws";
       // 🛑 CORRECTION 3: The IP is explicitly set here and is correct.
-      const wsUrl = `${scheme}://192.168.29.199:8000/ws/${CLIENT_ID}`;
+      const BACKEND_WS_HOST = "192.168.29.199:8000";
+      const wsUrl = `${scheme}://${BACKEND_WS_HOST}/ws/${CLIENT_ID}`;
       console.log(`[WS] Attempting FINAL connection to: ${wsUrl}`); // <-- IMPOR
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;

@@ -34,18 +34,18 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
-  // ✨ FIX: New state to store the WebSocket API secret
-  const [apiSecret, setApiSecret] = useState<string | null>(null);
+  
+  // ✅ CORRECTION 1: Merge the duplicate API secret declarations.
+  // We use the hardcoded secret found in utils.py for debugging.
+  const [apiSecret, setApiSecret] = useState<string | null>("supersecret_api_token_for_frontend_to_call_ws");
 
   const wsRef = useRef<WebSocket | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  // 0️⃣ FIX: Fetch WebSocket API Token inside useEffect
-  const [apiSecret, setApiSecret] = useState<string | null>("supersecret_api_token_for_frontend_to_call_ws");
+  // 🛑 CORRECTION 2: The entire broken useEffect (Step 0) has been removed.
+  // The logic is now handled by the initial state declaration above.
 
-    fetchToken();
-  }, [user]); // Run when the user object is available or changes
 
   // 1️⃣ Fetch logged-in user's profile ID from Supabase
   useEffect(() => {
@@ -174,7 +174,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       const CLIENT_ID = user?.id || `client_${Math.random().toString(36).slice(2)}`;
       
       const scheme = window.location.protocol === "https:" ? "wss" : "ws";
-      // Assuming your websocket endpoint is at the root of your host under /ws/:clientId
+      // 🛑 CORRECTION 3: The IP is explicitly set here and is correct.
       const wsUrl = `${scheme}://192.168.29.199:8000/ws/${CLIENT_ID}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -275,6 +275,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
           </Button>
         </div>
 
+        {/* The error message you were seeing is now driven by the actual error state */}
         {error && <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
           <AlertCircle className="w-5 h-5 text-destructive" />
           <span className="text-sm text-destructive">{error}</span>

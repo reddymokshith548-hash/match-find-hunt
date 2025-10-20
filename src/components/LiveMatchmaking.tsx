@@ -195,7 +195,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       
       const scheme = window.location.protocol === "https:" ? "wss" : "ws";
       // Assuming your websocket endpoint is at the root of your host under /ws/:clientId
-      const wsUrl = `${scheme}://${window.location.host}/ws/${CLIENT_ID}`;
+      const wsUrl = `${scheme}://${192.168.29.199}/ws/${CLIENT_ID}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 

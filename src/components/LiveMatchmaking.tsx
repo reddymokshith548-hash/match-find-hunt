@@ -42,27 +42,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // 0️⃣ FIX: Fetch WebSocket API Token inside useEffect
-  useEffect(() => {
-    // Only proceed if the user is authenticated
-    if (!user) return;
-
-    const fetchToken = async () => {
-      try {
-        const tokenRes = await fetch("/api/get_ws_token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: user.id }),
-        });
-        
-        if (!tokenRes.ok) throw new Error("Failed to fetch WS token.");
-
-        const data = await tokenRes.json();
-        setApiSecret(data.token);
-      } catch (err) {
-        console.error("Failed to fetch WebSocket token:", err);
-        setError("Failed to secure connection. Live updates may not work.");
-      }
-    };
+  const [apiSecret, setApiSecret] = useState<string | null>("supersecret_api_token_for_frontend_to_call_ws");
 
     fetchToken();
   }, [user]); // Run when the user object is available or changes
@@ -195,7 +175,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       
       const scheme = window.location.protocol === "https:" ? "wss" : "ws";
       // Assuming your websocket endpoint is at the root of your host under /ws/:clientId
-      const wsUrl = `${scheme}://${192.168.29.199}/ws/${CLIENT_ID}`;
+      const wsUrl = `${scheme}://192.168.29.199:8000/ws/${CLIENT_ID}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 

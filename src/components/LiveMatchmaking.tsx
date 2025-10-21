@@ -171,7 +171,9 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     }
 
     try {
-      const CLIENT_ID = user?.id || `client_${Math.random().toString(36).slice(2)}`;
+      // NEW (Uses the fetched profileId, which is what your match endpoint expects)
+// We already know profileId is non-null because of the parent useEffect check.
+const WS_CLIENT_ID = profileId; // Use the fetched profileId for the path segment.
       
      // LiveMatchmaking.tsx
 
@@ -194,7 +196,8 @@ if (!profileId || !apiSecret) {
 }
 
 // 4. CRITICAL: The URL MUST include the api_secret as a query parameter
-const wsUrl = `${scheme}://${BACKEND_WS_HOST}/ws/${CLIENT_ID}?api_secret=${apiSecret}`;
+// NEW URL:
+const wsUrl = `${scheme}://${BACKEND_WS_HOST}/ws/${WS_CLIENT_ID}?api_secret=${apiSecret}`;
 
 console.log(`[WS] Final connection URL (Direct Uvicorn): ${wsUrl}`);
 // ... rest of the function ...

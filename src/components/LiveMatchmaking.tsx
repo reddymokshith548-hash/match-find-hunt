@@ -173,11 +173,31 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     try {
       const CLIENT_ID = user?.id || `client_${Math.random().toString(36).slice(2)}`;
       
-      const scheme = "ws";
-      // 🛑 CORRECTION 3: The IP is explicitly set here and is correct.
-      const BACKEND_WS_HOST = "192.168.29.199:8000";
-      const wsUrl = `${scheme}://${BACKEND_WS_HOST}/ws/${CLIENT_ID}`;
-      console.log(`[WS] Attempting FINAL connection to: ${wsUrl}`); // <-- IMPOR
+     // LiveMatchmaking.tsx
+
+// 1. Host: Re-introduce the explicit port :8000 for direct connection to Uvicorn
+// VERIFY THIS IP (192.168.29.199) is correct.
+const BACKEND_WS_HOST = "192.168.29.199:8000"; 
+
+// 2. Protocol: We keep the explicit 'ws' to avoid the HTTPS/WSS conflict
+const scheme = "ws"; 
+
+// 3. API Secret: Verify this value is correct and non-null before usage.
+const [apiSecret, setApiSecret] = useState<string | null>("supersecret_api_token_for_frontend_to_call_ws");
+
+
+// ... inside the setupWebSocket function ...
+
+if (!profileId || !apiSecret) {
+    console.log("WebSocket setup deferred: Missing profileId or API secret.");
+    return;
+}
+
+// 4. CRITICAL: The URL MUST include the api_secret as a query parameter
+const wsUrl = `${scheme}://${BACKEND_WS_HOST}/ws/${CLIENT_ID}?api_secret=${apiSecret}`;
+
+console.log(`[WS] Final connection URL (Direct Uvicorn): ${wsUrl}`);
+// ... rest of the function ...
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 

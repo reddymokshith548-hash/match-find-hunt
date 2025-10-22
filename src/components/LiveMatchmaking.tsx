@@ -184,8 +184,6 @@ const BACKEND_WS_HOST = "192.168.29.199:8000";
 // 2. Protocol: We keep the explicit 'ws' to avoid the HTTPS/WSS conflict
 const scheme = "ws"; 
 
-// 3. API Secret: Verify this value is correct and non-null before usage.
-const [apiSecret, setApiSecret] = useState<string | null>("supersecret_api_token_for_frontend_to_call_ws");
 
 
 // ... inside the setupWebSocket function ...

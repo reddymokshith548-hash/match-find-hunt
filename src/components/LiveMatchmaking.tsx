@@ -182,7 +182,7 @@ const WS_CLIENT_ID = profileId; // Use the fetched profileId for the path segmen
 const BACKEND_WS_HOST = "192.168.29.199:8000"; 
 
 // 2. Protocol: We keep the explicit 'ws' to avoid the HTTPS/WSS conflict
-const scheme = "ws"; 
+const scheme = "wss"; 
 
 
 

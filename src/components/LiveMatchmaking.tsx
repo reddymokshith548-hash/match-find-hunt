@@ -202,12 +202,18 @@ console.log(`[WS] Final connection URL (Direct Uvicorn): ${wsUrl}`);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
-      ws.onopen = () => {
-        console.log("WebSocket connected");
-        // Use the fetched apiSecret for authentication
-        ws.send(JSON.stringify({ type: "auth", token: apiSecret }));
-        ws.send(JSON.stringify({ type: "subscribe", profile_id: profileId }));
-      };
+     // ✅ NEW CODE (Uses 'api_secret' to match your query parameter name)
+ws.onopen = () => {
+  console.log("WebSocket connected");
+  
+  // 🚩 FIX 1: Change 'token' to 'api_secret'
+  ws.send(JSON.stringify({ type: "auth", api_secret: apiSecret })); 
+  
+  // 🚩 FIX 2: Add a short delay before sending the second message (optional, but safer)
+  setTimeout(() => {
+    ws.send(JSON.stringify({ type: "subscribe", profile_id: profileId }));
+  }, 100); 
+};
 
       ws.onmessage = (event) => {
         try {

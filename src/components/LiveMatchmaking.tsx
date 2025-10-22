@@ -201,18 +201,21 @@ console.log(`[WS] Final connection URL (Direct Uvicorn): ${wsUrl}`);
 // ... rest of the function ...
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
+// LiveMatchmaking.tsx - inside setupWebSocket -> ws.onopen
 
-     // ✅ NEW CODE (Uses 'api_secret' to match your query parameter name)
 ws.onopen = () => {
-  console.log("WebSocket connected");
-  
-  // 🚩 FIX 1: Change 'token' to 'api_secret'
-  ws.send(JSON.stringify({ type: "auth", api_secret: apiSecret })); 
-  
-  // 🚩 FIX 2: Add a short delay before sending the second message (optional, but safer)
-  setTimeout(() => {
-    ws.send(JSON.stringify({ type: "subscribe", profile_id: profileId }));
-  }, 100); 
+    console.log("WebSocket connected");
+    
+    // 🚩 FIX: Change the key from 'api_secret' back to 'token'
+    ws.send(JSON.stringify({ 
+        type: "auth", 
+        token: apiSecret 
+    })); 
+    
+    // Add the subscribe message back (with a slight delay to be safe)
+    setTimeout(() => {
+        ws.send(JSON.stringify({ type: "subscribe", profile_id: profileId }));
+    }, 100); 
 };
 
       ws.onmessage = (event) => {

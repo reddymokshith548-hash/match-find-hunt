@@ -20,21 +20,9 @@ interface Profile {
   role: string;
   skills: string[];
   interests: string[];
-  stage: string;
-  looking_for: string[];
-  profile_pic_url?: string;
-}
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  needs: string[];
-  owner_id: string;
-  profiles: {
-    name: string;
-    role: string;
-    profile_pic_url?: string;
-  };
+  location: string;
+  age: number;
+  match_score: number;
 }
 interface Opportunity {
   id: string;
@@ -53,9 +41,8 @@ export default function Dashboard() {
     user,
     signOut
   } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [matches, setMatches] = useState<Profile[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
@@ -63,7 +50,6 @@ export default function Dashboard() {
     if (user) {
       fetchUserProfile();
       fetchMatches();
-      fetchProjects();
       fetchOpportunities();
     }
   }, [user]);
@@ -193,7 +179,7 @@ export default function Dashboard() {
           </div>
           
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
@@ -217,7 +203,6 @@ export default function Dashboard() {
               <Users className="h-4 w-4" />
               Matches
             </TabsTrigger>
-            
             <TabsTrigger value="messages" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               Messages
@@ -238,66 +223,18 @@ export default function Dashboard() {
             <LiveMatchmaking />
           </TabsContent>
 
-          {/* Projects */}
-          <TabsContent value="projects" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold">Explore Projects</h2>
-              <Button variant="hero">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Project
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {projects.map(project => <Card key={project.id} className="hover-3d">
-                  <CardHeader>
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={project.profiles?.profile_pic_url} />
-                        <AvatarFallback>{project.profiles?.name?.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-lg">{project.title}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          by {project.profiles?.name} • {project.profiles?.role}
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm">{project.description}</p>
-                    
-                    <div>
-                      <h4 className="font-semibold text-sm mb-2">Looking for</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {project.needs?.map(need => <Badge key={need} variant="secondary" className="text-xs">
-                            {need}
-                          </Badge>)}
-                      </div>
-                    </div>
-
-                    <Button className="w-full" variant="outline">
-                      Learn More
-                    </Button>
-                  </CardContent>
-                </Card>)}
-            </div>
-          </TabsContent>
-
           {/* Messages */}
           <TabsContent value="messages" className="space-y-6">
-            <h2 className="text-3xl font-bold">Messages</h2>
-            <Card>
-              <CardContent className="flex items-center justify-center h-64">
-                <div className="text-center">
-                  <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No messages yet</h3>
-                  <p className="text-muted-foreground">
-                    Start connecting with people to begin conversations!
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Messages</h3>
+              <p className="text-muted-foreground mb-4">
+                View all your conversations in the Messages page
+              </p>
+              <Button onClick={() => navigate('/messages')} variant="hero">
+                Go to Messages
+              </Button>
+            </div>
           </TabsContent>
 
           {/* Opportunities */}

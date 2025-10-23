@@ -53,6 +53,36 @@ export type Database = {
           },
         ]
       }
+      foundersync_results: {
+        Row: {
+          answers: Json
+          completed_at: string
+          id: string
+          leadership_style: string | null
+          personality_type: string | null
+          risk_tolerance: string | null
+          user_id: string
+        }
+        Insert: {
+          answers: Json
+          completed_at?: string
+          id?: string
+          leadership_style?: string | null
+          personality_type?: string | null
+          risk_tolerance?: string | null
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string
+          id?: string
+          leadership_style?: string | null
+          personality_type?: string | null
+          risk_tolerance?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           created_at: string | null
@@ -82,23 +112,29 @@ export type Database = {
       }
       messages: {
         Row: {
+          connection_id: string | null
           content: string
           created_at: string | null
           id: string
+          is_read: boolean
           receiver_id: string | null
           sender_id: string | null
         }
         Insert: {
+          connection_id?: string | null
           content: string
           created_at?: string | null
           id?: string
+          is_read?: boolean
           receiver_id?: string | null
           sender_id?: string | null
         }
         Update: {
+          connection_id?: string | null
           content?: string
           created_at?: string | null
           id?: string
+          is_read?: boolean
           receiver_id?: string | null
           sender_id?: string | null
         }
@@ -118,6 +154,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      nda_signatures: {
+        Row: {
+          accepted_at: string
+          connection_id: string
+          email: string
+          full_name: string
+          id: string
+          ip_address: string | null
+          profile_id: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          connection_id: string
+          email: string
+          full_name: string
+          id?: string
+          ip_address?: string | null
+          profile_id: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          connection_id?: string
+          email?: string
+          full_name?: string
+          id?: string
+          ip_address?: string | null
+          profile_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          related_id: string | null
+          related_user_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          related_id?: string | null
+          related_user_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          related_id?: string | null
+          related_user_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       opportunities: {
         Row: {
@@ -184,6 +289,7 @@ export type Database = {
           gender: string | null
           id: string
           interests: string[] | null
+          is_active: boolean | null
           is_verified: boolean | null
           last_active: string | null
           location: string | null
@@ -207,6 +313,7 @@ export type Database = {
           gender?: string | null
           id?: string
           interests?: string[] | null
+          is_active?: boolean | null
           is_verified?: boolean | null
           last_active?: string | null
           location?: string | null
@@ -230,6 +337,7 @@ export type Database = {
           gender?: string | null
           id?: string
           interests?: string[] | null
+          is_active?: boolean | null
           is_verified?: boolean | null
           last_active?: string | null
           location?: string | null
@@ -248,40 +356,67 @@ export type Database = {
         }
         Relationships: []
       }
-      projects: {
+      spark_room_members: {
         Row: {
-          created_at: string | null
-          description: string | null
           id: string
-          needs: string[] | null
-          owner_id: string | null
-          title: string
+          joined_at: string
+          room_id: string
+          user_id: string
         }
         Insert: {
-          created_at?: string | null
-          description?: string | null
           id?: string
-          needs?: string[] | null
-          owner_id?: string | null
-          title: string
+          joined_at?: string
+          room_id: string
+          user_id: string
         }
         Update: {
-          created_at?: string | null
-          description?: string | null
           id?: string
-          needs?: string[] | null
-          owner_id?: string | null
-          title?: string
+          joined_at?: string
+          room_id?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "projects_owner_id_fkey"
-            columns: ["owner_id"]
+            foreignKeyName: "spark_room_members_room_id_fkey"
+            columns: ["room_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "spark_rooms"
             referencedColumns: ["id"]
           },
         ]
+      }
+      spark_rooms: {
+        Row: {
+          created_at: string
+          creator_id: string
+          description: string | null
+          id: string
+          is_public: boolean
+          name: string
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          name: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          name?: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_interactions: {
         Row: {
@@ -312,23 +447,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_notification: {
+        Args: {
+          p_message: string
+          p_related_id?: string
+          p_related_user_id?: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_matchmaking_candidates: {
         Args: { exclude_interacted?: boolean; limit_count?: number }
         Returns: {
           age: number
           bio: string
-          gender: string
           id: string
           interests: string[]
           location: string
-          looking_for: string[]
           match_score: number
           name: string
-          profile_pic_url: string
           role: string
           skills: string[]
-          stage: string
-          user_id: string
         }[]
       }
     }

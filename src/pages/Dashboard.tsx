@@ -23,6 +23,9 @@ interface Profile {
   location: string;
   age: number;
   match_score: number;
+  stage: string;
+  looking_for: string[];
+  profile_pic_url?: string;
 }
 interface Opportunity {
   id: string;

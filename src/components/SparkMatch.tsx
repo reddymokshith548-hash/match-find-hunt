@@ -85,8 +85,10 @@ export default function SparkMatch() {
   };
 
   const loadNextProfile = () => {
-    setCurrentIndex(prev => prev + 1);
-    setIsAnimating(false);
+    setTimeout(() => {
+      setCurrentIndex(prev => prev + 1);
+      setIsAnimating(false);
+    }, 100);
   };
 
   const handleSwipeLeft = async () => {
@@ -217,19 +219,21 @@ export default function SparkMatch() {
       <div className="relative h-[600px] mb-6">
         {/* Next card preview */}
         {currentIndex + 1 < profiles.length && (
-          <div className="absolute w-full h-full scale-95 opacity-50 blur-sm">
-            <div className="w-full h-full bg-card rounded-lg border-2" />
+          <div className="absolute inset-0 scale-95 opacity-50">
+            <div className="w-full h-full bg-card rounded-lg border-2 shadow-xl" />
           </div>
         )}
 
         {/* Current card */}
-        <div className="swipe-card-container">
-          <SwipeCard
-            profile={currentProfile}
-            onSwipeLeft={handleSwipeLeft}
-            onSwipeRight={handleSwipeRight}
-          />
-        </div>
+        {currentProfile && (
+          <div className="absolute inset-0 swipe-card-container" key={currentProfile.id}>
+            <SwipeCard
+              profile={currentProfile}
+              onSwipeLeft={handleSwipeLeft}
+              onSwipeRight={handleSwipeRight}
+            />
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}

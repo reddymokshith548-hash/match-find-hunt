@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { profileSchema, type ProfileFormData } from '@/lib/validationSchemas';
+import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 
 const SKILLS_OPTIONS = [
   'React', 'JavaScript', 'Python', 'Marketing', 'Design', 'Product Management',
@@ -188,13 +189,11 @@ export default function Onboarding() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="profile_pic">Profile Picture URL (Optional)</Label>
-                <Input
-                  id="profile_pic"
-                  value={formData.profile_pic_url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, profile_pic_url: e.target.value }))}
-                  placeholder="https://example.com/your-photo.jpg"
-                  className="hover-tilt"
+                <Label htmlFor="profile_pic">Profile Picture</Label>
+                <ProfilePictureUpload
+                  currentUrl={formData.profile_pic_url}
+                  onUploadComplete={(url) => setFormData(prev => ({ ...prev, profile_pic_url: url }))}
+                  userName={formData.name}
                 />
               </div>
             </div>

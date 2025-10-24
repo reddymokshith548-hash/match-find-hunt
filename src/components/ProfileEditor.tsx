@@ -74,22 +74,39 @@ export default function ProfileEditor({ open, onOpenChange, profile, onProfileUp
     setUploading(true);
 
     try {
-      // Create a preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      // Create unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('profile-pictures')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(fileName);
+
+      setPreviewUrl(publicUrl);
 
       toast({
-        title: "Image loaded",
+        title: "Image uploaded",
         description: "Click Save Changes to update your profile picture",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading image:', error);
       toast({
         title: "Upload failed",
-        description: "Failed to load image. Please try again.",
+        description: error.message || "Failed to upload image",
         variant: "destructive"
       });
     } finally {

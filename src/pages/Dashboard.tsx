@@ -13,6 +13,8 @@ import { useAuth } from '@/hooks/useAuth';
 import LiveMatchmaking from '@/components/LiveMatchmaking';
 import SparkMatch from '@/components/SparkMatch';
 import ProfileEditor from '@/components/ProfileEditor';
+import NotificationCenter from '@/components/NotificationCenter';
+import ConnectionRequests from '@/components/ConnectionRequests';
 interface Profile {
   id: string;
   name: string;
@@ -167,6 +169,7 @@ export default function Dashboard() {
           </div>
           
           <div className="flex items-center space-x-2">
+            <NotificationCenter />
             <Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>
               <Settings className="h-4 w-4 mr-2" />
               Settings
@@ -197,7 +200,7 @@ export default function Dashboard() {
             </TabsTrigger>
             <TabsTrigger value="opportunities" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Spark Rooms
+              Opportunities
             </TabsTrigger>
           </TabsList>
 
@@ -208,6 +211,7 @@ export default function Dashboard() {
 
           {/* Live AI Matchmaking */}
           <TabsContent value="matches" className="space-y-6">
+            <ConnectionRequests />
             <LiveMatchmaking />
           </TabsContent>
 
@@ -227,7 +231,12 @@ export default function Dashboard() {
 
           {/* Opportunities */}
           <TabsContent value="opportunities" className="space-y-6">
-            <h2 className="font-bold text-3xl text-[#29c6af]/0">Spark Rooms</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-3xl">Opportunities</h2>
+              <Button onClick={() => navigate('/spark-rooms')} variant="outline">
+                View All Spark Rooms
+              </Button>
+            </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {opportunities.map(opportunity => <Card key={opportunity.id} className="hover-3d">

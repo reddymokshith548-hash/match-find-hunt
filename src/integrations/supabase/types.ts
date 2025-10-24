@@ -466,10 +466,13 @@ export type Database = {
           id: string
           interests: string[]
           location: string
+          looking_for: string[]
           match_score: number
           name: string
+          profile_pic_url: string
           role: string
           skills: string[]
+          stage: string
         }[]
       }
     }

@@ -93,21 +93,6 @@ export default function Dashboard() {
       console.error('Error fetching matches:', error);
     }
   };
-  const fetchProjects = async () => {
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from('projects').select(`
-          *,
-          profiles(name, role, profile_pic_url)
-        `).limit(10);
-      if (error) throw error;
-      setProjects(data || []);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-    }
-  };
   const fetchOpportunities = async () => {
     try {
       const {

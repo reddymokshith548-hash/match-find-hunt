@@ -37,7 +37,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signOut = async () => {
+    // Clear all local state
+    setUser(null);
+    setSession(null);
+    
+    // Sign out from Supabase
     await supabase.auth.signOut();
+    
+    // Clear any cached data
+    localStorage.clear();
+    sessionStorage.clear();
   };
 
   return (

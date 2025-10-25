@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Heart, X, MapPin, Briefcase, Sparkles } from 'lucide-react';
+import SkillBadge from './SkillBadge';
 
 interface Profile {
   id: string;
@@ -226,9 +227,7 @@ export default function SwipeCard({ profile, onSwipeLeft, onSwipeRight, style }:
                 <h4 className="text-xs font-semibold text-muted-foreground mb-2">SKILLS</h4>
                 <div className="flex flex-wrap gap-1">
                   {profile.skills.slice(0, 5).map((skill, idx) => (
-                    <Badge key={idx} variant="outline" className="text-xs">
-                      {skill}
-                    </Badge>
+                    <SkillBadge key={idx} skill={skill} className="text-xs" />
                   ))}
                   {profile.skills.length > 5 && (
                     <Badge variant="outline" className="text-xs">

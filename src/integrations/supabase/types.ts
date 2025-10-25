@@ -18,22 +18,34 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          nda_signed_by_user1: boolean | null
+          nda_signed_by_user2: boolean | null
           status: string | null
+          user1_accepted_at: string | null
           user1_id: string | null
+          user2_accepted_at: string | null
           user2_id: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
+          nda_signed_by_user1?: boolean | null
+          nda_signed_by_user2?: boolean | null
           status?: string | null
+          user1_accepted_at?: string | null
           user1_id?: string | null
+          user2_accepted_at?: string | null
           user2_id?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
+          nda_signed_by_user1?: boolean | null
+          nda_signed_by_user2?: boolean | null
           status?: string | null
+          user1_accepted_at?: string | null
           user1_id?: string | null
+          user2_accepted_at?: string | null
           user2_id?: string | null
         }
         Relationships: [
@@ -355,6 +367,56 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      skill_categories: {
+        Row: {
+          color_code: string
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color_code: string
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color_code?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      skill_category_mapping: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          id: string
+          skill_name: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          skill_name: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          id?: string
+          skill_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_category_mapping_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "skill_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       spark_room_members: {
         Row: {

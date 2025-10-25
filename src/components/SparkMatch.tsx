@@ -120,28 +120,34 @@ export default function SparkMatch() {
       .single();
     
     if (profileData) {
-      // Create connection
+      // Create connection with pending status
       const { data: connection, error } = await supabase
         .from('connections')
         .insert({
           user1_id: user?.id,
           user2_id: profileData.user_id,
-          status: 'pending'
+          status: 'pending',
+          nda_signed_by_user1: false,
+          nda_signed_by_user2: false
         })
         .select()
         .single();
 
       if (!error && connection) {
-        // Open NDA modal
+        // CRITICAL: Show NDA BEFORE proceeding
         setPendingConnection({
           targetUserId: profileData.user_id,
           targetUserName: profile.name,
           connectionId: connection.id
         });
         setNdaModalOpen(true);
+        
+        // Don't load next profile yet - wait for NDA acceptance
+        return;
       }
     }
     
+    // Only load next profile if no NDA modal shown
     setTimeout(() => {
       loadNextProfile();
     }, 300);
@@ -268,15 +274,23 @@ export default function SparkMatch() {
       {pendingConnection && (
         <NDAModal
           open={ndaModalOpen}
-          onOpenChange={setNdaModalOpen}
+          onOpenChange={(open) => {
+            setNdaModalOpen(open);
+            if (!open) {
+              // User closed modal without accepting - load next profile
+              loadNextProfile();
+            }
+          }}
           targetUserId={pendingConnection.targetUserId}
           targetUserName={pendingConnection.targetUserName}
           connectionId={pendingConnection.connectionId}
           onAccept={() => {
             toast({
               title: "Connection initiated!",
-              description: `Waiting for ${pendingConnection.targetUserName} to sign the NDA`
+              description: `Waiting for ${pendingConnection.targetUserName} to sign the NDA and accept`
             });
+            // Now load next profile after NDA acceptance
+            loadNextProfile();
           }}
         />
       )}

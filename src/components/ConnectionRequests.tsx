@@ -7,6 +7,7 @@ import { Check, X, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
+import NDAModal from './NDAModal';
 
 interface ConnectionRequest {
   id: string;
@@ -26,6 +27,12 @@ export default function ConnectionRequests() {
   const { toast } = useToast();
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ndaModalOpen, setNdaModalOpen] = useState(false);
+  const [selectedConnection, setSelectedConnection] = useState<{
+    id: string;
+    userId: string;
+    userName: string;
+  } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -83,28 +90,79 @@ export default function ConnectionRequests() {
     };
   };
 
-  const handleRequest = async (connectionId: string, accept: boolean) => {
+  const handleAccept = async (request: ConnectionRequest) => {
+    // Check if user has already signed NDA for this connection
+    const { data: existingSignature } = await supabase
+      .from('nda_signatures')
+      .select('id')
+      .eq('connection_id', request.id)
+      .eq('user_id', user?.id)
+      .single();
+
+    if (existingSignature) {
+      // Already signed, just accept
+      await finalizeAccept(request.id);
+    } else {
+      // Show NDA modal first
+      setSelectedConnection({
+        id: request.id,
+        userId: request.user1_id,
+        userName: request.requester.name
+      });
+      setNdaModalOpen(true);
+    }
+  };
+
+  const finalizeAccept = async (connectionId: string) => {
     try {
+      // User2 is accepting, so mark their NDA as signed
       const { error } = await supabase
         .from('connections')
-        .update({ status: accept ? 'accepted' : 'rejected' })
+        .update({ 
+          status: 'accepted',
+          nda_signed_by_user2: true,
+          user2_accepted_at: new Date().toISOString()
+        })
         .eq('id', connectionId);
 
       if (error) throw error;
 
       toast({
-        title: accept ? 'Connection accepted!' : 'Connection rejected',
-        description: accept 
-          ? 'You can now message each other' 
-          : 'Connection request declined',
+        title: 'Connection accepted!',
+        description: 'You can now message each other',
       });
 
       setRequests(prev => prev.filter(r => r.id !== connectionId));
     } catch (error) {
-      console.error('Error handling request:', error);
+      console.error('Error accepting connection:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update connection',
+        description: 'Failed to accept connection',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleReject = async (connectionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('connections')
+        .update({ status: 'rejected' })
+        .eq('id', connectionId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Connection rejected',
+        description: 'Connection request declined',
+      });
+
+      setRequests(prev => prev.filter(r => r.id !== connectionId));
+    } catch (error) {
+      console.error('Error rejecting connection:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reject connection',
         variant: 'destructive',
       });
     }
@@ -171,14 +229,14 @@ export default function ConnectionRequests() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleRequest(request.id, false)}
+                onClick={() => handleReject(request.id)}
                 className="hover:bg-destructive/10"
               >
                 <X className="h-4 w-4" />
               </Button>
               <Button
                 size="sm"
-                onClick={() => handleRequest(request.id, true)}
+                onClick={() => handleAccept(request)}
                 className="bg-green-500 hover:bg-green-600"
               >
                 <Check className="h-4 w-4" />
@@ -187,6 +245,21 @@ export default function ConnectionRequests() {
           </div>
         ))}
       </CardContent>
+
+      {/* NDA Modal */}
+      {selectedConnection && (
+        <NDAModal
+          open={ndaModalOpen}
+          onOpenChange={setNdaModalOpen}
+          targetUserId={selectedConnection.userId}
+          targetUserName={selectedConnection.userName}
+          connectionId={selectedConnection.id}
+          onAccept={() => {
+            finalizeAccept(selectedConnection.id);
+            setSelectedConnection(null);
+          }}
+        />
+      )}
     </Card>
   );
 }

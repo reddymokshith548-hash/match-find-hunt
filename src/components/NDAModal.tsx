@@ -41,7 +41,7 @@ export default function NDAModal({
         .single();
 
       // Sign the NDA
-      const { error } = await supabase
+      const { error: ndaError } = await supabase
         .from('nda_signatures')
         .insert({
           user_id: user.id,
@@ -51,18 +51,30 @@ export default function NDAModal({
           profile_id: profile?.id || '',
         });
 
-      if (error) {
-        if (error.code === '23505') {
-          // Already signed
-          toast({
-            title: "Already signed",
-            description: "You have already signed this NDA"
-          });
-          onOpenChange(false);
-          onAccept();
-          return;
-        }
-        throw error;
+      if (ndaError && ndaError.code !== '23505') {
+        throw ndaError;
+      }
+
+      // Get connection details to determine which user we are
+      const { data: connection } = await supabase
+        .from('connections')
+        .select('user1_id, user2_id')
+        .eq('id', connectionId)
+        .single();
+
+      if (connection) {
+        const isUser1 = connection.user1_id === user.id;
+        const updateField = isUser1 ? 'nda_signed_by_user1' : 'nda_signed_by_user2';
+        const timestampField = isUser1 ? 'user1_accepted_at' : 'user2_accepted_at';
+
+        // Update connection with NDA signature
+        await supabase
+          .from('connections')
+          .update({ 
+            [updateField]: true,
+            [timestampField]: new Date().toISOString()
+          })
+          .eq('id', connectionId);
       }
 
       toast({

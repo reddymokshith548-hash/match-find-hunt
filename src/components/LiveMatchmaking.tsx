@@ -179,7 +179,7 @@ const WS_CLIENT_ID = profileId; // Use the fetched profileId for the path segmen
 
 // 1. Host: Re-introduce the explicit port :8000 for direct connection to Uvicorn
 // VERIFY THIS IP (192.168.29.199) is correct.
-const BACKEND_WS_HOST = "192.168.29.199:8000"; 
+const BACKEND_WS_HOST = "10.184.10.84:8000"; 
 
 // 2. Protocol: We keep the explicit 'ws' to avoid the HTTPS/WSS conflict
 const scheme = "ws"; 

@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Calendar, Users, Plus, Video, Search, Clock } from 'lucide-react';
+import { Calendar, Users, Plus, Video, Search, Clock, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import SparkRoomChat from '@/components/SparkRoomChat';
 
 interface SparkRoom {
   id: string;
@@ -36,6 +37,7 @@ export default function SparkRooms() {
     topic: '',
     is_public: true,
   });
+  const [selectedRoom, setSelectedRoom] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -331,22 +333,33 @@ export default function SparkRooms() {
                   </div>
                 </div>
 
-                {room.is_member ? (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => leaveRoom(room.id)}
-                  >
-                    Leave Room
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full"
-                    onClick={() => joinRoom(room.id)}
-                  >
-                    Join Room
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {room.is_member ? (
+                    <>
+                      <Button
+                        variant="default"
+                        className="flex-1"
+                        onClick={() => setSelectedRoom({ id: room.id, name: room.name })}
+                      >
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Chat
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => leaveRoom(room.id)}
+                      >
+                        Leave
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      onClick={() => joinRoom(room.id)}
+                    >
+                      Join Room
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -361,6 +374,19 @@ export default function SparkRooms() {
           </div>
         )}
       </div>
+
+      {/* Chat Dialog */}
+      {selectedRoom && (
+        <Dialog open={!!selectedRoom} onOpenChange={() => setSelectedRoom(null)}>
+          <DialogContent className="max-w-2xl h-[700px] p-0">
+            <SparkRoomChat
+              roomId={selectedRoom.id}
+              roomName={selectedRoom.name}
+              onClose={() => setSelectedRoom(null)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

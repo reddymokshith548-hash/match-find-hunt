@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, AlertCircle } from "lucide-react";
 import { ProfileHoverCard } from "@/components/ProfileHoverCard";
+import { createConnectionRequest, recordPass } from "@/lib/connectionHelpers";
 
 interface MatchProfile {
   id: string;
@@ -82,7 +83,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       bio: "Passionate about building consumer apps. Looking for a business-minded co-founder.",
       location: "San Francisco, CA",
       experience: "5+ years",
-      profile_pic_url: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
+      profile_pic_url: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
       role: "Full-Stack Developer & Product Designer",
     },
     {
@@ -96,7 +97,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       bio: "Experienced in scaling B2B SaaS companies. Seeking a technical co-founder.",
       location: "New York, NY",
       experience: "8+ years",
-      profile_pic_url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
+      profile_pic_url: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
       role: "Business Development & Marketing Expert",
     },
   ];
@@ -268,13 +269,46 @@ ws.onopen = () => {
     return () => clearInterval(interval);
   }, [loading]);
 
-  // 7️⃣ Handle actions (remains the same)
-  const handleConnect = (id: string) => {
-    toast({ title: "Connection sent!", description: "We'll notify you when they respond." });
-    removeMatch(id, "right");
+  // 7️⃣ Handle actions
+  const handleConnect = async (targetProfileId: string) => {
+    if (!profileId || !user) {
+      toast({
+        title: "Error",
+        description: "Please log in to send connection requests",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const result = await createConnectionRequest(profileId, targetProfileId);
+
+    if (result.success) {
+      toast({
+        title: "Connection sent!",
+        description: "We'll notify you when they respond."
+      });
+      removeMatch(targetProfileId, "right");
+    } else if (result.alreadyExists) {
+      toast({
+        title: "Already connected",
+        description: "You've already sent a connection request to this person",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to send connection request",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handlePass = (id: string) => removeMatch(id, "left");
+  const handlePass = async (targetProfileId: string) => {
+    if (user) {
+      await recordPass(user.id, targetProfileId);
+    }
+    removeMatch(targetProfileId, "left");
+  };
 
   const removeMatch = (id: string, direction: "left" | "right") => {
     const el = cardRefs.current[id];
@@ -343,7 +377,7 @@ ws.onopen = () => {
                     </div>
                     {/* Profile Image */}
                     <div className="relative h-48 overflow-hidden">
-                      <img src={profile.profile_pic_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face"} alt={profile.name} className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105" />
+                      <img src={profile.profile_pic_url || "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop"} alt={profile.name} className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-40 transition-opacity duration-300" />
                       <Sparkles className="absolute top-2 left-2 w-4 h-4 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>

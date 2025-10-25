@@ -72,7 +72,7 @@ const MatchPreview = () => {
       compatibility: 94,
       skills: ["React", "Python", "UI/UX", "Product Strategy"],
       bio: "Passionate about building consumer apps that solve real problems. Looking for a business-minded co-founder to launch a healthtech startup.",
-      image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
+      image: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
     },
     {
       id: 2,
@@ -83,7 +83,7 @@ const MatchPreview = () => {
       compatibility: 89,
       skills: ["Growth Marketing", "Sales", "Business Strategy", "Fundraising"],
       bio: "Experienced in scaling B2B SaaS companies. Seeking a technical co-founder to build the next generation of productivity tools.",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
+      image: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop",
     },
   ];
 

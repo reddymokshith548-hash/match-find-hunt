@@ -155,12 +155,9 @@ export default function Dashboard() {
       <header className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold gradient-text">FindBaee</h1>
+            <h1 className="text-2xl gradient-text font-bold text-[#59b0bf]">Lexach</h1>
             <div className="hidden md:flex items-center space-x-2">
-              <Avatar 
-                className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                onClick={() => setProfileEditorOpen(true)}
-              >
+              <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all" onClick={() => setProfileEditorOpen(true)}>
                 <AvatarImage src={profile?.profile_pic_url} />
                 <AvatarFallback>{profile?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
@@ -268,13 +265,6 @@ export default function Dashboard() {
       </div>
 
       {/* Profile Editor Dialog */}
-      {profile && (
-        <ProfileEditor
-          open={profileEditorOpen}
-          onOpenChange={setProfileEditorOpen}
-          profile={profile}
-          onProfileUpdate={fetchUserProfile}
-        />
-      )}
+      {profile && <ProfileEditor open={profileEditorOpen} onOpenChange={setProfileEditorOpen} profile={profile} onProfileUpdate={fetchUserProfile} />}
     </div>;
 }

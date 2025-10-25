@@ -71,7 +71,7 @@ const Footer = () => {
     href: "https://www.instagram.com/____thechaoscrew?igsh=MWQzNTA2eTV0NHFxNA==",
     label: "Instagram"
   }];
-  return <footer className="bg-foreground text-background">
+  return <footer className="text-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
           {/* Brand */}
@@ -102,7 +102,7 @@ const Footer = () => {
 
         <div className="border-t border-background/20 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-background/60 text-sm">
-            © 2024 FindBaee. All rights reserved.
+            © 2024 Lexach. All rights reserved.
           </p>
           <p className="text-background/60 text-sm flex items-center gap-1 mt-4 md:mt-0">
             Made with <Heart className="w-4 h-4 text-red-400 fill-current" /> for entrepreneurs

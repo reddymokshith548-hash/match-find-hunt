@@ -16,7 +16,7 @@ const Footer = () => {
     }],
     Company: [{
       name: "About Us",
-      href: "#"
+      href: "https://preview--match-find-hunt.lovable.app/about"
     }, {
       name: "Careers",
       href: "#"
@@ -77,7 +77,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="col-span-2">
             <h3 className="text-2xl font-bold mb-4">
-              Find<span className="text-secondary">Baee</span>
+              Lexach<span className="text-secondary"></span>
             </h3>
             <p className="text-background/70 mb-6 leading-relaxed">Connecting entrepreneurs with their perfect co ❤️ founders. Build something amazing together.</p>
             <div className="flex gap-4">

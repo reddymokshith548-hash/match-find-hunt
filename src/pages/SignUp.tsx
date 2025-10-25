@@ -197,9 +197,7 @@ const SignUp = () => {
           <div className="text-center pt-4 border-t border-border/20">
             <p className="text-xs text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/login" className="text-accent hover:text-accent/80 underline font-medium transition-colors">
-                sign in
-              </Link>
+              <Link to="/login" className="text-accent hover:text-accent/80 underline font-medium transition-colors">Sign in</Link>
             </p>
           </div>
         </CardContent>

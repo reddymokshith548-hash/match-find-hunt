@@ -39,11 +39,18 @@ export default function SparkRoomChat({ roomId, roomName, onClose }: SparkRoomCh
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (user) {
-      fetchProfile();
-      fetchMessages();
-      subscribeToMessages();
-    }
+    if (!user) return;
+
+    fetchProfile();
+    fetchMessages();
+
+    const cleanup = subscribeToMessages();
+
+    // Clean up subscription on unmount or when roomId changes
+    return () => {
+      if (cleanup) cleanup();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, roomId]);
 
   useEffect(() => {
@@ -53,18 +60,22 @@ export default function SparkRoomChat({ roomId, roomName, onClose }: SparkRoomCh
   const fetchProfile = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
 
-    if (error) {
-      console.error('Error fetching profile:', error);
-      return;
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      setProfileId((data as any)?.id || null);
+    } catch (err) {
+      console.error('Unexpected error fetching profile:', err);
     }
-
-    setProfileId(data?.id || null);
   };
 
   const fetchMessages = async () => {
@@ -80,7 +91,10 @@ export default function SparkRoomChat({ roomId, roomName, onClose }: SparkRoomCh
         .eq('room_id', roomId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching messages:', error);
+        throw error;
+      }
 
       setMessages((data as any) || []);
     } catch (error) {
@@ -96,37 +110,63 @@ export default function SparkRoomChat({ roomId, roomName, onClose }: SparkRoomCh
   };
 
   const subscribeToMessages = () => {
-    const channel = supabase
-      .channel(`room-${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'spark_room_messages',
-          filter: `room_id=eq.${roomId}`,
-        },
-        async (payload) => {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('id, name, profile_pic_url')
-            .eq('id', payload.new.profile_id)
-            .single();
+    if (!roomId) return () => {};
+
+    // Build channel correctly so we can remove it later
+    const channel = supabase.channel(`room-${roomId}`);
+
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'spark_room_messages',
+        filter: `room_id=eq.${roomId}`,
+      },
+      async (payload) => {
+        try {
+          // payload.new.profile_id could be null or not set depending on insert logic
+          const profileIdFromPayload = payload.new.profile_id;
+
+          let profileData = null;
+          if (profileIdFromPayload) {
+            const { data: profileRes } = await supabase
+              .from('profiles')
+              .select('id, name, profile_pic_url')
+              .eq('id', profileIdFromPayload)
+              .single();
+
+            profileData = profileRes;
+          }
 
           const newMsg = {
             id: payload.new.id,
             message: payload.new.message,
             created_at: payload.new.created_at,
-            profile: profileData || { id: '', name: 'Unknown', profile_pic_url: null },
+            profile:
+              profileData || { id: '', name: 'Unknown', profile_pic_url: null },
           };
 
           setMessages((prev) => [...prev, newMsg]);
+        } catch (err) {
+          console.error('Error handling realtime payload:', err, payload);
         }
-      )
-      .subscribe();
+      }
+    );
 
+    channel.subscribe((status) => {
+      // helpful debug output to see if subscription fails or is rejected
+      console.debug('Supabase realtime channel status for', roomId, status);
+    });
+
+    // Return cleanup function that removes the channel correctly
     return () => {
-      supabase.removeChannel(channel);
+      try {
+        supabase.removeChannel(channel);
+        console.debug('Removed supabase channel for room', roomId);
+      } catch (err) {
+        console.error('Error removing supabase channel:', err);
+      }
     };
   };
 
@@ -137,7 +177,17 @@ export default function SparkRoomChat({ roomId, roomName, onClose }: SparkRoomCh
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newMessage.trim() || !user || !profileId) return;
+    if (!newMessage.trim() || !user || !profileId) {
+      if (!profileId) {
+        console.warn('You do not have a profileId; cannot send message.');
+        toast({
+          title: 'Error',
+          description: 'Your profile is not set up. Please complete your profile before sending messages.',
+          variant: 'destructive',
+        });
+      }
+      return;
+    }
 
     setSending(true);
 

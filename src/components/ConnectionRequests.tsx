@@ -15,6 +15,8 @@ interface ConnectionRequest {
   user2_id: string;
   status: string;
   created_at: string;
+  nda_signed_by_user1: boolean;
+  nda_signed_by_user2: boolean;
   requester: {
     name: string;
     role: string;
@@ -53,6 +55,8 @@ export default function ConnectionRequests() {
           user2_id,
           status,
           created_at,
+          nda_signed_by_user1,
+          nda_signed_by_user2,
           requester:profiles!connections_user1_id_fkey(name, role, profile_pic_url)
         `)
         .eq('user2_id', user.id)
@@ -91,19 +95,22 @@ export default function ConnectionRequests() {
   };
 
   const handleAccept = async (request: ConnectionRequest) => {
-    // Check if user has already signed NDA for this connection
-    const { data: existingSignature } = await supabase
-      .from('nda_signatures')
-      .select('id')
-      .eq('connection_id', request.id)
-      .eq('user_id', user?.id)
-      .single();
+    // 1. Check if the INITIATOR (user1) has signed their part of the NDA
+    if (!request.nda_signed_by_user1) {
+      toast({
+        title: "Wait!",
+        description: `${request.requester.name} has not signed their part of the NDA yet.`,
+        variant: "default",
+      });
+      return;
+    }
 
-    if (existingSignature) {
-      // Already signed, just accept
+    // 2. Check if the RECEIVER (current user, user2) has signed their part
+    if (request.nda_signed_by_user2) {
+      // Already signed by user2, just finalize
       await finalizeAccept(request.id);
     } else {
-      // Show NDA modal first
+      // User2 needs to sign NDA, show the modal
       setSelectedConnection({
         id: request.id,
         userId: request.user1_id,
@@ -115,10 +122,10 @@ export default function ConnectionRequests() {
 
   const finalizeAccept = async (connectionId: string) => {
     try {
-      // User2 is accepting, so mark their NDA as signed
+      // User2 is accepting, mark their NDA as signed
       const { error } = await supabase
         .from('connections')
-        .update({ 
+        .update({
           status: 'accepted',
           nda_signed_by_user2: true,
           user2_accepted_at: new Date().toISOString()

@@ -7,17 +7,17 @@ export interface ConnectionResult {
   alreadyExists?: boolean;
 }
 
-// 🎯 NEW HELPER: Safely get user_id (auth.users.id) from a profile_id (public.profiles.id)
-async function getUserIdFromProfileId(profileId: string): Promise<string | null> {
-    // Note: The input parameters for recordPass in LiveMatchmaking.tsx need to be checked.
-    // Assuming LiveMatchmaking calls recordPass(user.id, targetProfileId) where user.id is the User ID
-    // and targetProfileId is the Profile ID.
+async function recordInteractionRpc(fromProfileId: string, toProfileId: string, type: 'like' | 'pass') {
+  const { error } = await supabase.rpc('record_interaction', {
+    p_from_profile_id: fromProfileId,
+    p_to_profile_id: toProfileId,
+    p_interaction_type: type,
+  });
 
-    // If the input is already a User ID, this function will try to look it up in profiles, which is incorrect.
-    // For safety and correctness, we rely on the logic below where all necessary profile data is fetched.
-    
-    // For createConnectionRequest, both are Profile IDs, so the existing fetch logic is integrated directly.
-    return null; // This helper is no longer needed as the full profile fetch is integrated below.
+  if (error) {
+    console.error('RPC Error recording interaction:', error.message);
+    throw new Error(`Failed to record interaction: ${error.message}`);
+  }
 }
 
 export async function createConnectionRequest(
@@ -59,50 +59,37 @@ export async function createConnectionRequest(
 
     if (createError) throw createError;
 
-    // 3. 🎯 CRITICAL FIX: Fetch BOTH User ID and Profile Name for notifications/interactions
-    const { data: fromProfile, error: fromProfileError } = await supabase
+    // 3. Fetch Profile Data for Notification
+    const { data: fromProfile } = await supabase
       .from('profiles')
       .select('name, user_id')
       .eq('id', fromProfileId)
       .single();
-      
-    const { data: toProfile, error: toProfileError } = await supabase
+
+    const { data: toProfile } = await supabase
       .from('profiles')
-      .select('name, user_id')
+      .select('user_id')
       .eq('id', toProfileId)
       .single();
 
-    if (fromProfileError || toProfileError) {
-        // Log the error but proceed with interaction record if profiles exist
-        console.error('Error fetching profile data for notification/interaction:', fromProfileError || toProfileError);
-    }
-
-    // 4. Notification Logic (Uses toProfile?.user_id)
+    // 4. Notification Logic
     if (toProfile?.user_id) {
       await supabase.from('notifications').insert({
-        user_id: toProfile.user_id, // Correct: Auth User ID
+        user_id: toProfile.user_id,
         type: 'connection_request',
         title: 'New Connection Request',
         message: `${fromProfile?.name || 'Someone'} wants to connect with you!`,
-        related_user_id: fromProfile?.user_id || null, // Correct: Auth User ID
+        related_user_id: fromProfile?.user_id || null,
         related_id: newConnection.id,
         is_read: false,
       });
     }
 
-    // 5. 🎯 CRITICAL FIX: Record Interaction using the fetched AUTH User IDs
-    // This was the source of the "Unknown error" (likely a foreign key violation)
-    const { error: interactionError } = await supabase
-      .from('user_interactions')
-      .insert({
-        user_id: fromProfile?.user_id || null,      // Corrected to use AUTH User ID
-        target_user_id: toProfile?.user_id || null, // Corrected to use AUTH User ID
-        interaction_type: 'like',
-      });
-
-    if (interactionError) {
+    // 5. Use RPC to record the 'like' interaction
+    try {
+      await recordInteractionRpc(fromProfileId, toProfileId, 'like');
+    } catch (interactionError) {
       console.error('Error recording interaction:', interactionError);
-      // We don't throw, as the connection request itself was successful
     }
 
     return {
@@ -118,31 +105,22 @@ export async function createConnectionRequest(
   }
 }
 
-// NOTE: We assume LiveMatchmaking.tsx calls this as recordPass(user.id, targetProfileId)
-// where user.id is the AUTH User ID and targetProfileId is the Profile ID.
 export async function recordPass(fromUserId: string, toProfileId: string): Promise<void> {
   try {
-    // The 'from' ID (fromUserId) is assumed to be the AUTH User ID (from user.id).
-    // The 'to' ID (toProfileId) is the Profile ID, so we must fetch the corresponding AUTH User ID.
-    
-    // 🎯 CRITICAL FIX: Fetch the target AUTH User ID
-    const { data: toProfile, error: toProfileError } = await supabase
+    // 1. Fetch the Profile ID of the initiating user from their AUTH User ID
+    const { data: fromProfile } = await supabase
       .from('profiles')
-      .select('user_id')
-      .eq('id', toProfileId)
-      .maybeSingle();
+      .select('id')
+      .eq('user_id', fromUserId)
+      .single();
 
-    if (toProfileError || !toProfile?.user_id) {
-        console.error('Cannot record pass: Target profile user ID not found or error occurred.', toProfileError);
-        return;
+    if (!fromProfile?.id) {
+      console.error('Cannot record pass: Initiating profile not found for user ID.', fromUserId);
+      return;
     }
 
-    // Insert using the correct AUTH User IDs
-    await supabase.from('user_interactions').insert({
-      user_id: fromUserId,             // This is the correct AUTH User ID
-      target_user_id: toProfile.user_id, // Corrected to use the fetched AUTH User ID
-      interaction_type: 'pass',
-    });
+    // 2. Use RPC to record the 'pass' interaction
+    await recordInteractionRpc(fromProfile.id, toProfileId, 'pass');
   } catch (error) {
     console.error('Error recording pass:', error);
   }

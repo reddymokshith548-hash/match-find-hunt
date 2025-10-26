@@ -295,4 +295,137 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       toast({
         title: "Error",
         description: result.error || "Failed to send connection request",
-        variant:
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handlePass = async (targetProfileId: string) => {
+    if (user) {
+      await recordPass(user.id, targetProfileId);
+    }
+    removeMatch(targetProfileId, "left");
+  };
+
+  const removeMatch = (id: string, direction: "left" | "right") => {
+    const el = cardRefs.current[id];
+    if (el) {
+      el.style.transform = direction === "right" ? "scale(0.8) translateX(100px)" : "scale(0.8) translateX(-100px)";
+      el.style.opacity = "0";
+      setTimeout(() => setMatches((prev) => prev.filter((m) => m.id !== id)), 300);
+    }
+  };
+
+  const handleViewProfile = (id: string) => {
+    window.location.href = `/profile/${id}`;
+  };
+
+  const handleRefresh = () => fetchMatches();
+
+  // 8️⃣ Render UI - UPDATED SKILL BADGES
+  return (
+    <section className={`py-12 ${className}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header (omitted for brevity, remains the same) */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">Live <span className="gradient-text">AI Matches</span></h2>
+            <p className="text-muted-foreground">Real-time AI-powered co-founder recommendations</p>
+          </div>
+          <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm">
+            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            Refresh
+          </Button>
+        </div>
+
+        {/* Error/Loading/Empty States (omitted for brevity, remains the same) */}
+        {error && <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-destructive" />
+          <span className="text-sm text-destructive">{error}</span>
+        </div>}
+
+        {loading && matches.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />
+            <p className="text-muted-foreground">Finding your perfect matches...</p>
+          </div>
+        )}
+
+        {!loading && matches.length === 0 && !error && (
+          <div className="text-center py-12">
+            <Sparkles className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No matches found</h3>
+            <p className="text-muted-foreground mb-4">Complete your profile to get better AI recommendations</p>
+            <Button onClick={handleRefresh} variant="hero">Try Again</Button>
+          </div>
+        )}
+
+        {matches.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {matches.map((profile, index) => (
+              <div key={profile.id} ref={el => (cardRefs.current[profile.id] = el)} className="relative" style={{ animationDelay: `${index * 0.1}s` }}>
+                <ProfileHoverCard profile={profile} side="top">
+                  <Card variant="match" className="overflow-hidden group relative transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-2 hover:shadow-xl">
+                    {/* ... Image and Header content remains the same ... */}
+                    <div className="absolute top-4 right-4 z-10">
+                      <Badge className="bg-primary text-primary-foreground font-semibold animate-pulse">
+                        {profile.match_score}% Match
+                      </Badge>
+                    </div>
+                    <div className="relative h-48 overflow-hidden">
+                      <img src={profile.profile_pic_url || "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop"} alt={profile.name} className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-40 transition-opacity duration-300" />
+                      <Sparkles className="absolute top-2 left-2 w-4 h-4 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                    </div>
+                    <CardHeader className="pb-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-semibold mb-1 group-hover:gradient-text transition-all duration-300">{profile.name}</h3>
+                          <p className="text-muted-foreground text-sm mb-2">{profile.role || profile.type}</p>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {profile.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" />{profile.location}</div>}
+                            {profile.experience && <div className="flex items-center gap-1"><Briefcase className="w-4 h-4" />{profile.experience}</div>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-secondary">
+                          <Star className="w-4 h-4 fill-current" />
+                          <span className="text-sm font-medium">4.9</span>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="pt-0 space-y-4">
+                      {profile.bio && <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">{profile.bio.length > 120 ? `${profile.bio.substring(0, 120)}...` : profile.bio}</p>}
+                      <div className="flex flex-wrap gap-2">
+                        {/* 💡 UPDATED: Apply color class using getSkillColorClass */}
+                        {profile.skills.slice(0, 3).map((skill, i) => (
+                          <Badge 
+                            key={i} 
+                            // Use the color class helper here
+                            className={`text-xs ${getSkillColorClass(skill)} transition-all duration-300 border-none`} 
+                          >
+                            {skill}
+                          </Badge>
+                        ))}
+                        {profile.skills.length > 3 && <Badge variant="outline" className="text-xs">+{profile.skills.length - 3}</Badge>}
+                      </div>
+                    </CardContent>
+
+                    <div className="p-4 flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1 hover:border-destructive hover:text-destructive transition-all duration-300" onClick={() => handlePass(profile.id)}><X className="w-4 h-4 mr-2" />Pass</Button>
+                      <Button variant="outline" size="sm" onClick={() => handleViewProfile(profile.id)}><Eye className="w-4 h-4" /></Button>
+                      <Button variant="hero" size="sm" className="flex-1" onClick={() => handleConnect(profile.id)}><Heart className="w-4 h-4 mr-2" />Connect</Button>
+                    </div>
+                  </Card>
+                </ProfileHoverCard>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+export default LiveMatchmaking;

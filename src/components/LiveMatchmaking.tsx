@@ -9,6 +9,39 @@ import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, A
 import { ProfileHoverCard } from "@/components/ProfileHoverCard";
 import { createConnectionRequest, recordPass } from "@/lib/connectionHelpers";
 
+// 1. 🎨 New Skill Color Utility Function
+const getSkillColorClass = (skill: string) => {
+  const lowerSkill = skill.toLowerCase();
+  
+  // Tech/Coding (Green)
+  if (lowerSkill.includes('react') || lowerSkill.includes('python') || lowerSkill.includes('javascript') || lowerSkill.includes('code') || lowerSkill.includes('software')) {
+    return 'bg-green-600 hover:bg-green-700 text-white';
+  }
+  // Marketing/Sales (Blue)
+  if (lowerSkill.includes('marketing') || lowerSkill.includes('sales') || lowerSkill.includes('growth')) {
+    return 'bg-blue-600 hover:bg-blue-700 text-white';
+  }
+  // Product/Strategy (Indigo)
+  if (lowerSkill.includes('product') || lowerSkill.includes('strategy') || lowerSkill.includes('business')) {
+    return 'bg-indigo-600 hover:bg-indigo-700 text-white';
+  }
+  // Design (Pink)
+  if (lowerSkill.includes('design') || lowerSkill.includes('ui/ux') || lowerSkill.includes('figma')) {
+    return 'bg-pink-600 hover:bg-pink-700 text-white';
+  }
+  // DevOps/Cloud (Yellow/Amber)
+  if (lowerSkill.includes('devops') || lowerSkill.includes('cloud') || lowerSkill.includes('aws') || lowerSkill.includes('azure')) {
+    return 'bg-amber-600 hover:bg-amber-700 text-white';
+  }
+  // Finance/Fundraising (Purple)
+  if (lowerSkill.includes('finance') || lowerSkill.includes('investor') || lowerSkill.includes('fundraising')) {
+    return 'bg-purple-600 hover:bg-purple-700 text-white';
+  }
+  
+  // Default
+  return 'bg-gray-500 hover:bg-gray-600 text-white'; 
+};
+
 interface MatchProfile {
   id: string;
   name: string;
@@ -36,17 +69,11 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [error, setError] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   
-  // ✅ CORRECTION 1: Merge the duplicate API secret declarations.
-  // We use the hardcoded secret found in utils.py for debugging.
   const [apiSecret, setApiSecret] = useState<string | null>("supersecret_api_token_for_frontend_to_call_ws");
 
   const wsRef = useRef<WebSocket | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-
-  // 🛑 CORRECTION 2: The entire broken useEffect (Step 0) has been removed.
-  // The logic is now handled by the initial state declaration above.
-
 
   // 1️⃣ Fetch logged-in user's profile ID from Supabase
   useEffect(() => {
@@ -78,7 +105,8 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       type: "Co-Founder",
       age: 28,
       interests: ["AI", "Healthcare", "Sustainability"],
-      skills: ["React", "Python", "UI/UX", "Product Strategy"],
+      // 💡 Added more diverse skills for testing color-coding
+      skills: ["React", "Python", "UI/UX", "Product Strategy", "Fundraising"], 
       match_score: 94,
       bio: "Passionate about building consumer apps. Looking for a business-minded co-founder.",
       location: "San Francisco, CA",
@@ -92,7 +120,8 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       type: "Business Partner",
       age: 32,
       interests: ["Fintech", "B2B SaaS", "Growth"],
-      skills: ["Growth Marketing", "Sales", "Business Strategy", "Fundraising"],
+      // 💡 Added more diverse skills for testing color-coding
+      skills: ["Growth Marketing", "Sales", "Business Strategy", "DevOps"],
       match_score: 89,
       bio: "Experienced in scaling B2B SaaS companies. Seeking a technical co-founder.",
       location: "New York, NY",
@@ -163,61 +192,32 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     });
   };
 
-  // 4️⃣ WebSocket for live updates - UPDATED to use apiSecret state
+  // 4️⃣ WebSocket for live updates - UPDATED
   const setupWebSocket = () => {
-    // Only proceed if both profileId and apiSecret are available
     if (!profileId || !apiSecret) {
-        console.log("WebSocket setup deferred: Missing profileId or API secret.");
-        return;
+      console.log("WebSocket setup deferred: Missing profileId or API secret.");
+      return;
     }
 
     try {
-      // NEW (Uses the fetched profileId, which is what your match endpoint expects)
-// We already know profileId is non-null because of the parent useEffect check.
-const WS_CLIENT_ID = profileId; // Use the fetched profileId for the path segment.
+      const WS_CLIENT_ID = profileId;
+      const BACKEND_WS_HOST = "10.184.10.84:8000"; 
+      const scheme = "ws"; 
+
+      const wsUrl = `${scheme}://${BACKEND_WS_HOST}/ws/${WS_CLIENT_ID}?api_secret=${apiSecret}`;
+
+      console.log(`[WS] Final connection URL (Direct Uvicorn): ${wsUrl}`);
       
-     // LiveMatchmaking.tsx
-
-// 1. Host: Re-introduce the explicit port :8000 for direct connection to Uvicorn
-// VERIFY THIS IP (192.168.29.199) is correct.
-const BACKEND_WS_HOST = "10.184.10.84:8000"; 
-
-// 2. Protocol: We keep the explicit 'ws' to avoid the HTTPS/WSS conflict
-const scheme = "ws"; 
-
-
-
-// ... inside the setupWebSocket function ...
-
-if (!profileId || !apiSecret) {
-    console.log("WebSocket setup deferred: Missing profileId or API secret.");
-    return;
-}
-
-// 4. CRITICAL: The URL MUST include the api_secret as a query parameter
-// NEW URL:
-const wsUrl = `${scheme}://${BACKEND_WS_HOST}/ws/${WS_CLIENT_ID}?api_secret=${apiSecret}`;
-
-console.log(`[WS] Final connection URL (Direct Uvicorn): ${wsUrl}`);
-// ... rest of the function ...
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
-// LiveMatchmaking.tsx - inside setupWebSocket -> ws.onopen
 
-ws.onopen = () => {
-    console.log("WebSocket connected");
-    
-    // 🚩 FIX: Change the key from 'api_secret' back to 'token'
-    ws.send(JSON.stringify({ 
-        type: "auth", 
-        token: apiSecret 
-    })); 
-    
-    // Add the subscribe message back (with a slight delay to be safe)
-    setTimeout(() => {
-        ws.send(JSON.stringify({ type: "subscribe", profile_id: profileId }));
-    }, 100); 
-};
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+        ws.send(JSON.stringify({ type: "auth", token: apiSecret }));
+        setTimeout(() => {
+          ws.send(JSON.stringify({ type: "subscribe", profile_id: profileId }));
+        }, 100);
+      };
 
       ws.onmessage = (event) => {
         try {
@@ -244,22 +244,19 @@ ws.onopen = () => {
 
   // 5️⃣ Component init - UPDATED dependency array
   useEffect(() => {
-    // Fetch initial matches once profileId is known
     if (profileId) {
       fetchMatches();
     }
     
-    // Set up WebSocket once both profileId and apiSecret are ready
     if (profileId && apiSecret) {
         setupWebSocket();
     }
 
-    // Cleanup function
     return () => {
       if (wsRef.current) wsRef.current.close();
       if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     };
-  }, [profileId, apiSecret]); // Trigger on changes to profileId OR apiSecret
+  }, [profileId, apiSecret]);
 
   // 6️⃣ Auto-refresh every 5 minutes (remains the same)
   useEffect(() => {
@@ -269,7 +266,7 @@ ws.onopen = () => {
     return () => clearInterval(interval);
   }, [loading]);
 
-  // 7️⃣ Handle actions
+  // 7️⃣ Handle actions (remains the same)
   const handleConnect = async (targetProfileId: string) => {
     if (!profileId || !user) {
       toast({
@@ -298,130 +295,4 @@ ws.onopen = () => {
       toast({
         title: "Error",
         description: result.error || "Failed to send connection request",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handlePass = async (targetProfileId: string) => {
-    if (user) {
-      await recordPass(user.id, targetProfileId);
-    }
-    removeMatch(targetProfileId, "left");
-  };
-
-  const removeMatch = (id: string, direction: "left" | "right") => {
-    const el = cardRefs.current[id];
-    if (el) {
-      el.style.transform = direction === "right" ? "scale(0.8) translateX(100px)" : "scale(0.8) translateX(-100px)";
-      el.style.opacity = "0";
-      setTimeout(() => setMatches((prev) => prev.filter((m) => m.id !== id)), 300);
-    }
-  };
-
-  const handleViewProfile = (id: string) => {
-    window.location.href = `/profile/${id}`;
-  };
-
-  const handleRefresh = () => fetchMatches();
-
-  // 8️⃣ Render UI (remains the same)
-  return (
-    <section className={`py-12 ${className}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Live <span className="gradient-text">AI Matches</span></h2>
-            <p className="text-muted-foreground">Real-time AI-powered co-founder recommendations</p>
-          </div>
-          <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm">
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            Refresh
-          </Button>
-        </div>
-
-        {/* The error message you were seeing is now driven by the actual error state */}
-        {error && <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-destructive" />
-          <span className="text-sm text-destructive">{error}</span>
-        </div>}
-
-        {loading && matches.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />
-            <p className="text-muted-foreground">Finding your perfect matches...</p>
-          </div>
-        )}
-
-        {!loading && matches.length === 0 && !error && (
-          <div className="text-center py-12">
-            <Sparkles className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No matches found</h3>
-            <p className="text-muted-foreground mb-4">Complete your profile to get better AI recommendations</p>
-            <Button onClick={handleRefresh} variant="hero">Try Again</Button>
-          </div>
-        )}
-
-        {matches.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {matches.map((profile, index) => (
-              <div key={profile.id} ref={el => (cardRefs.current[profile.id] = el)} className="relative" style={{ animationDelay: `${index * 0.1}s` }}>
-                <ProfileHoverCard profile={profile} side="top">
-                  <Card variant="match" className="overflow-hidden group relative transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-2 hover:shadow-xl">
-                    {/* Badge */}
-                    <div className="absolute top-4 right-4 z-10">
-                      <Badge className="bg-primary text-primary-foreground font-semibold animate-pulse">
-                        {profile.match_score}% Match
-                      </Badge>
-                    </div>
-                    {/* Profile Image */}
-                    <div className="relative h-48 overflow-hidden">
-                      <img src={profile.profile_pic_url || "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop"} alt={profile.name} className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-40 transition-opacity duration-300" />
-                      <Sparkles className="absolute top-2 left-2 w-4 h-4 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                    </div>
-
-                    <CardHeader className="pb-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold mb-1 group-hover:gradient-text transition-all duration-300">{profile.name}</h3>
-                          <p className="text-muted-foreground text-sm mb-2">{profile.role || profile.type}</p>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            {profile.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" />{profile.location}</div>}
-                            {profile.experience && <div className="flex items-center gap-1"><Briefcase className="w-4 h-4" />{profile.experience}</div>}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 text-secondary">
-                          <Star className="w-4 h-4 fill-current" />
-                          <span className="text-sm font-medium">4.9</span>
-                        </div>
-                      </div>
-                    </CardHeader>
-
-                    <CardContent className="pt-0 space-y-4">
-                      {profile.bio && <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">{profile.bio.length > 120 ? `${profile.bio.substring(0, 120)}...` : profile.bio}</p>}
-                      <div className="flex flex-wrap gap-2">
-                        {profile.skills.slice(0, 3).map((skill, i) => <Badge key={i} variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground transition-all duration-300">{skill}</Badge>)}
-                        {profile.skills.length > 3 && <Badge variant="outline" className="text-xs">+{profile.skills.length - 3}</Badge>}
-                      </div>
-                    </CardContent>
-
-                    <div className="p-4 flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1 hover:border-destructive hover:text-destructive transition-all duration-300" onClick={() => handlePass(profile.id)}><X className="w-4 h-4 mr-2" />Pass</Button>
-                      <Button variant="outline" size="sm" onClick={() => handleViewProfile(profile.id)}><Eye className="w-4 h-4" /></Button>
-                      <Button variant="hero" size="sm" className="flex-1" onClick={() => handleConnect(profile.id)}><Heart className="w-4 h-4 mr-2" />Connect</Button>
-                    </div>
-                  </Card>
-                </ProfileHoverCard>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-};
-
-export default LiveMatchmaking;
+        variant:

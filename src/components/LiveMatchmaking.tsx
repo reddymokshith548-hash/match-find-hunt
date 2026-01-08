@@ -84,9 +84,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .single();
 
       if (error) {
         console.error("Failed to fetch profile:", error);
@@ -194,13 +192,54 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     });
   };
 
-  // 4️⃣ WebSocket for live updates - DISABLED (no production backend configured)
-  // To enable, set VITE_WS_BACKEND_URL environment variable to your secure wss:// endpoint
+  // 4️⃣ WebSocket for live updates - UPDATED
   const setupWebSocket = () => {
-    // WebSocket disabled - using Supabase RPC polling instead
-    // If you have a production WebSocket backend, configure it here:
-    // const wsUrl = import.meta.env.VITE_WS_BACKEND_URL;
-    console.log("WebSocket disabled - using Supabase RPC for match fetching");
+    if (!profileId || !apiSecret) {
+      console.log("WebSocket setup deferred: Missing profileId or API secret.");
+      return;
+    }
+
+    try {
+      const WS_CLIENT_ID = profileId;
+      const BACKEND_WS_HOST = "10.184.10.84:8000"; 
+      const scheme = "ws"; 
+
+      const wsUrl = `${scheme}://${BACKEND_WS_HOST}/ws/${WS_CLIENT_ID}?api_secret=${apiSecret}`;
+
+      console.log(`[WS] Final connection URL (Direct Uvicorn): ${wsUrl}`);
+      
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+        ws.send(JSON.stringify({ type: "auth", token: apiSecret }));
+        setTimeout(() => {
+          ws.send(JSON.stringify({ type: "subscribe", profile_id: profileId }));
+        }, 100);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "matches") {
+            setMatches(data.matches);
+            animateNewMatches(data.matches);
+          }
+        } catch (err) {
+          console.error("WebSocket invalid message:", event.data);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log("WebSocket disconnected, retrying in 5s...");
+        retryTimeoutRef.current = setTimeout(setupWebSocket, 5000);
+      };
+
+      ws.onerror = (err) => console.error("WebSocket error:", err);
+    } catch (err) {
+      console.error("Failed to setup WebSocket:", err);
+    }
   };
 
   // 5️⃣ Component init - UPDATED dependency array

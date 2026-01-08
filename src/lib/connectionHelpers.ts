@@ -7,11 +7,11 @@ export interface ConnectionResult {
   alreadyExists?: boolean;
 }
 
-async function recordInteractionViaRPC(fromProfileId: string, toProfileId: string, type: 'like' | 'pass') {
-  const { error } = await supabase.rpc('record_interaction', {
-    p_from_profile_id: fromProfileId,
-    p_to_profile_id: toProfileId,
-    p_interaction_type: type
+async function recordInteractionDirect(fromProfileId: string, toProfileId: string, type: 'like' | 'pass') {
+  const { error } = await supabase.from('user_interactions').insert({
+    user_id: fromProfileId,
+    target_user_id: toProfileId,
+    interaction_type: type,
   });
 
   if (error) {
@@ -85,9 +85,9 @@ export async function createConnectionRequest(
       });
     }
 
-    // 5. Record the 'like' interaction via RPC
+    // 5. Record the 'like' interaction directly
     try {
-      await recordInteractionViaRPC(fromProfileId, toProfileId, 'like');
+      await recordInteractionDirect(fromProfileId, toProfileId, 'like');
     } catch (interactionError) {
       console.error('Error recording interaction:', interactionError);
     }
@@ -112,17 +112,15 @@ export async function recordPass(fromUserId: string, toProfileId: string): Promi
       .from('profiles')
       .select('id')
       .eq('user_id', fromUserId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .single();
 
     if (!fromProfile?.id) {
       console.error('Cannot record pass: Initiating profile not found for user ID.', fromUserId);
       return;
     }
 
-    // 2. Record the 'pass' interaction via RPC
-    await recordInteractionViaRPC(fromProfile.id, toProfileId, 'pass');
+    // 2. Record the 'pass' interaction directly
+    await recordInteractionDirect(fromProfile.id, toProfileId, 'pass');
   } catch (error) {
     console.error('Error recording pass:', error);
   }

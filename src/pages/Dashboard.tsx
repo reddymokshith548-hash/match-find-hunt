@@ -61,18 +61,22 @@ export default function Dashboard() {
   const fetchUserProfile = async () => {
     if (!user) return;
     try {
-      const {
-        data,
-        error
-      } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No profile found, redirect to onboarding
-          navigate('/onboarding');
-          return;
-        }
-        throw error;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        // No profile found, redirect to onboarding
+        navigate('/onboarding');
+        return;
       }
+
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);

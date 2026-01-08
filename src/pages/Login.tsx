@@ -18,7 +18,7 @@ const Login = () => {
     toast
   } = useToast();
   useEffect(() => {
-    // Check if user is already logged in
+    // If already logged in, send user to dashboard (dashboard will decide if onboarding is needed)
     const {
       data: {
         subscription

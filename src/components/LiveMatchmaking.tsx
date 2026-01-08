@@ -84,7 +84,9 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (error) {
         console.error("Failed to fetch profile:", error);

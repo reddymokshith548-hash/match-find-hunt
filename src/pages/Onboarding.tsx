@@ -37,7 +37,18 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
 
-  // Check if user already has a profile
+  const [formData, setFormData] = useState({
+    name: '',
+    bio: '',
+    role: '',
+    skills: [] as string[],
+    interests: [] as string[],
+    stage: '',
+    looking_for: [] as string[],
+    profile_pic_url: ''
+  });
+
+  // Check for existing profile and pre-fill form data
   useEffect(() => {
     const checkExistingProfile = async () => {
       if (!user) {
@@ -48,18 +59,32 @@ export default function Onboarding() {
       try {
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('id')
+          .select('*')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
           .maybeSingle();
 
         if (error) throw error;
 
         if (profile) {
-          // User already has a profile, redirect to dashboard
-          navigate('/dashboard', { replace: true });
-          return;
+          // Pre-fill form with existing profile data
+          setFormData({
+            name: profile.name || '',
+            bio: profile.bio || '',
+            role: profile.role || '',
+            skills: profile.skills || [],
+            interests: profile.interests || [],
+            stage: profile.stage || '',
+            looking_for: profile.looking_for || [],
+            profile_pic_url: profile.profile_pic_url || ''
+          });
+          
+          // If profile is complete, redirect to dashboard
+          if (profile.name && profile.bio && profile.role && 
+              profile.skills?.length > 0 && profile.interests?.length > 0 &&
+              profile.stage && profile.looking_for?.length > 0) {
+            navigate('/dashboard', { replace: true });
+            return;
+          }
         }
       } catch (error) {
         console.error('Error checking profile:', error);
@@ -72,17 +97,6 @@ export default function Onboarding() {
       checkExistingProfile();
     }
   }, [user, authLoading, navigate]);
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    bio: '',
-    role: '',
-    skills: [] as string[],
-    interests: [] as string[],
-    stage: '',
-    looking_for: [] as string[],
-    profile_pic_url: ''
-  });
 
   const handleNext = () => {
     if (step < 3) setStep(step + 1);
@@ -126,7 +140,7 @@ export default function Onboarding() {
       
       const { error } = await supabase
         .from('profiles')
-        .insert({
+        .upsert({
           user_id: user.id,
           name: validatedData.name,
           bio: validatedData.bio,
@@ -136,12 +150,14 @@ export default function Onboarding() {
           stage: validatedData.stage,
           looking_for: validatedData.looking_for,
           profile_pic_url: validatedData.profile_pic_url || null
+        }, {
+          onConflict: 'user_id'
         });
 
       if (error) throw error;
 
       toast({
-        title: "Profile created successfully!",
+        title: "Profile saved successfully!",
         description: "Welcome to FindBaee. Let's find your perfect match!",
       });
 

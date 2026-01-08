@@ -23,19 +23,18 @@ interface Message {
   };
 }
 
-interface SparkRoomChatProps {
+export interface SparkRoomChatProps {
   roomId: string;
   roomName: string;
   onClose: () => void;
-  // 💡 NEW PROP for clickable profile feature
-  onProfileClick: (profileId: string) => void; 
+  onProfileClick?: (profileId: string) => void; 
 }
 
 export default function SparkRoomChat({ 
   roomId, 
   roomName, 
   onClose,
-  onProfileClick // 👈 Destructure new prop
+  onProfileClick
 }: SparkRoomChatProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -289,12 +288,12 @@ export default function SparkRoomChat({
                         isOwnMessage ? 'flex-row-reverse' : 'flex-row'
                     )}
                   >
-                    {/* 💡 CLICKABLE AVATAR */}
+                    {/* Avatar - clickable if onProfileClick provided */}
                     <button 
-                        onClick={() => senderId && onProfileClick(senderId)}
+                        onClick={() => senderId && onProfileClick?.(senderId)}
                         className="h-8 w-8 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-primary rounded-full transition-shadow"
                         aria-label={`View profile for ${profileName}`}
-                        disabled={!senderId}
+                        disabled={!senderId || !onProfileClick}
                     >
                         <Avatar className="h-8 w-8">
                             <AvatarImage src={msg.profile?.profile_pic_url || undefined} />
@@ -311,11 +310,10 @@ export default function SparkRoomChat({
                         {isOwnMessage ? (
                             <span className="text-xs font-medium text-primary">You</span>
                         ) : (
-                            // 💡 CLICKABLE NAME BADGE
                             <Badge 
                                 variant="outline" 
-                                className="cursor-pointer hover:bg-muted-foreground/10 transition-colors px-2 py-0.5"
-                                onClick={() => senderId && onProfileClick(senderId)}
+                                className={`px-2 py-0.5 ${onProfileClick ? 'cursor-pointer hover:bg-muted-foreground/10 transition-colors' : ''}`}
+                                onClick={() => senderId && onProfileClick?.(senderId)}
                             >
                                 <span className="text-xs font-medium">{profileName}</span>
                             </Badge>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,9 +32,42 @@ const LOOKING_FOR_OPTIONS = [
 export default function Onboarding() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(true);
+
+  // Check if user already has a profile
+  useEffect(() => {
+    const checkExistingProfile = async () => {
+      if (!user) {
+        setCheckingProfile(false);
+        return;
+      }
+      
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (profile) {
+          // User already has a profile, redirect to dashboard
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking profile:', error);
+      }
+      
+      setCheckingProfile(false);
+    };
+
+    if (!authLoading) {
+      checkExistingProfile();
+    }
+  }, [user, authLoading, navigate]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -72,7 +105,15 @@ export default function Onboarding() {
   };
 
   const handleSubmit = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to create your profile.",
+        variant: "destructive",
+      });
+      navigate('/login');
+      return;
+    }
     
     setLoading(true);
     try {
@@ -134,6 +175,32 @@ export default function Onboarding() {
         return false;
     }
   };
+
+  // Show loading while checking auth or profile
+  if (authLoading || checkingProfile) {
+    return (
+      <div className="min-h-screen bg-gradient-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground mb-4">Please sign in to complete your profile.</p>
+            <Button onClick={() => navigate('/login')}>Go to Login</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">

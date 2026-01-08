@@ -20,14 +20,31 @@ const SignUp = () => {
     toast
   } = useToast();
   useEffect(() => {
-    // Check if user is already logged in
+    // Check if user is already logged in and has a profile
+    const checkAuthAndProfile = async (userId: string) => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (profile) {
+        navigate("/dashboard");
+      } else {
+        navigate("/onboarding");
+      }
+    };
+
     const {
       data: {
         subscription
       }
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        navigate("/dashboard");
+        // Defer the async check to avoid deadlock
+        setTimeout(() => {
+          checkAuthAndProfile(session.user.id);
+        }, 0);
       }
     });
     return () => subscription.unsubscribe();

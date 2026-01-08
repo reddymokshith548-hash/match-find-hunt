@@ -296,6 +296,7 @@ export type Database = {
       profiles: {
         Row: {
           age: number | null
+          Ai_summary: string | null
           bio: string | null
           created_at: string | null
           gender: string | null
@@ -320,6 +321,7 @@ export type Database = {
         }
         Insert: {
           age?: number | null
+          Ai_summary?: string | null
           bio?: string | null
           created_at?: string | null
           gender?: string | null
@@ -344,6 +346,7 @@ export type Database = {
         }
         Update: {
           age?: number | null
+          Ai_summary?: string | null
           bio?: string | null
           created_at?: string | null
           gender?: string | null
@@ -447,6 +450,48 @@ export type Database = {
           },
         ]
       }
+      spark_room_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          profile_id: string
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          profile_id: string
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          profile_id?: string
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spark_room_messages_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spark_room_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "spark_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spark_rooms: {
         Row: {
           created_at: string
@@ -536,6 +581,15 @@ export type Database = {
           skills: string[]
           stage: string
         }[]
+      }
+      get_my_profile_id: { Args: never; Returns: string }
+      record_interaction: {
+        Args: {
+          p_from_profile_id: string
+          p_interaction_type: string
+          p_to_profile_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

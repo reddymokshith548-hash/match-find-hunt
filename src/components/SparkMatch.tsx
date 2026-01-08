@@ -66,22 +66,26 @@ export default function SparkMatch() {
     }
   };
 
-  const recordInteraction = async (targetUserId: string, interactionType: 'like' | 'pass') => {
+  const recordInteraction = async (targetProfileId: string, interactionType: 'like' | 'pass') => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('user_interactions')
-        .insert([{
-          user_id: user.id,
-          target_user_id: targetUserId,
-          interaction_type: interactionType
-        }]);
+      // Use the RPC function which handles profile ID to user ID conversion
+      const { error } = await supabase.rpc('record_interaction', {
+        p_from_profile_id: await getMyProfileId(),
+        p_to_profile_id: targetProfileId,
+        p_interaction_type: interactionType
+      });
 
       if (error) throw error;
     } catch (error) {
       console.error('Error recording interaction:', error);
     }
+  };
+
+  const getMyProfileId = async (): Promise<string> => {
+    const { data } = await supabase.rpc('get_my_profile_id');
+    return data || '';
   };
 
   const loadNextProfile = () => {
@@ -112,20 +116,16 @@ export default function SparkMatch() {
     
     await recordInteraction(profile.id, 'like');
     
-    // Get profile user_id for connection
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('user_id')
-      .eq('id', profile.id)
-      .single();
+    // Get current user's profile ID
+    const myProfileId = await getMyProfileId();
     
-    if (profileData) {
-      // Create connection with pending status
+    if (myProfileId) {
+      // Create connection using profile IDs (the table actually stores profile IDs based on foreign keys)
       const { data: connection, error } = await supabase
         .from('connections')
         .insert({
-          user1_id: user?.id,
-          user2_id: profileData.user_id,
+          user1_id: myProfileId,
+          user2_id: profile.id,
           status: 'pending',
           nda_signed_by_user1: false,
           nda_signed_by_user2: false
@@ -136,7 +136,7 @@ export default function SparkMatch() {
       if (!error && connection) {
         // CRITICAL: Show NDA BEFORE proceeding
         setPendingConnection({
-          targetUserId: profileData.user_id,
+          targetUserId: profile.id,
           targetUserName: profile.name,
           connectionId: connection.id
         });
@@ -144,6 +144,13 @@ export default function SparkMatch() {
         
         // Don't load next profile yet - wait for NDA acceptance
         return;
+      } else if (error) {
+        console.error('Error creating connection:', error);
+        toast({
+          title: "Connection failed",
+          description: error.message,
+          variant: "destructive"
+        });
       }
     }
     

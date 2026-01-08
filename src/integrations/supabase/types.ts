@@ -565,23 +565,41 @@ export type Database = {
         }
         Returns: string
       }
-      get_matchmaking_candidates: {
-        Args: { exclude_interacted?: boolean; limit_count?: number }
-        Returns: {
-          age: number
-          bio: string
-          id: string
-          interests: string[]
-          location: string
-          looking_for: string[]
-          match_score: number
-          name: string
-          profile_pic_url: string
-          role: string
-          skills: string[]
-          stage: string
-        }[]
-      }
+      get_matchmaking_candidates:
+        | {
+            Args: { exclude_interacted?: boolean; limit_count?: number }
+            Returns: {
+              age: number
+              bio: string
+              id: string
+              interests: string[]
+              location: string
+              looking_for: string[]
+              match_score: number
+              name: string
+              profile_pic_url: string
+              role: string
+              skills: string[]
+              stage: string
+            }[]
+          }
+        | {
+            Args: { exclude_interacted?: boolean; limit_count?: number }
+            Returns: {
+              age: number
+              bio: string
+              id: string
+              interests: string[]
+              location: string
+              looking_for: string[]
+              match_score: number
+              name: string
+              profile_pic_url: string
+              role: string
+              skills: string[]
+              stage: string
+            }[]
+          }
       get_my_profile_id: { Args: never; Returns: string }
       record_interaction: {
         Args: {

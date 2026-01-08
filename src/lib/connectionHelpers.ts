@@ -7,15 +7,15 @@ export interface ConnectionResult {
   alreadyExists?: boolean;
 }
 
-async function recordInteractionRpc(fromProfileId: string, toProfileId: string, type: 'like' | 'pass') {
-  const { error } = await supabase.rpc('record_interaction', {
-    p_from_profile_id: fromProfileId,
-    p_to_profile_id: toProfileId,
-    p_interaction_type: type,
+async function recordInteractionDirect(fromProfileId: string, toProfileId: string, type: 'like' | 'pass') {
+  const { error } = await supabase.from('user_interactions').insert({
+    user_id: fromProfileId,
+    target_user_id: toProfileId,
+    interaction_type: type,
   });
 
   if (error) {
-    console.error('RPC Error recording interaction:', error.message);
+    console.error('Error recording interaction:', error.message);
     throw new Error(`Failed to record interaction: ${error.message}`);
   }
 }
@@ -85,9 +85,9 @@ export async function createConnectionRequest(
       });
     }
 
-    // 5. Use RPC to record the 'like' interaction
+    // 5. Record the 'like' interaction directly
     try {
-      await recordInteractionRpc(fromProfileId, toProfileId, 'like');
+      await recordInteractionDirect(fromProfileId, toProfileId, 'like');
     } catch (interactionError) {
       console.error('Error recording interaction:', interactionError);
     }
@@ -119,8 +119,8 @@ export async function recordPass(fromUserId: string, toProfileId: string): Promi
       return;
     }
 
-    // 2. Use RPC to record the 'pass' interaction
-    await recordInteractionRpc(fromProfile.id, toProfileId, 'pass');
+    // 2. Record the 'pass' interaction directly
+    await recordInteractionDirect(fromProfile.id, toProfileId, 'pass');
   } catch (error) {
     console.error('Error recording pass:', error);
   }

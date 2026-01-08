@@ -46,12 +46,16 @@ export default function Onboarding() {
       }
       
       try {
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('id')
           .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
-        
+
+        if (error) throw error;
+
         if (profile) {
           // User already has a profile, redirect to dashboard
           navigate('/dashboard', { replace: true });

@@ -22,11 +22,18 @@ const SignUp = () => {
   useEffect(() => {
     // Check if user is already logged in and has a profile
     const checkAuthAndProfile = async (userId: string) => {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('id')
         .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
+
+      if (error) {
+        // If we can't read profiles for some reason, still allow onboarding as fallback
+        console.error('Error checking profile:', error);
+      }
       
       if (profile) {
         navigate("/dashboard");

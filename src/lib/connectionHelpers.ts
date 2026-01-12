@@ -79,9 +79,11 @@ export async function createConnectionRequest(
       });
     }
 
-    // 5. Record the 'like' interaction
+    // 5. Record the 'like' interaction (uses auth user IDs for RLS)
     try {
-      await recordInteractionDirect(fromProfileId, toProfileId, 'like');
+      if (fromProfile?.user_id && toProfile?.user_id) {
+        await recordInteractionDirect(fromProfile.user_id, toProfile.user_id, 'like');
+      }
     } catch (interactionError) {
       console.error('Error recording interaction:', interactionError);
     }
@@ -101,12 +103,12 @@ export async function createConnectionRequest(
 }
 
 /**
- * Records an interaction directly using profile IDs
+ * Records an interaction using auth user IDs (required by RLS)
  */
-async function recordInteractionDirect(fromProfileId: string, toProfileId: string, type: 'like' | 'pass') {
+async function recordInteractionDirect(fromAuthUserId: string, toAuthUserId: string, type: 'like' | 'pass') {
   const { error } = await supabase.from('user_interactions').insert({
-    user_id: fromProfileId,
-    target_user_id: toProfileId,
+    user_id: fromAuthUserId,
+    target_user_id: toAuthUserId,
     interaction_type: type,
   });
 
@@ -123,20 +125,20 @@ async function recordInteractionDirect(fromProfileId: string, toProfileId: strin
  */
 export async function recordPass(fromUserId: string, toProfileId: string): Promise<void> {
   try {
-    // 1. Fetch the Profile ID of the initiating user from their AUTH User ID
-    const { data: fromProfile } = await supabase
+    // Get the target profile's auth user_id
+    const { data: toProfile } = await supabase
       .from('profiles')
-      .select('id')
-      .eq('user_id', fromUserId)
+      .select('user_id')
+      .eq('id', toProfileId)
       .single();
 
-    if (!fromProfile?.id) {
-      console.error('Cannot record pass: Initiating profile not found for user ID.', fromUserId);
+    if (!toProfile?.user_id) {
+      console.error('Cannot record pass: Target profile not found for profile ID.', toProfileId);
       return;
     }
 
-    // 2. Record the 'pass' interaction directly
-    await recordInteractionDirect(fromProfile.id, toProfileId, 'pass');
+    // Record the 'pass' interaction with auth user IDs
+    await recordInteractionDirect(fromUserId, toProfile.user_id, 'pass');
   } catch (error) {
     console.error('Error recording pass:', error);
   }

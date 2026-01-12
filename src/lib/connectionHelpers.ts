@@ -68,12 +68,16 @@ export async function createConnectionRequest(
 
     // 4. Notification to recipient (uses auth user_id for notifications table)
     if (toProfile?.user_id) {
+      // Ensure message is never null/undefined - database requires non-null
+      const senderName = fromProfile?.name && fromProfile.name.trim() ? fromProfile.name : 'Someone';
+      const notificationMessage = `${senderName} wants to connect with you!`;
+
       await supabase.from('notifications').insert({
         user_id: toProfile.user_id,
         type: 'connection_request',
         title: 'New Connection Request',
-        message: `${fromProfile?.name || 'Someone'} wants to connect with you!`,
-        related_user_id: fromProfile?.user_id || null,
+        message: notificationMessage,
+        related_user_id: fromProfile?.user_id ?? null,
         related_id: newConnection.id,
         is_read: false,
       });

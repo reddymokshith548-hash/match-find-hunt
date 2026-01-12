@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, AlertCircle, Brain, BarChart3 } from "lucide-react";
-import { ProfileHoverCard } from "@/components/ProfileHoverCard";
+
 import { createConnectionRequest, recordPass } from "@/lib/connectionHelpers";
 import { CompatibilityBreakdown } from "@/components/CompatibilityBreakdown";
 
@@ -357,137 +357,161 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {matches.map((profile, index) => (
               <div key={profile.id} ref={el => (cardRefs.current[profile.id] = el)} className="relative" style={{ animationDelay: `${index * 0.1}s` }}>
-                <ProfileHoverCard profile={profile} side="top">
-                  <Card variant="match" className="overflow-hidden group relative transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-2 hover:shadow-xl">
-                    <div className="absolute top-4 right-4 z-10 flex gap-1">
-                      {profile.phase === 'phase2' && profile.viewer_traits && profile.candidate_traits && (
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedMatch(profile);
-                            setShowBreakdown(true);
-                          }}
-                        >
-                          <BarChart3 className="w-3.5 h-3.5" />
-                        </Button>
-                      )}
-                      <Badge className={`font-semibold ${profile.phase === 'phase2' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
-                        {profile.match_score}% {profile.phase === 'phase2' ? 'Compatible' : 'Match'}
-                      </Badge>
-                    </div>
-                    
-                    <div className="relative h-48 overflow-hidden">
-                      <img 
-                        src={profile.profile_pic_url || "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop"} 
-                        alt={profile.name} 
-                        className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105" 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-40 transition-opacity duration-300" />
-                      {profile.phase === 'phase2' && (
-                        <div className="absolute top-2 left-2">
-                          <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30">
-                            <Brain className="w-3 h-3 mr-1" />
-                            FounderSync
-                          </Badge>
-                        </div>
-                      )}
-                      <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                    </div>
-                    
-                    <CardHeader className="pb-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold mb-1 group-hover:gradient-text transition-all duration-300">{profile.name}</h3>
-                          <p className="text-muted-foreground text-sm mb-2">{profile.role || profile.type}</p>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            {profile.location && (
-                              <div className="flex items-center gap-1">
-                                <MapPin className="w-4 h-4" />{profile.location}
-                              </div>
-                            )}
-                            {profile.experience && (
-                              <div className="flex items-center gap-1">
-                                <Briefcase className="w-4 h-4" />{profile.experience}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 text-secondary">
-                          <Star className="w-4 h-4 fill-current" />
-                          <span className="text-sm font-medium">4.9</span>
+                <Card variant="match" className="overflow-hidden group relative cursor-pointer transition-transform duration-300 ease-out hover:scale-[1.03] hover:shadow-2xl">
+                  <div className="absolute top-4 right-4 z-10 flex gap-1">
+                    {profile.phase === 'phase2' && profile.viewer_traits && profile.candidate_traits && (
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedMatch(profile);
+                          setShowBreakdown(true);
+                        }}
+                      >
+                        <BarChart3 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    <Badge className={`font-semibold ${profile.phase === 'phase2' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
+                      {profile.match_score}% {profile.phase === 'phase2' ? 'Compatible' : 'Match'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="relative h-48 overflow-hidden">
+                    <img 
+                      src={profile.profile_pic_url || "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop"} 
+                      alt={profile.name} 
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+                    {profile.phase === 'phase2' && (
+                      <div className="absolute top-2 left-2">
+                        <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30">
+                          <Brain className="w-3 h-3 mr-1" />
+                          FounderSync
+                        </Badge>
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                  </div>
+                  
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold mb-1">{profile.name}</h3>
+                        <p className="text-muted-foreground text-sm mb-2">{profile.role || profile.type}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          {profile.location && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-4 h-4" />{profile.location}
+                            </div>
+                          )}
+                          {profile.experience && (
+                            <div className="flex items-center gap-1">
+                              <Briefcase className="w-4 h-4" />{profile.experience}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </CardHeader>
+                      <div className="flex items-center gap-1 text-secondary">
+                        <Star className="w-4 h-4 fill-current" />
+                        <span className="text-sm font-medium">4.9</span>
+                      </div>
+                    </div>
+                  </CardHeader>
 
-                    <CardContent className="pt-0 space-y-4">
-                      {/* AI Summary for Phase 2 matches */}
-                      {profile.ai_summary && profile.phase === 'phase2' && (
-                        <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                          <p className="text-sm text-foreground/80 italic">
-                            "{profile.ai_summary}"
+                  <CardContent className="pt-0 space-y-4">
+                    {/* AI Summary Box - Always visible for Phase 2 matches */}
+                    {profile.ai_summary && profile.phase === 'phase2' && (
+                      <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-foreground leading-relaxed">
+                            {profile.ai_summary}
                           </p>
                         </div>
-                      )}
-                      
-                      {/* Bio for Phase 1 matches */}
-                      {(!profile.ai_summary || profile.phase !== 'phase2') && profile.bio && (
-                        <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">
-                          {profile.bio.length > 120 ? `${profile.bio.substring(0, 120)}...` : profile.bio}
-                        </p>
-                      )}
-                      
-                      <div className="flex flex-wrap gap-2">
-                        {profile.skills.slice(0, 3).map((skill, i) => (
-                          <Badge 
-                            key={i} 
-                            className={`text-xs ${getSkillColorClass(skill)} transition-all duration-300 border-none`} 
-                          >
-                            {skill}
-                          </Badge>
-                        ))}
-                        {profile.skills.length > 3 && (
-                          <Badge variant="outline" className="text-xs">+{profile.skills.length - 3}</Badge>
-                        )}
                       </div>
-                    </CardContent>
-
-                    <div className="p-4 flex gap-2">
+                    )}
+                    
+                    {/* Bio for non-FounderSync matches */}
+                    {(!profile.ai_summary || profile.phase !== 'phase2') && profile.bio && (
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {profile.bio.length > 120 ? `${profile.bio.substring(0, 120)}...` : profile.bio}
+                      </p>
+                    )}
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {profile.skills.slice(0, 3).map((skill, i) => (
+                        <Badge 
+                          key={i} 
+                          className={getSkillColorClass(skill)}
+                        >
+                          {skill}
+                        </Badge>
+                      ))}
+                      {profile.skills.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{profile.skills.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/50">
+                      {profile.interests.slice(0, 3).map((interest, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">
+                          {interest}
+                        </Badge>
+                      ))}
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2">
                       <Button 
+                        onClick={(e) => { e.stopPropagation(); handlePass(profile.id); }}
                         variant="outline" 
                         size="sm" 
-                        className="flex-1 hover:border-destructive hover:text-destructive transition-all duration-300" 
-                        onClick={() => handlePass(profile.id)}
+                        className="flex-1 group/btn"
                       >
-                        <X className="w-4 h-4 mr-2" />Pass
+                        <X className="w-4 h-4 mr-1 group-hover/btn:text-destructive transition-colors" /> Pass
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleViewProfile(profile.id)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button variant="hero" size="sm" className="flex-1" onClick={() => handleConnect(profile.id)}>
-                        <Heart className="w-4 h-4 mr-2" />Connect
+                      <Button 
+                        onClick={(e) => { e.stopPropagation(); handleConnect(profile.id); }}
+                        variant="hero" 
+                        size="sm" 
+                        className="flex-1"
+                      >
+                        <Heart className="w-4 h-4 mr-1" /> Connect
                       </Button>
                     </div>
-                  </Card>
-                </ProfileHoverCard>
+                    
+                    <Button 
+                      onClick={(e) => { e.stopPropagation(); handleViewProfile(profile.id); }}
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Full Profile
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Compatibility Breakdown Modal */}
-      <CompatibilityBreakdown
-        open={showBreakdown}
-        onOpenChange={setShowBreakdown}
-        matchName={selectedMatch?.name || ''}
-        matchScore={selectedMatch?.match_score || 0}
-        aiSummary={selectedMatch?.ai_summary}
-        viewerTraits={selectedMatch?.viewer_traits}
-        candidateTraits={selectedMatch?.candidate_traits}
-      />
+      {showBreakdown && selectedMatch && (
+        <CompatibilityBreakdown
+          open={showBreakdown}
+          onOpenChange={setShowBreakdown}
+          matchName={selectedMatch.name}
+          matchScore={selectedMatch.match_score}
+          aiSummary={selectedMatch.ai_summary}
+          viewerTraits={selectedMatch.viewer_traits}
+          candidateTraits={selectedMatch.candidate_traits}
+        />
+      )}
     </section>
   );
 };

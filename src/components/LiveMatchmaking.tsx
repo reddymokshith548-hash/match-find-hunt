@@ -10,6 +10,7 @@ import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, A
 
 import { createConnectionRequest, recordPass } from "@/lib/connectionHelpers";
 import { CompatibilityBreakdown } from "@/components/CompatibilityBreakdown";
+import MutualNDAModal from "@/components/MutualNDAModal";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();
@@ -76,6 +77,14 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [useIntelligenceEngine, setUseIntelligenceEngine] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchProfile | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  
+  // NDA Modal state
+  const [ndaModalOpen, setNdaModalOpen] = useState(false);
+  const [pendingConnection, setPendingConnection] = useState<{
+    connectionId: string;
+    targetProfileId: string;
+    targetName: string;
+  } | null>(null);
   
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
@@ -248,7 +257,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     return () => clearInterval(interval);
   }, [loading]);
 
-  const handleConnect = async (targetProfileId: string) => {
+  const handleConnect = async (targetProfile: MatchProfile) => {
     if (!profileId || !user) {
       toast({
         title: "Error",
@@ -258,14 +267,16 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       return;
     }
 
-    const result = await createConnectionRequest(profileId, targetProfileId);
+    const result = await createConnectionRequest(profileId, targetProfile.id);
 
-    if (result.success) {
-      toast({
-        title: "Connection sent!",
-        description: "We'll notify you when they respond."
+    if (result.success && result.connectionId) {
+      // Show NDA modal for sender to sign
+      setPendingConnection({
+        connectionId: result.connectionId,
+        targetProfileId: targetProfile.id,
+        targetName: targetProfile.name,
       });
-      removeMatch(targetProfileId, "right");
+      setNdaModalOpen(true);
     } else if (result.alreadyExists) {
       toast({
         title: "Already connected",
@@ -278,6 +289,17 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         description: result.error || "Failed to send connection request",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleNDAAccepted = () => {
+    if (pendingConnection) {
+      toast({
+        title: "✅ Connection sent!",
+        description: `We'll notify ${pendingConnection.targetName} about your request.`
+      });
+      removeMatch(pendingConnection.targetProfileId, "right");
+      setPendingConnection(null);
     }
   };
 
@@ -451,48 +473,36 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                         </Badge>
                       ))}
                       {profile.skills.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{profile.skills.length - 3} more
-                        </Badge>
+                        <Badge variant="outline">+{profile.skills.length - 3}</Badge>
                       )}
                     </div>
-                    
-                    <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/50">
-                      {profile.interests.slice(0, 3).map((interest, i) => (
-                        <Badge key={i} variant="outline" className="text-xs">
-                          {interest}
-                        </Badge>
-                      ))}
-                    </div>
-                    
+
                     <div className="flex gap-2 pt-2">
                       <Button 
-                        onClick={(e) => { e.stopPropagation(); handlePass(profile.id); }}
                         variant="outline" 
                         size="sm" 
-                        className="flex-1 group/btn"
+                        className="flex-1"
+                        onClick={() => handlePass(profile.id)}
                       >
-                        <X className="w-4 h-4 mr-1 group-hover/btn:text-destructive transition-colors" /> Pass
+                        <X className="w-4 h-4 mr-1" />
+                        Pass
                       </Button>
                       <Button 
-                        onClick={(e) => { e.stopPropagation(); handleConnect(profile.id); }}
-                        variant="hero" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewProfile(profile.id)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button 
                         size="sm" 
                         className="flex-1"
+                        onClick={() => handleConnect(profile)}
                       >
-                        <Heart className="w-4 h-4 mr-1" /> Connect
+                        <Heart className="w-4 h-4 mr-1" />
+                        Connect
                       </Button>
                     </div>
-                    
-                    <Button 
-                      onClick={(e) => { e.stopPropagation(); handleViewProfile(profile.id); }}
-                      variant="ghost" 
-                      size="sm" 
-                      className="w-full"
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Full Profile
-                    </Button>
                   </CardContent>
                 </Card>
               </div>
@@ -501,15 +511,31 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         )}
       </div>
 
-      {showBreakdown && selectedMatch && (
+      {/* Compatibility Breakdown Modal */}
+      {selectedMatch && (
         <CompatibilityBreakdown
           open={showBreakdown}
           onOpenChange={setShowBreakdown}
-          matchName={selectedMatch.name}
           matchScore={selectedMatch.match_score}
-          aiSummary={selectedMatch.ai_summary}
-          viewerTraits={selectedMatch.viewer_traits}
-          candidateTraits={selectedMatch.candidate_traits}
+          aiSummary={selectedMatch.ai_summary || ''}
+          viewerTraits={selectedMatch.viewer_traits || { thinking_style: '', leadership_style: '', risk_tolerance: '' }}
+          candidateTraits={selectedMatch.candidate_traits || { thinking_style: '', leadership_style: '', risk_tolerance: '' }}
+          matchName={selectedMatch.name}
+        />
+      )}
+
+      {/* NDA Modal for sender */}
+      {pendingConnection && (
+        <MutualNDAModal
+          open={ndaModalOpen}
+          onOpenChange={(open) => {
+            setNdaModalOpen(open);
+            if (!open) setPendingConnection(null);
+          }}
+          targetUserName={pendingConnection.targetName}
+          connectionId={pendingConnection.connectionId}
+          isInitiator={true}
+          onAccept={handleNDAAccepted}
         />
       )}
     </section>

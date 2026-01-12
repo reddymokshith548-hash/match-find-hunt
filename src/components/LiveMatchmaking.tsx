@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, AlertCircle, Brain } from "lucide-react";
+import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, AlertCircle, Brain, BarChart3 } from "lucide-react";
 import { ProfileHoverCard } from "@/components/ProfileHoverCard";
 import { createConnectionRequest, recordPass } from "@/lib/connectionHelpers";
+import { CompatibilityBreakdown } from "@/components/CompatibilityBreakdown";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();
@@ -34,6 +35,12 @@ const getSkillColorClass = (skill: string) => {
   return 'bg-gray-500 hover:bg-gray-600 text-white'; 
 };
 
+interface TraitData {
+  thinking_style: string;
+  leadership_style: string;
+  risk_tolerance: string;
+}
+
 interface MatchProfile {
   id: string;
   name: string;
@@ -49,6 +56,8 @@ interface MatchProfile {
   role?: string;
   ai_summary?: string | null;
   phase?: string;
+  viewer_traits?: TraitData | null;
+  candidate_traits?: TraitData | null;
 }
 
 interface LiveMatchmakingProps {
@@ -63,6 +72,8 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [error, setError] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [useIntelligenceEngine, setUseIntelligenceEngine] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<MatchProfile | null>(null);
+  const [showBreakdown, setShowBreakdown] = useState(false);
   
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
@@ -156,6 +167,8 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
             role: m.role,
             ai_summary: m.ai_summary,
             phase: m.phase,
+            viewer_traits: m.viewer_traits,
+            candidate_traits: m.candidate_traits,
           }));
 
           setMatches(mapped);
@@ -344,7 +357,21 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
               <div key={profile.id} ref={el => (cardRefs.current[profile.id] = el)} className="relative" style={{ animationDelay: `${index * 0.1}s` }}>
                 <ProfileHoverCard profile={profile} side="top">
                   <Card variant="match" className="overflow-hidden group relative transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-2 hover:shadow-xl">
-                    <div className="absolute top-4 right-4 z-10">
+                    <div className="absolute top-4 right-4 z-10 flex gap-1">
+                      {profile.phase === 'phase2' && profile.viewer_traits && profile.candidate_traits && (
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedMatch(profile);
+                            setShowBreakdown(true);
+                          }}
+                        >
+                          <BarChart3 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                       <Badge className={`font-semibold ${profile.phase === 'phase2' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
                         {profile.match_score}% {profile.phase === 'phase2' ? 'Compatible' : 'Match'}
                       </Badge>
@@ -448,6 +475,17 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
           </div>
         )}
       </div>
+
+      {/* Compatibility Breakdown Modal */}
+      <CompatibilityBreakdown
+        open={showBreakdown}
+        onOpenChange={setShowBreakdown}
+        matchName={selectedMatch?.name || ''}
+        matchScore={selectedMatch?.match_score || 0}
+        aiSummary={selectedMatch?.ai_summary}
+        viewerTraits={selectedMatch?.viewer_traits}
+        candidateTraits={selectedMatch?.candidate_traits}
+      />
     </section>
   );
 };

@@ -13,7 +13,11 @@ interface TraitData {
 }
 
 interface VisibleMatch {
+  /** Profile ID (public.profiles.id) */
   id: string;
+  /** Match record ID (public.matches.id) */
+  match_id: string;
+  /** Auth user ID (public.profiles.user_id) of the *other* user */
   user_id: string;
   name: string;
   role: string;
@@ -121,7 +125,9 @@ serve(async (req) => {
       const aiSummary = isUser1 ? match.ai_summary_user1 : match.ai_summary_user2;
 
       visibleMatches.push({
-        id: match.id,
+        // IMPORTANT: Frontend expects this to be the profile ID (used for /profile/:id and connections.user2_id FK)
+        id: profile.id,
+        match_id: match.id,
         user_id: otherUserId,
         name: profile.name,
         role: profile.role,

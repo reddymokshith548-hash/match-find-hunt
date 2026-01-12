@@ -95,9 +95,17 @@ export async function createConnectionRequest(
     };
   } catch (error) {
     console.error('Error creating connection:', error);
+
+    const e = error as any;
+    const messageParts = [
+      typeof e?.message === 'string' ? e.message : null,
+      typeof e?.details === 'string' ? e.details : null,
+      typeof e?.hint === 'string' ? e.hint : null,
+    ].filter(Boolean);
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: messageParts.join(' — ') || (typeof e === 'string' ? e : 'Unknown error occurred'),
     };
   }
 }

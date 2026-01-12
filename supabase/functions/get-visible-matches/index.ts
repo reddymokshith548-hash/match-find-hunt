@@ -6,6 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface TraitData {
+  thinking_style: string;
+  leadership_style: string;
+  risk_tolerance: string;
+}
+
 interface VisibleMatch {
   id: string;
   user_id: string;
@@ -20,6 +26,8 @@ interface VisibleMatch {
   final_score: number | null;
   ai_summary: string | null;
   phase: string;
+  viewer_traits: TraitData | null;
+  candidate_traits: TraitData | null;
 }
 
 serve(async (req) => {
@@ -43,6 +51,19 @@ serve(async (req) => {
     }
 
     console.log(`Fetching visible matches for user: ${user_id}`);
+
+    // Get viewer's FounderSync traits
+    const { data: viewerFS } = await supabase
+      .from('foundersync_results')
+      .select('personality_type, leadership_style, risk_tolerance')
+      .eq('user_id', user_id)
+      .maybeSingle();
+
+    const viewerTraits: TraitData | null = viewerFS ? {
+      thinking_style: viewerFS.personality_type || '',
+      leadership_style: viewerFS.leadership_style || '',
+      risk_tolerance: viewerFS.risk_tolerance || '',
+    } : null;
 
     // Get all visible matches for this user
     const { data: matches, error: matchError } = await supabase
@@ -83,6 +104,19 @@ serve(async (req) => {
         continue;
       }
 
+      // Get candidate's FounderSync traits
+      const { data: candidateFS } = await supabase
+        .from('foundersync_results')
+        .select('personality_type, leadership_style, risk_tolerance')
+        .eq('user_id', otherUserId)
+        .maybeSingle();
+
+      const candidateTraits: TraitData | null = candidateFS ? {
+        thinking_style: candidateFS.personality_type || '',
+        leadership_style: candidateFS.leadership_style || '',
+        risk_tolerance: candidateFS.risk_tolerance || '',
+      } : null;
+
       // Get the viewer-relative AI summary
       const aiSummary = isUser1 ? match.ai_summary_user1 : match.ai_summary_user2;
 
@@ -100,6 +134,8 @@ serve(async (req) => {
         final_score: match.final_score,
         ai_summary: aiSummary,
         phase: match.phase || 'phase1',
+        viewer_traits: viewerTraits,
+        candidate_traits: candidateTraits,
       });
     }
 

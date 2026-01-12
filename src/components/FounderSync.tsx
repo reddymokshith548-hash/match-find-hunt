@@ -249,6 +249,24 @@ export default function FounderSync({ onComplete, onSkip, showSkip = true }: Fou
         if (error) throw error;
       }
 
+      // Trigger the FounderSync Intelligence Engine
+      try {
+        console.log('Triggering FounderSync Intelligence Engine...');
+        const { data: matcherResult, error: matcherError } = await supabase.functions.invoke('foundersync-matcher', {
+          body: { user_id: user.id }
+        });
+
+        if (matcherError) {
+          console.error('FounderSync matcher error:', matcherError);
+          // Don't block completion, just log the error
+        } else {
+          console.log('FounderSync matcher completed:', matcherResult);
+        }
+      } catch (matcherError) {
+        console.error('Failed to run FounderSync matcher:', matcherError);
+        // Don't block completion
+      }
+
       setCompleted(true);
     } catch (error) {
       console.error('Error saving FounderSync results:', error);

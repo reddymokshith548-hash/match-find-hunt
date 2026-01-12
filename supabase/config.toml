@@ -1,1 +1,7 @@
 project_id = "vagrjonewjbjeuotsrya"
+
+[functions.foundersync-matcher]
+verify_jwt = false
+
+[functions.get-visible-matches]
+verify_jwt = false

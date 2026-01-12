@@ -97,26 +97,44 @@ export type Database = {
       }
       matches: {
         Row: {
+          ai_summary_user1: string | null
+          ai_summary_user2: string | null
           created_at: string | null
+          final_score: number | null
+          hidden_reason: string | null
           id: string
           is_active: boolean | null
+          is_visible: boolean | null
           match_score: number | null
+          phase: string | null
           user1_id: string | null
           user2_id: string | null
         }
         Insert: {
+          ai_summary_user1?: string | null
+          ai_summary_user2?: string | null
           created_at?: string | null
+          final_score?: number | null
+          hidden_reason?: string | null
           id?: string
           is_active?: boolean | null
+          is_visible?: boolean | null
           match_score?: number | null
+          phase?: string | null
           user1_id?: string | null
           user2_id?: string | null
         }
         Update: {
+          ai_summary_user1?: string | null
+          ai_summary_user2?: string | null
           created_at?: string | null
+          final_score?: number | null
+          hidden_reason?: string | null
           id?: string
           is_active?: boolean | null
+          is_visible?: boolean | null
           match_score?: number | null
+          phase?: string | null
           user1_id?: string | null
           user2_id?: string | null
         }

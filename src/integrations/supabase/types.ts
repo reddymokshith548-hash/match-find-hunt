@@ -613,6 +613,10 @@ export type Database = {
         }
         Returns: string
       }
+      foundersync_compatibility: {
+        Args: { user_a: string; user_b: string }
+        Returns: number
+      }
       get_matchmaking_candidates: {
         Args: { exclude_interacted?: boolean; limit_count?: number }
         Returns: {

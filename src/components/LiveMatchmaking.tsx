@@ -495,6 +495,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                         <Eye className="w-4 h-4" />
                       </Button>
                       <Button 
+                        variant="hero"
                         size="sm" 
                         className="flex-1"
                         onClick={() => handleConnect(profile)}

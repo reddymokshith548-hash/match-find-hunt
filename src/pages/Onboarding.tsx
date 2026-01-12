@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, ArrowRight, ArrowLeft } from 'lucide-react';
+import { X, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { profileSchema, type ProfileFormData } from '@/lib/validationSchemas';
+import { profileSchema } from '@/lib/validationSchemas';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
+import FounderSync from '@/components/FounderSync';
 
 const SKILLS_OPTIONS = [
   'React', 'JavaScript', 'Python', 'Marketing', 'Design', 'Product Management',
@@ -36,6 +37,8 @@ export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
+  const [showFounderSync, setShowFounderSync] = useState(false);
+  const [profileCreated, setProfileCreated] = useState(false);
 
   // Check if user already has a profile
   useEffect(() => {
@@ -108,7 +111,7 @@ export default function Onboarding() {
     }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmitProfile = async () => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -140,12 +143,8 @@ export default function Onboarding() {
 
       if (error) throw error;
 
-      toast({
-        title: "Profile created successfully!",
-        description: "Welcome to FindBaee. Let's find your perfect match!",
-      });
-
-      navigate('/dashboard');
+      setProfileCreated(true);
+      setShowFounderSync(true);
     } catch (error: any) {
       if (error.issues) {
         // Zod validation errors
@@ -165,6 +164,22 @@ export default function Onboarding() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFounderSyncComplete = () => {
+    toast({
+      title: "Profile created successfully!",
+      description: "Welcome to Lexach. Let's find your perfect co-founder!",
+    });
+    navigate('/dashboard');
+  };
+
+  const handleFounderSyncSkip = () => {
+    toast({
+      title: "Profile created!",
+      description: "You can take the FounderSync assessment anytime from Settings.",
+    });
+    navigate('/dashboard');
   };
 
   const isStepValid = () => {
@@ -206,23 +221,38 @@ export default function Onboarding() {
     );
   }
 
+  // Show FounderSync after profile is created
+  if (showFounderSync) {
+    return (
+      <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
+        <FounderSync 
+          onComplete={handleFounderSyncComplete}
+          onSkip={handleFounderSyncSkip}
+          showSkip={true}
+        />
+      </div>
+    );
+  }
+
+  const totalSteps = 3;
+
   return (
     <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl glass-card">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold gradient-text">
-            Welcome to FindBaee
+            Welcome to Lexach
           </CardTitle>
           <p className="text-muted-foreground">
-            Step {step} of 3 - Let's build your profile
+            Step {step} of {totalSteps} - Let's build your profile
           </p>
           <div className="flex justify-center mt-4">
             <div className="flex space-x-2">
-              {[1, 2, 3].map((i) => (
+              {Array.from({ length: totalSteps }, (_, i) => (
                 <div
                   key={i}
                   className={`h-2 w-8 rounded-full ${
-                    i <= step ? 'bg-primary' : 'bg-muted'
+                    i < step ? 'bg-primary' : 'bg-muted'
                   }`}
                 />
               ))}
@@ -411,11 +441,12 @@ export default function Onboarding() {
               </Button>
             ) : (
               <Button
-                onClick={handleSubmit}
+                onClick={handleSubmitProfile}
                 disabled={!isStepValid() || loading}
                 variant="hero"
               >
-                {loading ? 'Creating...' : 'Complete Profile'}
+                {loading ? 'Creating...' : 'Continue to FounderSync'}
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             )}
           </div>

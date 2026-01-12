@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Users, Briefcase, MessageSquare, Calendar, Settings, LogOut, Search, Plus, ExternalLink, Zap } from 'lucide-react';
+import { Users, MessageSquare, Calendar, Settings, LogOut, ExternalLink, Zap } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +14,8 @@ import SparkMatch from '@/components/SparkMatch';
 import ProfileEditor from '@/components/ProfileEditor';
 import NotificationCenter from '@/components/NotificationCenter';
 import ConnectionRequests from '@/components/ConnectionRequests';
+import FounderSyncBanner from '@/components/FounderSyncBanner';
+
 interface Profile {
   id: string;
   name: string;
@@ -29,6 +30,7 @@ interface Profile {
   looking_for: string[];
   profile_pic_url?: string;
 }
+
 interface Opportunity {
   id: string;
   title: string;
@@ -37,27 +39,60 @@ interface Opportunity {
   event_date: string;
   link: string;
 }
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
-  const {
-    user,
-    signOut
-  } = useAuth();
+  const { toast } = useToast();
+  const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [matches, setMatches] = useState<Profile[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [showFounderSyncBanner, setShowFounderSyncBanner] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
   useEffect(() => {
     if (user) {
       fetchUserProfile();
       fetchMatches();
       fetchOpportunities();
+      checkFounderSyncStatus();
     }
   }, [user]);
+
+  // Check if banner was previously dismissed in this session
+  useEffect(() => {
+    const dismissed = sessionStorage.getItem('foundersync_banner_dismissed');
+    if (dismissed === 'true') {
+      setBannerDismissed(true);
+    }
+  }, []);
+
+  const checkFounderSyncStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('foundersync_results')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      // Show banner if no FounderSync results exist
+      setShowFounderSyncBanner(!data);
+    } catch (error) {
+      console.error('Error checking FounderSync status:', error);
+    }
+  };
+
+  const handleDismissBanner = () => {
+    setBannerDismissed(true);
+    sessionStorage.setItem('foundersync_banner_dismissed', 'true');
+  };
+
   const fetchUserProfile = async () => {
     if (!user) return;
     try {
@@ -87,12 +122,10 @@ export default function Dashboard() {
       });
     }
   };
+
   const fetchMatches = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.rpc('get_matchmaking_candidates', {
+      const { data, error } = await supabase.rpc('get_matchmaking_candidates', {
         limit_count: 10,
         exclude_interacted: true
       });
@@ -102,12 +135,10 @@ export default function Dashboard() {
       console.error('Error fetching matches:', error);
     }
   };
+
   const fetchOpportunities = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from('opportunities').select('*').order('event_date', {
+      const { data, error } = await supabase.from('opportunities').select('*').order('event_date', {
         ascending: true
       }).limit(10);
       if (error) throw error;
@@ -118,12 +149,11 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
   const handleConnect = async (targetUserId: string) => {
     if (!user) return;
     try {
-      const {
-        error
-      } = await supabase.from('connections').insert([{
+      const { error } = await supabase.from('connections').insert([{
         user1_id: user.id,
         user2_id: targetUserId,
         status: 'pending'
@@ -142,19 +172,30 @@ export default function Dashboard() {
       });
     }
   };
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
+
   if (loading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading your dashboard...</p>
         </div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="min-h-screen bg-background">
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* FounderSync Banner */}
+      {showFounderSyncBanner && !bannerDismissed && (
+        <FounderSyncBanner onDismiss={handleDismissBanner} />
+      )}
+
       {/* Header */}
       <header className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -240,7 +281,8 @@ export default function Dashboard() {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {opportunities.map(opportunity => <Card key={opportunity.id} className="hover-3d">
+              {opportunities.map(opportunity => (
+                <Card key={opportunity.id} className="hover-3d">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
@@ -262,13 +304,22 @@ export default function Dashboard() {
                       Learn More
                     </Button>
                   </CardContent>
-                </Card>)}
+                </Card>
+              ))}
             </div>
           </TabsContent>
         </Tabs>
       </div>
 
       {/* Profile Editor Dialog */}
-      {profile && <ProfileEditor open={profileEditorOpen} onOpenChange={setProfileEditorOpen} profile={profile} onProfileUpdate={fetchUserProfile} />}
-    </div>;
+      {profile && (
+        <ProfileEditor 
+          open={profileEditorOpen} 
+          onOpenChange={setProfileEditorOpen} 
+          profile={profile} 
+          onProfileUpdate={fetchUserProfile} 
+        />
+      )}
+    </div>
+  );
 }

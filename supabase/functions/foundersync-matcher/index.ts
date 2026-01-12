@@ -395,6 +395,42 @@ serve(async (req) => {
         .eq('id', match.id);
 
       console.log(`Updated match ${match.id} with score ${compatibilityScore}`);
+
+      // Create notification for high-compatibility matches (score >= 75)
+      if (compatibilityScore >= 75) {
+        // Get other user's profile for the notification
+        const { data: otherProfile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('user_id', otherUserId)
+          .maybeSingle();
+
+        // Create notification for the current user
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: user_id,
+            type: 'high_compatibility_match',
+            title: '🎯 High Compatibility Match!',
+            message: `You have ${compatibilityScore}% compatibility with ${otherProfile?.name || 'a founder'}. Check out your match!`,
+            related_user_id: otherUserId,
+            related_id: match.id,
+          });
+
+        console.log(`Created high-compatibility notification for user ${user_id}`);
+
+        // Also notify the other user if they completed FounderSync
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: otherUserId,
+            type: 'high_compatibility_match',
+            title: '🎯 High Compatibility Match!',
+            message: `Someone just matched with you at ${compatibilityScore}% compatibility!`,
+            related_user_id: user_id,
+            related_id: match.id,
+          });
+      }
     }
 
     return new Response(JSON.stringify({ 

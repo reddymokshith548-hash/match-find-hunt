@@ -18,6 +18,7 @@ import About from "./pages/About";
 import Settings from "./pages/Settings";
 import Messages from "./pages/Messages";
 import SparkRooms from "./pages/SparkRooms";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,8 @@ const App = () => (
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/spark-rooms" element={<ProtectedRoute><SparkRooms /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/auth" element={<Navigate to="/login" />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

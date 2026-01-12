@@ -65,6 +65,36 @@ export type Database = {
           },
         ]
       }
+      foundersync_history: {
+        Row: {
+          answers: Json
+          completed_at: string
+          id: string
+          leadership_style: string | null
+          personality_type: string | null
+          risk_tolerance: string | null
+          user_id: string
+        }
+        Insert: {
+          answers: Json
+          completed_at?: string
+          id?: string
+          leadership_style?: string | null
+          personality_type?: string | null
+          risk_tolerance?: string | null
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string
+          id?: string
+          leadership_style?: string | null
+          personality_type?: string | null
+          risk_tolerance?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       foundersync_results: {
         Row: {
           answers: Json

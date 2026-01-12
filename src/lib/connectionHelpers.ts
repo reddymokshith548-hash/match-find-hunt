@@ -5,27 +5,21 @@ export interface ConnectionResult {
   connectionId?: string;
   error?: string;
   alreadyExists?: boolean;
+  requiresNDA?: boolean;
 }
 
-async function recordInteractionDirect(fromProfileId: string, toProfileId: string, type: 'like' | 'pass') {
-  const { error } = await supabase.from('user_interactions').insert({
-    user_id: fromProfileId,
-    target_user_id: toProfileId,
-    interaction_type: type,
-  });
-
-  if (error) {
-    console.error('Error recording interaction:', error.message);
-    throw new Error(`Failed to record interaction: ${error.message}`);
-  }
-}
-
+/**
+ * Creates a connection request from one profile to another.
+ * The sender must sign the NDA separately after this call.
+ * @param fromProfileId - The profile ID of the sender
+ * @param toProfileId - The profile ID of the recipient
+ */
 export async function createConnectionRequest(
   fromProfileId: string,
   toProfileId: string
 ): Promise<ConnectionResult> {
   try {
-    // 1. Check for existing connection (Correctly uses Profile IDs)
+    // 1. Check for existing connection (uses Profile IDs)
     const { data: existingConnection, error: checkError } = await supabase
       .from('connections')
       .select('id, status')
@@ -44,7 +38,7 @@ export async function createConnectionRequest(
       };
     }
 
-    // 2. Insert the new connection (Correctly uses Profile IDs)
+    // 2. Insert the new connection (uses Profile IDs)
     const { data: newConnection, error: createError } = await supabase
       .from('connections')
       .insert({
@@ -72,7 +66,7 @@ export async function createConnectionRequest(
       .eq('id', toProfileId)
       .single();
 
-    // 4. Notification Logic
+    // 4. Notification to recipient (uses auth user_id for notifications table)
     if (toProfile?.user_id) {
       await supabase.from('notifications').insert({
         user_id: toProfile.user_id,
@@ -85,7 +79,7 @@ export async function createConnectionRequest(
       });
     }
 
-    // 5. Record the 'like' interaction directly
+    // 5. Record the 'like' interaction
     try {
       await recordInteractionDirect(fromProfileId, toProfileId, 'like');
     } catch (interactionError) {
@@ -95,6 +89,7 @@ export async function createConnectionRequest(
     return {
       success: true,
       connectionId: newConnection.id,
+      requiresNDA: true, // Signal that sender needs to sign NDA
     };
   } catch (error) {
     console.error('Error creating connection:', error);
@@ -105,6 +100,27 @@ export async function createConnectionRequest(
   }
 }
 
+/**
+ * Records an interaction directly using profile IDs
+ */
+async function recordInteractionDirect(fromProfileId: string, toProfileId: string, type: 'like' | 'pass') {
+  const { error } = await supabase.from('user_interactions').insert({
+    user_id: fromProfileId,
+    target_user_id: toProfileId,
+    interaction_type: type,
+  });
+
+  if (error) {
+    console.error('Error recording interaction:', error.message);
+    throw new Error(`Failed to record interaction: ${error.message}`);
+  }
+}
+
+/**
+ * Records a pass interaction
+ * @param fromUserId - The AUTH user ID of the person passing
+ * @param toProfileId - The PROFILE ID of the person being passed on
+ */
 export async function recordPass(fromUserId: string, toProfileId: string): Promise<void> {
   try {
     // 1. Fetch the Profile ID of the initiating user from their AUTH User ID
@@ -123,5 +139,76 @@ export async function recordPass(fromUserId: string, toProfileId: string): Promi
     await recordInteractionDirect(fromProfile.id, toProfileId, 'pass');
   } catch (error) {
     console.error('Error recording pass:', error);
+  }
+}
+
+/**
+ * Sign NDA for a connection
+ * @param connectionId - The connection ID
+ * @param userId - The AUTH user ID signing
+ */
+export async function signNDAForConnection(
+  connectionId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get user's profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .eq('user_id', userId)
+      .single();
+
+    if (!profile) {
+      return { success: false, error: 'Profile not found' };
+    }
+
+    // Get user email
+    const { data: userData } = await supabase.auth.getUser();
+    const email = userData.user?.email || '';
+
+    // Insert NDA signature
+    const { error: ndaError } = await supabase
+      .from('nda_signatures')
+      .insert({
+        user_id: userId,
+        connection_id: connectionId,
+        full_name: profile.name || 'Unknown',
+        email,
+        profile_id: profile.id,
+      });
+
+    if (ndaError && ndaError.code !== '23505') {
+      throw ndaError;
+    }
+
+    // Get connection to determine which field to update
+    const { data: connection } = await supabase
+      .from('connections')
+      .select('user1_id, user2_id')
+      .eq('id', connectionId)
+      .single();
+
+    if (connection) {
+      const isUser1 = connection.user1_id === profile.id;
+      const updateField = isUser1 ? 'nda_signed_by_user1' : 'nda_signed_by_user2';
+      const timestampField = isUser1 ? 'user1_accepted_at' : 'user2_accepted_at';
+
+      await supabase
+        .from('connections')
+        .update({
+          [updateField]: true,
+          [timestampField]: new Date().toISOString(),
+        })
+        .eq('id', connectionId);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error signing NDA:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to sign NDA',
+    };
   }
 }

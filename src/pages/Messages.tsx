@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Send, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Send, MessageSquare, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,7 +14,7 @@ interface Conversation {
   id: string;
   connection_id: string;
   other_user: {
-    id: string;
+    profile_id: string;
     name: string;
     profile_pic_url?: string | null;
   };
@@ -34,6 +34,7 @@ interface Message {
 
 export default function Messages() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -41,18 +42,32 @@ export default function Messages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [profileId, setProfileId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user) {
-      fetchConversations();
+      fetchProfileAndConversations();
     }
   }, [user]);
+
+  // Handle deep-link to specific connection
+  useEffect(() => {
+    const connectionParam = searchParams.get('connection');
+    if (connectionParam && conversations.length > 0) {
+      const targetConv = conversations.find(c => c.connection_id === connectionParam);
+      if (targetConv) {
+        setSelectedConversation(targetConv);
+      }
+    }
+  }, [searchParams, conversations]);
 
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation.connection_id);
-      subscribeToMessages(selectedConversation.connection_id);
+      const cleanup = subscribeToMessages(selectedConversation.connection_id);
+      return cleanup;
     }
   }, [selectedConversation]);
 
@@ -64,78 +79,95 @@ export default function Messages() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const fetchConversations = async () => {
+  const fetchProfileAndConversations = async () => {
     if (!user) return;
 
     try {
-      // Get all connections where both users have signed NDA
+      // First get user's profile ID
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Error fetching profile:', profileError);
+        setLoadingConversations(false);
+        return;
+      }
+
+      setProfileId(profile.id);
+
+      // Get all accepted connections where both users have signed NDA
       const { data: connections, error } = await supabase
         .from('connections')
         .select(`
           id,
           user1_id,
           user2_id,
-          status
+          status,
+          nda_signed_by_user1,
+          nda_signed_by_user2
         `)
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`)
         .eq('status', 'accepted');
 
       if (error) throw error;
 
-      // For each connection, check if both users signed NDA
-      const conversationsWithNDA = await Promise.all(
-        (connections || []).map(async (conn) => {
-          const { data: signatures } = await supabase
-            .from('nda_signatures')
-            .select('user_id')
-            .eq('connection_id', conn.id);
+      // Filter to only connections where both NDAs are signed and build conversation list
+      const conversationsData: Conversation[] = [];
 
-          const bothSigned = signatures && signatures.length === 2;
-          
-          if (!bothSigned) return null;
+      for (const conn of connections || []) {
+        // Both must have signed
+        if (!conn.nda_signed_by_user1 || !conn.nda_signed_by_user2) continue;
 
-          const otherUserId = conn.user1_id === user.id ? conn.user2_id : conn.user1_id;
+        const otherProfileId = conn.user1_id === profile.id ? conn.user2_id : conn.user1_id;
 
-          // Get other user's profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('name, profile_pic_url, user_id')
-            .eq('user_id', otherUserId)
-            .single();
+        // Get other user's profile
+        const { data: otherProfile } = await supabase
+          .from('profiles')
+          .select('id, name, profile_pic_url')
+          .eq('id', otherProfileId)
+          .single();
 
-          // Get last message
-          const { data: lastMsg } = await supabase
-            .from('messages')
-            .select('content, created_at')
-            .eq('connection_id', conn.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+        if (!otherProfile) continue;
 
-          return {
-            id: conn.id,
-            connection_id: conn.id,
-            other_user: {
-              id: otherUserId,
-              name: profile?.name || 'Unknown',
-              profile_pic_url: profile?.profile_pic_url
-            },
-            last_message: lastMsg?.content,
-            last_message_time: lastMsg?.created_at,
-            unread_count: 0
-          };
-        })
-      );
+        // Get last message
+        const { data: lastMsg } = await supabase
+          .from('messages')
+          .select('content, created_at')
+          .eq('connection_id', conn.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      const validConversations = conversationsWithNDA.filter(
-        (conv) => conv !== null
-      ) as Conversation[];
+        conversationsData.push({
+          id: conn.id,
+          connection_id: conn.id,
+          other_user: {
+            profile_id: otherProfile.id,
+            name: otherProfile.name || 'Unknown',
+            profile_pic_url: otherProfile.profile_pic_url,
+          },
+          last_message: lastMsg?.content,
+          last_message_time: lastMsg?.created_at,
+          unread_count: 0,
+        });
+      }
 
-      setConversations(validConversations);
+      setConversations(conversationsData);
 
-      // Auto-select first conversation if available
-      if (validConversations.length > 0 && !selectedConversation) {
-        setSelectedConversation(validConversations[0]);
+      // Auto-select first conversation or deep-linked one
+      const connectionParam = searchParams.get('connection');
+      if (connectionParam) {
+        const targetConv = conversationsData.find(c => c.connection_id === connectionParam);
+        if (targetConv) {
+          setSelectedConversation(targetConv);
+        } else if (conversationsData.length > 0) {
+          setSelectedConversation(conversationsData[0]);
+        }
+      } else if (conversationsData.length > 0 && !selectedConversation) {
+        setSelectedConversation(conversationsData[0]);
       }
     } catch (error) {
       console.error('Error fetching conversations:', error);
@@ -144,11 +176,13 @@ export default function Messages() {
         description: "Failed to load conversations",
         variant: "destructive"
       });
+    } finally {
+      setLoadingConversations(false);
     }
   };
 
   const fetchMessages = async (connectionId: string) => {
-    if (!user) return;
+    if (!user || !profileId) return;
 
     try {
       const { data, error } = await supabase
@@ -161,12 +195,12 @@ export default function Messages() {
 
       setMessages(data || []);
 
-      // Mark messages as read
+      // Mark messages as read (using profile ID)
       await supabase
         .from('messages')
         .update({ is_read: true })
         .eq('connection_id', connectionId)
-        .eq('receiver_id', user.id)
+        .eq('receiver_id', profileId)
         .eq('is_read', false);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -196,16 +230,17 @@ export default function Messages() {
   };
 
   const handleSendMessage = async () => {
-    if (!user || !selectedConversation || !newMessage.trim()) return;
+    if (!user || !selectedConversation || !newMessage.trim() || !profileId) return;
 
     setLoading(true);
 
     try {
+      // Use profile IDs for sender/receiver
       const { error } = await supabase
         .from('messages')
         .insert({
-          sender_id: user.id,
-          receiver_id: selectedConversation.other_user.id,
+          sender_id: profileId,
+          receiver_id: selectedConversation.other_user.profile_id,
           content: newMessage.trim(),
           connection_id: selectedConversation.connection_id,
           is_read: false
@@ -256,7 +291,11 @@ export default function Messages() {
           {/* Conversations List */}
           <Card className="lg:col-span-1">
             <ScrollArea className="h-full">
-              {conversations.length === 0 ? (
+              {loadingConversations ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : conversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center p-6">
                   <MessageSquare className="h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No conversations yet</h3>
@@ -277,7 +316,7 @@ export default function Messages() {
                       }`}
                     >
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={conv.other_user.profile_pic_url} />
+                        <AvatarImage src={conv.other_user.profile_pic_url || undefined} />
                         <AvatarFallback>{conv.other_user.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 text-left">
@@ -305,7 +344,7 @@ export default function Messages() {
                 {/* Chat Header */}
                 <div className="p-4 border-b flex items-center space-x-3">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={selectedConversation.other_user.profile_pic_url} />
+                    <AvatarImage src={selectedConversation.other_user.profile_pic_url || undefined} />
                     <AvatarFallback>
                       {selectedConversation.other_user.name.charAt(0)}
                     </AvatarFallback>
@@ -315,28 +354,35 @@ export default function Messages() {
 
                 {/* Messages */}
                 <ScrollArea className="flex-1 p-4">
-                  {messages.map((message) => {
-                    const isSender = message.sender_id === user?.id;
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex mb-4 ${isSender ? 'justify-end' : 'justify-start'}`}
-                      >
+                  {messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <MessageSquare className="h-12 w-12 text-muted-foreground mb-2" />
+                      <p className="text-muted-foreground">No messages yet. Say hello! 👋</p>
+                    </div>
+                  ) : (
+                    messages.map((message) => {
+                      const isSender = message.sender_id === profileId;
+                      return (
                         <div
-                          className={`max-w-[70%] rounded-lg p-3 ${
-                            isSender
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
-                          }`}
+                          key={message.id}
+                          className={`flex mb-4 ${isSender ? 'justify-end' : 'justify-start'}`}
                         >
-                          <p className="text-sm">{message.content}</p>
-                          <span className="text-xs opacity-70 mt-1 block">
-                            {formatTime(message.created_at)}
-                          </span>
+                          <div
+                            className={`max-w-[70%] rounded-lg p-3 ${
+                              isSender
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            }`}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                            <span className="text-xs opacity-70 mt-1 block">
+                              {formatTime(message.created_at)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                   <div ref={messagesEndRef} />
                 </ScrollArea>
 

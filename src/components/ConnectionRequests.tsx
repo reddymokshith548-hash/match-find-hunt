@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Users } from 'lucide-react';
+import { Check, X, Users, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
-import NDAModal from './NDAModal';
+import MutualNDAModal from './MutualNDAModal';
 
 interface ConnectionRequest {
   id: string;
@@ -18,6 +19,7 @@ interface ConnectionRequest {
   nda_signed_by_user1: boolean;
   nda_signed_by_user2: boolean;
   requester: {
+    id: string;
     name: string;
     role: string;
     profile_pic_url?: string;
@@ -27,26 +29,43 @@ interface ConnectionRequest {
 export default function ConnectionRequests() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<ConnectionRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileId, setProfileId] = useState<string | null>(null);
   const [ndaModalOpen, setNdaModalOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<{
     id: string;
-    userId: string;
     userName: string;
   } | null>(null);
 
   useEffect(() => {
     if (user) {
-      fetchRequests();
+      fetchProfileAndRequests();
       subscribeToConnections();
     }
   }, [user]);
 
-  const fetchRequests = async () => {
+  const fetchProfileAndRequests = async () => {
     if (!user) return;
 
     try {
+      // First get the user's profile ID
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Error fetching profile:', profileError);
+        setLoading(false);
+        return;
+      }
+
+      setProfileId(profile.id);
+
+      // Now fetch connection requests where this profile is user2
       const { data, error } = await supabase
         .from('connections')
         .select(`
@@ -57,9 +76,9 @@ export default function ConnectionRequests() {
           created_at,
           nda_signed_by_user1,
           nda_signed_by_user2,
-          requester:profiles!connections_user1_id_fkey(name, role, profile_pic_url)
+          requester:profiles!connections_user1_id_fkey(id, name, role, profile_pic_url)
         `)
-        .eq('user2_id', user.id)
+        .eq('user2_id', profile.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
@@ -73,6 +92,8 @@ export default function ConnectionRequests() {
   };
 
   const subscribeToConnections = () => {
+    if (!profileId) return;
+    
     const channel = supabase
       .channel('connection-changes')
       .on(
@@ -81,10 +102,9 @@ export default function ConnectionRequests() {
           event: '*',
           schema: 'public',
           table: 'connections',
-          filter: `user2_id=eq.${user?.id}`
         },
         () => {
-          fetchRequests();
+          fetchProfileAndRequests();
         }
       )
       .subscribe();
@@ -95,51 +115,46 @@ export default function ConnectionRequests() {
   };
 
   const handleAccept = async (request: ConnectionRequest) => {
-    // 1. Check if the INITIATOR (user1) has signed their part of the NDA
+    // Check if sender has signed their NDA
     if (!request.nda_signed_by_user1) {
       toast({
-        title: "Wait!",
-        description: `${request.requester.name} has not signed their part of the NDA yet.`,
+        title: "Waiting for NDA",
+        description: `${request.requester.name} hasn't signed the NDA yet. They need to sign first.`,
         variant: "default",
       });
       return;
     }
 
-    // 2. Check if the RECEIVER (current user, user2) has signed their part
-    if (request.nda_signed_by_user2) {
-      // Already signed by user2, just finalize
-      await finalizeAccept(request.id);
-    } else {
-      // User2 needs to sign NDA, show the modal
-      setSelectedConnection({
-        id: request.id,
-        userId: request.user1_id,
-        userName: request.requester.name
-      });
-      setNdaModalOpen(true);
-    }
+    // Receiver needs to sign NDA
+    setSelectedConnection({
+      id: request.id,
+      userName: request.requester.name,
+    });
+    setNdaModalOpen(true);
   };
 
   const finalizeAccept = async (connectionId: string) => {
     try {
-      // User2 is accepting, mark their NDA as signed
+      // Update connection status to accepted
       const { error } = await supabase
         .from('connections')
         .update({
           status: 'accepted',
-          nda_signed_by_user2: true,
-          user2_accepted_at: new Date().toISOString()
         })
         .eq('id', connectionId);
 
       if (error) throw error;
 
       toast({
-        title: 'Connection accepted!',
-        description: 'You can now message each other',
+        title: '🎉 Connection accepted!',
+        description: 'You can now message each other securely.',
       });
 
+      // Remove from pending list
       setRequests(prev => prev.filter(r => r.id !== connectionId));
+      
+      // Navigate to messages with connection pre-selected
+      navigate(`/messages?connection=${connectionId}`);
     } catch (error) {
       console.error('Error accepting connection:', error);
       toast({
@@ -229,6 +244,11 @@ export default function ConnectionRequests() {
               <div>
                 <h4 className="font-semibold">{request.requester.name}</h4>
                 <p className="text-sm text-muted-foreground">{request.requester.role}</p>
+                {request.nda_signed_by_user1 && (
+                  <Badge variant="outline" className="mt-1 text-xs">
+                    ✓ NDA Signed
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -246,21 +266,22 @@ export default function ConnectionRequests() {
                 onClick={() => handleAccept(request)}
                 className="bg-green-500 hover:bg-green-600"
               >
-                <Check className="h-4 w-4" />
+                <Check className="h-4 w-4 mr-1" />
+                Accept
               </Button>
             </div>
           </div>
         ))}
       </CardContent>
 
-      {/* NDA Modal */}
+      {/* NDA Modal for accepting */}
       {selectedConnection && (
-        <NDAModal
+        <MutualNDAModal
           open={ndaModalOpen}
           onOpenChange={setNdaModalOpen}
-          targetUserId={selectedConnection.userId}
           targetUserName={selectedConnection.userName}
           connectionId={selectedConnection.id}
+          isInitiator={false}
           onAccept={() => {
             finalizeAccept(selectedConnection.id);
             setSelectedConnection(null);

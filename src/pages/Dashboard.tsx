@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, MessageSquare, Calendar, Settings, LogOut, ExternalLink, Zap } from 'lucide-react';
+import { Users, MessageSquare, Calendar, Settings, LogOut, ExternalLink, Zap, User } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -212,6 +212,10 @@ export default function Dashboard() {
           
           <div className="flex items-center space-x-2">
             <NotificationCenter />
+            <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
+              <User className="h-4 w-4 mr-2" />
+              My Profile
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>
               <Settings className="h-4 w-4 mr-2" />
               Settings

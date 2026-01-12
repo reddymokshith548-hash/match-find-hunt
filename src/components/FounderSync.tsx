@@ -216,11 +216,23 @@ export default function FounderSync({ onComplete, onSkip, showSkip = true }: Fou
       // Check if user already has results
       const { data: existingResults } = await supabase
         .from('foundersync_results')
-        .select('id')
+        .select('id, personality_type, leadership_style, risk_tolerance')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (existingResults) {
+        // Save old results to history before updating
+        await supabase
+          .from('foundersync_history')
+          .insert({
+            user_id: user.id,
+            answers: formattedAnswers,
+            personality_type: existingResults.personality_type,
+            leadership_style: existingResults.leadership_style,
+            risk_tolerance: existingResults.risk_tolerance,
+            completed_at: new Date().toISOString()
+          });
+
         // Update existing results
         const { error } = await supabase
           .from('foundersync_results')
@@ -247,6 +259,18 @@ export default function FounderSync({ onComplete, onSkip, showSkip = true }: Fou
           });
 
         if (error) throw error;
+
+        // Also save to history for the first entry
+        await supabase
+          .from('foundersync_history')
+          .insert({
+            user_id: user.id,
+            answers: formattedAnswers,
+            personality_type: personalityType,
+            leadership_style: leadershipStyle,
+            risk_tolerance: riskTolerance,
+            completed_at: new Date().toISOString()
+          });
       }
 
       // Trigger the FounderSync Intelligence Engine

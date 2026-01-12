@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,7 @@ interface LiveMatchmakingProps {
 const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [matches, setMatches] = useState<MatchProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -296,7 +298,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   };
 
   const handleViewProfile = (id: string) => {
-    window.location.href = `/profile/${id}`;
+    navigate(`/profile/${id}`);
   };
 
   const handleRefresh = () => fetchMatches();

@@ -81,6 +81,35 @@ export async function createConnectionRequest(
         related_id: newConnection.id,
         is_read: false,
       });
+
+      // 5. Send email notification
+      try {
+        // Get recipient's email
+        const { data: { user: recipient } } = await supabase.auth.getUser();
+        
+        // Get recipient profile for email
+        const { data: recipientProfile } = await supabase
+          .from('profiles')
+          .select('name, user_id')
+          .eq('id', toProfileId)
+          .single();
+
+        if (recipientProfile) {
+          // We need to invoke the edge function to send email
+          await supabase.functions.invoke('send-connection-email', {
+            body: {
+              type: 'connection_request',
+              recipientEmail: '', // Will be fetched server-side
+              recipientName: recipientProfile.name || 'User',
+              senderName: senderName,
+              connectionId: newConnection.id,
+            },
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending email notification:', emailError);
+        // Don't fail the connection request if email fails
+      }
     }
 
     // 5. Record the 'like' interaction (uses auth user IDs for RLS)

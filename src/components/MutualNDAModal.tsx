@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -32,9 +32,77 @@ export default function MutualNDAModal({
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
   const [signature, setSignature] = useState<string | null>(null);
   const [hasDownloaded, setHasDownloaded] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [alreadySigned, setAlreadySigned] = useState(false);
+
+  // Check if the user has already signed the NDA and if both have signed
+  useEffect(() => {
+    const checkNDAStatus = async () => {
+      if (!user || !open) {
+        setCheckingStatus(false);
+        return;
+      }
+      
+      try {
+        setCheckingStatus(true);
+        
+        // Get user's profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (!profile) {
+          setCheckingStatus(false);
+          return;
+        }
+        
+        // Get connection details
+        const { data: connection } = await supabase
+          .from('connections')
+          .select('user1_id, user2_id, nda_signed_by_user1, nda_signed_by_user2, status')
+          .eq('id', connectionId)
+          .single();
+        
+        if (!connection) {
+          setCheckingStatus(false);
+          return;
+        }
+        
+        const isUser1 = connection.user1_id === profile.id;
+        const userHasSigned = isUser1 ? connection.nda_signed_by_user1 : connection.nda_signed_by_user2;
+        const otherHasSigned = isUser1 ? connection.nda_signed_by_user2 : connection.nda_signed_by_user1;
+        
+        // If both have signed, navigate directly to chat
+        if (userHasSigned && otherHasSigned && connection.status === 'accepted') {
+          toast({
+            title: "✅ NDA Already Signed",
+            description: "Both parties have signed. Opening chat..."
+          });
+          onOpenChange(false);
+          navigate(`/messages?connection=${connectionId}`);
+          return;
+        }
+        
+        // If user has already signed but waiting for other party
+        if (userHasSigned && !otherHasSigned) {
+          setAlreadySigned(true);
+        }
+        
+      } catch (error) {
+        console.error('Error checking NDA status:', error);
+      } finally {
+        setCheckingStatus(false);
+      }
+    };
+    
+    checkNDAStatus();
+  }, [open, user, connectionId]);
+
 
   const generateNDADocument = (): string => {
     const currentDate = new Date().toLocaleDateString('en-IN', {
@@ -262,14 +330,36 @@ Document ID: NDA-${connectionId.slice(0, 8).toUpperCase()}
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-2xl font-bold text-center">
-            🤝 Mutual NDA Required
-          </DialogTitle>
-          <p className="text-center text-sm text-muted-foreground mt-2">
-            Sign this NDA to start chatting with {targetUserName}
-          </p>
-        </DialogHeader>
+        {checkingStatus ? (
+          <div className="p-12 flex flex-col items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Checking NDA status...</p>
+          </div>
+        ) : alreadySigned ? (
+          <div className="p-8 text-center">
+            <div className="mb-4">
+              <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
+            </div>
+            <DialogTitle className="text-2xl font-bold mb-2">
+              ✅ You've Already Signed
+            </DialogTitle>
+            <p className="text-muted-foreground mb-6">
+              You've signed the NDA. Waiting for {targetUserName} to sign before you can chat.
+            </p>
+            <Button onClick={() => onOpenChange(false)} variant="outline">
+              Close
+            </Button>
+          </div>
+        ) : (
+          <>
+            <DialogHeader className="p-6 pb-2">
+              <DialogTitle className="text-2xl font-bold text-center">
+                🤝 Mutual NDA Required
+              </DialogTitle>
+              <p className="text-center text-sm text-muted-foreground mt-2">
+                Sign this NDA to start chatting with {targetUserName}
+              </p>
+            </DialogHeader>
 
         <ScrollArea className="max-h-[55vh] px-6">
           <div className="space-y-5 text-sm leading-relaxed pb-4">
@@ -393,6 +483,8 @@ Document ID: NDA-${connectionId.slice(0, 8).toUpperCase()}
             )}
           </Button>
         </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

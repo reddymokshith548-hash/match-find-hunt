@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import {
   DropdownMenu,
@@ -27,6 +28,7 @@ interface Notification {
 export default function NotificationCenter() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -105,6 +107,43 @@ export default function NotificationCenter() {
     }
   };
 
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read first
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+    
+    // Close dropdown
+    setOpen(false);
+    
+    // Navigate based on notification type
+    switch (notification.type) {
+      case 'connection_request':
+        // Navigate to dashboard matches tab which shows connection requests
+        navigate('/dashboard?tab=matches');
+        break;
+      case 'connection_accepted':
+        // Navigate to messages with the connection
+        if (notification.related_id) {
+          navigate(`/messages?connection=${notification.related_id}`);
+        } else {
+          navigate('/messages');
+        }
+        break;
+      case 'message':
+        // Navigate to messages
+        if (notification.related_id) {
+          navigate(`/messages?connection=${notification.related_id}`);
+        } else {
+          navigate('/messages');
+        }
+        break;
+      default:
+        // Default navigation to dashboard
+        navigate('/dashboard');
+    }
+  };
+
   const markAllAsRead = async () => {
     try {
       const { error } = await supabase
@@ -165,7 +204,7 @@ export default function NotificationCenter() {
               className={`flex flex-col items-start p-3 cursor-pointer ${
                 !notification.is_read ? 'bg-primary/5' : ''
               }`}
-              onClick={() => !notification.is_read && markAsRead(notification.id)}
+              onClick={() => handleNotificationClick(notification)}
             >
               <div className="flex items-start justify-between w-full">
                 <div className="flex-1">

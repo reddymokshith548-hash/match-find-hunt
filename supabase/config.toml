@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.get-visible-matches]
 verify_jwt = false
+
+[functions.generate-ai-summary]
+verify_jwt = false

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, AlertCircle, Brain, BarChart3 } from "lucide-react";
+import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, AlertCircle, Brain, BarChart3, Wand2 } from "lucide-react";
 
 import { createConnectionRequest, recordPass } from "@/lib/connectionHelpers";
 import { CompatibilityBreakdown } from "@/components/CompatibilityBreakdown";
@@ -77,6 +77,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [useIntelligenceEngine, setUseIntelligenceEngine] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchProfile | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [generatingSummaryFor, setGeneratingSummaryFor] = useState<string | null>(null);
   
   // NDA Modal state
   const [ndaModalOpen, setNdaModalOpen] = useState(false);
@@ -323,6 +324,46 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     navigate(`/profile/${id}`);
   };
 
+  const handleGenerateAISummary = async (profile: MatchProfile) => {
+    if (!user) return;
+    
+    setGeneratingSummaryFor(profile.id);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-ai-summary', {
+        body: {
+          viewer_user_id: user.id,
+          candidate_profile_id: profile.id
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.ai_summary) {
+        // Update the match in state with the new AI summary
+        setMatches(prev => prev.map(m => 
+          m.id === profile.id 
+            ? { ...m, ai_summary: data.ai_summary }
+            : m
+        ));
+        
+        toast({
+          title: data.cached ? "📋 Cached Summary" : "✨ AI Summary Generated",
+          description: data.cached ? "Retrieved from cache" : "Fresh compatibility analysis ready"
+        });
+      }
+    } catch (err: any) {
+      console.error('Error generating AI summary:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to generate AI summary",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingSummaryFor(null);
+    }
+  };
+
   const handleRefresh = () => fetchMatches();
 
   return (
@@ -444,8 +485,8 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                   </CardHeader>
 
                   <CardContent className="pt-0 space-y-4">
-                    {/* AI Summary Box - Always visible for Phase 2 matches */}
-                    {profile.ai_summary && profile.phase === 'phase2' && (
+                    {/* AI Summary Box - Show when available */}
+                    {profile.ai_summary ? (
                       <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
                         <div className="flex items-start gap-2">
                           <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
@@ -454,13 +495,33 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                           </p>
                         </div>
                       </div>
-                    )}
-                    
-                    {/* Bio for non-FounderSync matches */}
-                    {(!profile.ai_summary || profile.phase !== 'phase2') && profile.bio && (
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {profile.bio.length > 120 ? `${profile.bio.substring(0, 120)}...` : profile.bio}
-                      </p>
+                    ) : (
+                      <>
+                        {/* Bio when no AI summary */}
+                        {profile.bio && (
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {profile.bio.length > 100 ? `${profile.bio.substring(0, 100)}...` : profile.bio}
+                          </p>
+                        )}
+                        {/* Generate AI Summary button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          disabled={generatingSummaryFor === profile.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleGenerateAISummary(profile);
+                          }}
+                        >
+                          {generatingSummaryFor === profile.id ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Wand2 className="w-4 h-4 mr-2" />
+                          )}
+                          Generate AI Summary
+                        </Button>
+                      </>
                     )}
                     
                     <div className="flex flex-wrap gap-2">

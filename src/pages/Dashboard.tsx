@@ -150,28 +150,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleConnect = async (targetUserId: string) => {
-    if (!user) return;
-    try {
-      const { error } = await supabase.from('connections').insert([{
-        user1_id: user.id,
-        user2_id: targetUserId,
-        status: 'pending'
-      }]);
-      if (error) throw error;
-      toast({
-        title: "Connection request sent!",
-        description: "We'll notify you when they respond."
-      });
-    } catch (error) {
-      console.error('Error sending connection:', error);
-      toast({
-        title: "Error",
-        description: "Failed to send connection request",
-        variant: "destructive"
-      });
-    }
-  };
+  // Note: Connection handling is now managed by LiveMatchmaking component via unified helper
 
   const handleSignOut = async () => {
     await signOut();

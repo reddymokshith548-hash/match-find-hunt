@@ -365,6 +365,7 @@ export type Database = {
           role: string | null
           skills: string[] | null
           stage: string | null
+          test_completed: boolean
           user_id: string | null
         }
         Insert: {
@@ -390,6 +391,7 @@ export type Database = {
           role?: string | null
           skills?: string[] | null
           stage?: string | null
+          test_completed?: boolean
           user_id?: string | null
         }
         Update: {
@@ -415,6 +417,7 @@ export type Database = {
           role?: string | null
           skills?: string[] | null
           stage?: string | null
+          test_completed?: boolean
           user_id?: string | null
         }
         Relationships: []

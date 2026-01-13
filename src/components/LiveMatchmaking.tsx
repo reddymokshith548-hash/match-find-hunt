@@ -10,7 +10,7 @@ import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, A
 
 import { createConnectionRequest, recordPass } from "@/lib/connectionHelpers";
 import { CompatibilityBreakdown } from "@/components/CompatibilityBreakdown";
-import MutualNDAModal from "@/components/MutualNDAModal";
+// MutualNDAModal removed - NDA flow is handled in ConnectionRequests
 import MatchFilters, { MatchFiltersState } from "@/components/MatchFilters";
 import { useRealtimeMatches } from "@/hooks/useRealtimeMatches";
 
@@ -88,13 +88,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     skills: [],
   });
   
-  // NDA Modal state
-  const [ndaModalOpen, setNdaModalOpen] = useState(false);
-  const [pendingConnection, setPendingConnection] = useState<{
-    connectionId: string;
-    targetProfileId: string;
-    targetName: string;
-  } | null>(null);
+  // NDA Modal no longer needed here - handled in Messages/ConnectionRequests
   
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
@@ -315,13 +309,12 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     const result = await createConnectionRequest(profileId, targetProfile.id);
 
     if (result.success && result.connectionId) {
-      // Show NDA modal for sender to sign
-      setPendingConnection({
-        connectionId: result.connectionId,
-        targetProfileId: targetProfile.id,
-        targetName: targetProfile.name,
+      // Instagram-like flow: Just send the request, no NDA yet
+      toast({
+        title: "✅ Request Sent!",
+        description: `Connection request sent to ${targetProfile.name}. They'll be notified!`
       });
-      setNdaModalOpen(true);
+      removeMatch(targetProfile.id, "right");
     } else if (result.alreadyExists) {
       toast({
         title: "Already connected",
@@ -337,16 +330,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     }
   };
 
-  const handleNDAAccepted = () => {
-    if (pendingConnection) {
-      toast({
-        title: "✅ Connection sent!",
-        description: `We'll notify ${pendingConnection.targetName} about your request.`
-      });
-      removeMatch(pendingConnection.targetProfileId, "right");
-      setPendingConnection(null);
-    }
-  };
+  // NDA modal removed from connect flow - only shows when trying to chat
 
   const handlePass = async (targetProfileId: string) => {
     if (user) {
@@ -551,7 +535,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
                     {profile.phase === 'phase2' && (
                       <div className="absolute top-2 left-2">
-                        <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30">
+                        <Badge variant="secondary" className="bg-background text-primary border border-primary/30 shadow-sm">
                           <Brain className="w-3 h-3 mr-1" />
                           FounderSync
                         </Badge>
@@ -687,20 +671,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         />
       )}
 
-      {/* NDA Modal for sender */}
-      {pendingConnection && (
-        <MutualNDAModal
-          open={ndaModalOpen}
-          onOpenChange={(open) => {
-            setNdaModalOpen(open);
-            if (!open) setPendingConnection(null);
-          }}
-          targetUserName={pendingConnection.targetName}
-          connectionId={pendingConnection.connectionId}
-          isInitiator={true}
-          onAccept={handleNDAAccepted}
-        />
-      )}
+      {/* NDA Modal removed - NDA is only required when trying to chat, not on connect */}
     </section>
   );
 };

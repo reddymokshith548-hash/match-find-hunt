@@ -119,7 +119,12 @@ export default function ConnectionRequests() {
         .order('created_at', { ascending: false });
 
       if (receivedError) throw receivedError;
-      setReceivedRequests(received as any || []);
+      
+      // Filter out connections with null requester profiles
+      const validReceived = (received || []).filter(
+        (r: any) => r && r.id && r.requester && r.requester.id
+      );
+      setReceivedRequests(validReceived as ConnectionRequest[]);
 
       // Fetch sent requests (where this profile is user1)
       const { data: sent, error: sentError } = await supabase
@@ -139,7 +144,12 @@ export default function ConnectionRequests() {
         .order('created_at', { ascending: false });
 
       if (sentError) throw sentError;
-      setSentRequests(sent as any || []);
+      
+      // Filter out connections with null recipient profiles
+      const validSent = (sent || []).filter(
+        (r: any) => r && r.id && r.recipient && r.recipient.id
+      );
+      setSentRequests(validSent as SentRequest[]);
 
     } catch (error) {
       console.error('Error fetching requests:', error);
@@ -379,7 +389,11 @@ export default function ConnectionRequests() {
                 <p>No pending connection requests</p>
               </div>
             ) : (
-              receivedRequests.map(request => (
+              receivedRequests.map(request => {
+                // Skip rendering if requester data is missing
+                if (!request || !request.requester || !request.requester.id) return null;
+                
+                return (
                 <div
                   key={request.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -434,7 +448,8 @@ export default function ConnectionRequests() {
                     </Button>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </TabsContent>
 
@@ -446,7 +461,11 @@ export default function ConnectionRequests() {
                 <p className="text-sm mt-1">Connect with founders from the Matches tab!</p>
               </div>
             ) : (
-              sentRequests.map(request => (
+              sentRequests.map(request => {
+                // Skip rendering if recipient data is missing
+                if (!request || !request.recipient || !request.recipient.id) return null;
+                
+                return (
                 <div
                   key={request.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -505,7 +524,8 @@ export default function ConnectionRequests() {
                     )}
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </TabsContent>
         </Tabs>

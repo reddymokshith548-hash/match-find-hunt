@@ -169,71 +169,66 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     setLoading(true);
     setError(null);
 
-      try {
-        // Try intelligence engine first if user completed FounderSync
-        if (useIntelligenceEngine) {
-          console.log('Using FounderSync Intelligence Engine...');
-          const { data: engineResult, error: engineError } = await supabase.functions.invoke('get-visible-matches', {
-            body: { user_id: user.id, limit: 20 }
-          });
-
-          if (!engineError && Array.isArray(engineResult?.matches)) {
-            const mapped: MatchProfile[] = engineResult.matches
-              .filter((m: any) => m && m.id)
-              .map((m: any) => ({
-                id: String(m.id),
-                name: m.name || 'Unknown',
-                type: m.role || 'User',
-                interests: Array.isArray(m.interests) ? m.interests : [],
-                skills: Array.isArray(m.skills) ? m.skills : [],
-                match_score: typeof m.final_score === 'number' ? m.final_score : (typeof m.match_score === 'number' ? m.match_score : 0),
-                bio: m.bio,
-                location: m.location || m.stage,
-                profile_pic_url: m.profile_pic_url,
-                role: m.role,
-                ai_summary: m.ai_summary,
-                phase: m.phase,
-                viewer_traits: m.viewer_traits,
-                candidate_traits: m.candidate_traits,
-              }));
-
-            setMatches(mapped);
-            animateNewMatches(mapped);
-            setLoading(false);
-            return;
-          }
-
-          console.log('Intelligence engine fallback to RPC...', engineError);
-        }
-
-        // Fallback to regular RPC
-        const { data, error } = await supabase.rpc("get_matchmaking_candidates", {
-          limit_count: 10,
-          exclude_interacted: true,
+    try {
+      // Try intelligence engine first if user completed FounderSync
+      if (useIntelligenceEngine) {
+        console.log('Using FounderSync Intelligence Engine...');
+        const { data: engineResult, error: engineError } = await supabase.functions.invoke('get-visible-matches', {
+          body: { user_id: user.id, limit: 20 }
         });
 
-        if (error) throw error;
-
-        const safeRows = Array.isArray(data) ? data : [];
-        const mapped: MatchProfile[] = safeRows
-          .filter((p: any) => p && p.id)
-          .map((p: any) => ({
-            id: String(p.id),
-            name: p.name || 'Unknown',
-            type: p.role || "User",
-            age: p.age,
-            interests: Array.isArray(p.interests) ? p.interests : [],
-            skills: Array.isArray(p.skills) ? p.skills : [],
-            match_score: typeof p.match_score === 'number' ? p.match_score : 0,
-            bio: p.bio,
-            location: p.location,
-            experience: p.experience,
-            profile_pic_url: p.profile_pic_url,
-            role: p.role,
+        if (!engineError && engineResult?.matches) {
+          const mapped: MatchProfile[] = engineResult.matches.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            type: m.role || "User",
+            interests: m.interests || [],
+            skills: m.skills || [],
+            match_score: m.final_score || 0,
+            bio: m.bio,
+            location: m.stage,
+            profile_pic_url: m.profile_pic_url,
+            role: m.role,
+            ai_summary: m.ai_summary,
+            phase: m.phase,
+            viewer_traits: m.viewer_traits,
+            candidate_traits: m.candidate_traits,
           }));
 
-        setMatches(mapped);
-        animateNewMatches(mapped);
+          setMatches(mapped);
+          animateNewMatches(mapped);
+          setLoading(false);
+          return;
+        }
+
+        console.log('Intelligence engine fallback to RPC...', engineError);
+      }
+
+      // Fallback to regular RPC
+      const { data, error } = await supabase.rpc("get_matchmaking_candidates", {
+        limit_count: 10,
+        exclude_interacted: true,
+      });
+
+      if (error) throw error;
+
+      const mapped: MatchProfile[] = (data || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        type: p.role || "User",
+        age: p.age,
+        interests: p.interests || [],
+        skills: p.skills || [],
+        match_score: p.match_score || 0,
+        bio: p.bio,
+        location: p.location,
+        experience: p.experience,
+        profile_pic_url: p.profile_pic_url,
+        role: p.role,
+      }));
+
+      setMatches(mapped);
+      animateNewMatches(mapped);
     } catch (err) {
       console.error("Error fetching matches:", err);
       setError("Failed to fetch matches. Showing sample matches.");

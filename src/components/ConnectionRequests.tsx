@@ -25,24 +25,24 @@ interface ProfileDetails {
 
 interface ConnectionRequest {
   id: string;
-  user1_id: string | null;
-  user2_id: string | null;
-  status: string | null;
-  created_at: string | null;
-  nda_signed_by_user1: boolean | null;
-  nda_signed_by_user2: boolean | null;
-  requester: ProfileDetails | null;
+  user1_id: string;
+  user2_id: string;
+  status: string;
+  created_at: string;
+  nda_signed_by_user1: boolean;
+  nda_signed_by_user2: boolean;
+  requester: ProfileDetails;
 }
 
 interface SentRequest {
   id: string;
-  user1_id: string | null;
-  user2_id: string | null;
-  status: string | null;
-  created_at: string | null;
-  nda_signed_by_user1: boolean | null;
-  nda_signed_by_user2: boolean | null;
-  recipient: ProfileDetails | null;
+  user1_id: string;
+  user2_id: string;
+  status: string;
+  created_at: string;
+  nda_signed_by_user1: boolean;
+  nda_signed_by_user2: boolean;
+  recipient: ProfileDetails;
 }
 
 interface AcceptedConnection {
@@ -91,9 +91,9 @@ export default function ConnectionRequests() {
         .from('profiles')
         .select('id')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .single();
 
-      if (profileError || !profile?.id) {
+      if (profileError || !profile) {
         console.error('Error fetching profile:', profileError);
         setLoading(false);
         return;
@@ -199,7 +199,7 @@ export default function ConnectionRequests() {
     // Open NDA modal for the receiver to sign
     setSelectedConnection({
       id: request.id,
-      userName: request.requester?.name ?? 'Unknown',
+      userName: request.requester.name,
       isInitiator: false,
     });
     setNdaModalOpen(true);
@@ -304,15 +304,11 @@ export default function ConnectionRequests() {
     }
   };
 
-  const formatTimeAgo = (dateString?: string | null) => {
-    if (!dateString) return '';
-
+  const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return '';
-
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-
+    
     if (diffInHours < 1) {
       return 'Just now';
     } else if (diffInHours < 24) {
@@ -383,78 +379,62 @@ export default function ConnectionRequests() {
                 <p>No pending connection requests</p>
               </div>
             ) : (
-              (receivedRequests || []).filter(r => r && r.id).map(request => {
-                const requester = request.requester;
-                const requesterName = requester?.name ?? 'Unknown';
-                const requesterRole = requester?.role ?? 'Founder';
-                const requesterProfileId = requester?.id ?? request.user1_id ?? '';
-
-                const hoverProfile = requesterProfileId
-                  ? {
-                      id: requesterProfileId,
-                      name: requesterName,
-                      role: requesterRole,
-                      profile_pic_url: requester?.profile_pic_url,
-                      bio: requester?.bio,
-                      location: requester?.location,
-                      skills: requester?.skills || [],
-                      interests: requester?.interests || [],
-                    }
-                  : null;
-
-                const avatar = (
-                  <Avatar className="h-12 w-12 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
-                    <AvatarImage src={requester?.profile_pic_url} />
-                    <AvatarFallback>{requesterName?.charAt(0) || '?'}</AvatarFallback>
-                  </Avatar>
-                );
-
-                return (
-                  <div
-                    key={request.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      {hoverProfile ? (
-                        <ProfileHoverCard profile={hoverProfile} side="right">
-                          {avatar}
-                        </ProfileHoverCard>
-                      ) : (
-                        avatar
-                      )}
-                      <div>
-                        <h4 className="font-semibold">{requesterName}</h4>
-                        <p className="text-sm text-muted-foreground">{requesterRole}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">
-                            {formatTimeAgo(request.created_at)}
-                          </span>
-                        </div>
+              receivedRequests.map(request => (
+                <div
+                  key={request.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <ProfileHoverCard
+                      profile={{
+                        id: request.requester.id,
+                        name: request.requester.name,
+                        role: request.requester.role,
+                        profile_pic_url: request.requester.profile_pic_url,
+                        bio: request.requester.bio,
+                        location: request.requester.location,
+                        skills: request.requester.skills || [],
+                        interests: request.requester.interests || [],
+                      }}
+                      side="right"
+                    >
+                      <Avatar className="h-12 w-12 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
+                        <AvatarImage src={request.requester.profile_pic_url} />
+                        <AvatarFallback>{request.requester.name?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    </ProfileHoverCard>
+                    <div>
+                      <h4 className="font-semibold">{request.requester.name}</h4>
+                      <p className="text-sm text-muted-foreground">{request.requester.role}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {formatTimeAgo(request.created_at)}
+                        </span>
                       </div>
                     </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleReject(request.id)}
-                        className="hover:bg-destructive/10"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAccept(request)}
-                        className="bg-green-500 hover:bg-green-600"
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Accept
-                      </Button>
-                    </div>
                   </div>
-                );
-              })
+
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleReject(request.id)}
+                      className="hover:bg-destructive/10"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAccept(request)}
+                      className="bg-green-500 hover:bg-green-600"
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Accept
+                    </Button>
+                  </div>
+                </div>
+              ))
             )}
           </TabsContent>
 
@@ -466,82 +446,66 @@ export default function ConnectionRequests() {
                 <p className="text-sm mt-1">Connect with founders from the Matches tab!</p>
               </div>
             ) : (
-              (sentRequests || []).filter(r => r && r.id).map(request => {
-                const recipient = request.recipient;
-                const recipientName = recipient?.name ?? 'Unknown';
-                const recipientRole = recipient?.role ?? 'Founder';
-                const recipientProfileId = recipient?.id ?? request.user2_id ?? '';
-
-                const hoverProfile = recipientProfileId
-                  ? {
-                      id: recipientProfileId,
-                      name: recipientName,
-                      role: recipientRole,
-                      profile_pic_url: recipient?.profile_pic_url,
-                      bio: recipient?.bio,
-                      location: recipient?.location,
-                      skills: recipient?.skills || [],
-                      interests: recipient?.interests || [],
-                    }
-                  : null;
-
-                const avatar = (
-                  <Avatar className="h-12 w-12 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
-                    <AvatarImage src={recipient?.profile_pic_url} />
-                    <AvatarFallback>{recipientName?.charAt(0) || '?'}</AvatarFallback>
-                  </Avatar>
-                );
-
-                return (
-                  <div
-                    key={request.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      {hoverProfile ? (
-                        <ProfileHoverCard profile={hoverProfile} side="right">
-                          {avatar}
-                        </ProfileHoverCard>
-                      ) : (
-                        avatar
-                      )}
-                      <div>
-                        <h4 className="font-semibold">{recipientName}</h4>
-                        <p className="text-sm text-muted-foreground">{recipientRole}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">
-                            {formatTimeAgo(request.created_at)}
-                          </span>
-                        </div>
+              sentRequests.map(request => (
+                <div
+                  key={request.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <ProfileHoverCard
+                      profile={{
+                        id: request.recipient.id,
+                        name: request.recipient.name,
+                        role: request.recipient.role,
+                        profile_pic_url: request.recipient.profile_pic_url,
+                        bio: request.recipient.bio,
+                        location: request.recipient.location,
+                        skills: request.recipient.skills || [],
+                        interests: request.recipient.interests || [],
+                      }}
+                      side="right"
+                    >
+                      <Avatar className="h-12 w-12 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
+                        <AvatarImage src={request.recipient.profile_pic_url} />
+                        <AvatarFallback>{request.recipient.name?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    </ProfileHoverCard>
+                    <div>
+                      <h4 className="font-semibold">{request.recipient.name}</h4>
+                      <p className="text-sm text-muted-foreground">{request.recipient.role}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {formatTimeAgo(request.created_at)}
+                        </span>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      {getStatusBadge(request.status || 'pending')}
-                      {request.status === 'pending' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCancelRequest(request.id)}
-                          className="hover:bg-destructive/10"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {request.status === 'accepted' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleChatClick(request.id, recipientName, false)}
-                        >
-                          Chat
-                        </Button>
-                      )}
-                    </div>
                   </div>
-                );
-              })
+
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(request.status)}
+                    {request.status === 'pending' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCancelRequest(request.id)}
+                        className="hover:bg-destructive/10"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {request.status === 'accepted' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleChatClick(request.id, request.recipient.name, false)}
+                      >
+                        Chat
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))
             )}
           </TabsContent>
         </Tabs>

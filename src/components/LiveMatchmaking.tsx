@@ -177,22 +177,27 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
           body: { user_id: user.id, limit: 20 }
         });
 
-        if (!engineError && engineResult?.matches) {
-          const mapped: MatchProfile[] = engineResult.matches.map((m: any) => ({
+      if (!engineError && engineResult?.success && Array.isArray(engineResult.matches)) {
+          // Filter out null/undefined entries and entries without valid id
+          const validMatches = engineResult.matches.filter(
+            (m: any) => m != null && typeof m === 'object' && m.id
+          );
+          
+          const mapped: MatchProfile[] = validMatches.map((m: any) => ({
             id: m.id,
-            name: m.name,
+            name: m.name || 'Unknown',
             type: m.role || "User",
-            interests: m.interests || [],
-            skills: m.skills || [],
-            match_score: m.final_score || 0,
-            bio: m.bio,
-            location: m.stage,
-            profile_pic_url: m.profile_pic_url,
-            role: m.role,
-            ai_summary: m.ai_summary,
-            phase: m.phase,
-            viewer_traits: m.viewer_traits,
-            candidate_traits: m.candidate_traits,
+            interests: Array.isArray(m.interests) ? m.interests : [],
+            skills: Array.isArray(m.skills) ? m.skills : [],
+            match_score: typeof m.final_score === 'number' ? m.final_score : 0,
+            bio: m.bio || undefined,
+            location: m.stage || undefined,
+            profile_pic_url: m.profile_pic_url || undefined,
+            role: m.role || undefined,
+            ai_summary: m.ai_summary || null,
+            phase: m.phase || 'phase1',
+            viewer_traits: m.viewer_traits || null,
+            candidate_traits: m.candidate_traits || null,
           }));
 
           setMatches(mapped);
@@ -212,19 +217,24 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
 
       if (error) throw error;
 
-      const mapped: MatchProfile[] = (data || []).map((p: any) => ({
+      // Ensure data is an array and filter out invalid entries
+      const validData = Array.isArray(data) 
+        ? data.filter((p: any) => p != null && typeof p === 'object' && p.id)
+        : [];
+
+      const mapped: MatchProfile[] = validData.map((p: any) => ({
         id: p.id,
-        name: p.name,
+        name: p.name || 'Unknown',
         type: p.role || "User",
-        age: p.age,
-        interests: p.interests || [],
-        skills: p.skills || [],
-        match_score: p.match_score || 0,
-        bio: p.bio,
-        location: p.location,
-        experience: p.experience,
-        profile_pic_url: p.profile_pic_url,
-        role: p.role,
+        age: typeof p.age === 'number' ? p.age : undefined,
+        interests: Array.isArray(p.interests) ? p.interests : [],
+        skills: Array.isArray(p.skills) ? p.skills : [],
+        match_score: typeof p.match_score === 'number' ? p.match_score : 0,
+        bio: p.bio || undefined,
+        location: p.location || undefined,
+        experience: p.experience || undefined,
+        profile_pic_url: p.profile_pic_url || undefined,
+        role: p.role || undefined,
       }));
 
       setMatches(mapped);
@@ -270,30 +280,39 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     return () => clearInterval(interval);
   }, [loading]);
 
-  // Apply filters to matches
+  // Apply filters to matches with null-safety
   const filteredMatches = useMemo(() => {
-    return matches.filter(match => {
-      // Filter by minimum compatibility
-      if (filters.minCompatibility > 0 && match.match_score < filters.minCompatibility) {
-        return false;
-      }
-      
-      // Filter by phase
-      if (filters.phase !== 'all' && match.phase !== filters.phase) {
-        return false;
-      }
-      
-      // Filter by skills
-      if (filters.skills.length > 0) {
-        const matchSkills = (match.skills || []).map(s => s.toLowerCase());
-        const hasMatchingSkill = filters.skills.some(skill => 
-          matchSkills.some(ms => ms.includes(skill.toLowerCase()))
-        );
-        if (!hasMatchingSkill) return false;
-      }
-      
-      return true;
-    });
+    // First ensure matches is a valid array
+    if (!Array.isArray(matches)) return [];
+    
+    return matches
+      // Filter out any null/undefined entries or entries without id
+      .filter((match): match is MatchProfile => match != null && !!match.id)
+      .filter(match => {
+        // Filter by minimum compatibility
+        const score = match.match_score ?? 0;
+        if (filters.minCompatibility > 0 && score < filters.minCompatibility) {
+          return false;
+        }
+        
+        // Filter by phase
+        if (filters.phase !== 'all' && match.phase !== filters.phase) {
+          return false;
+        }
+        
+        // Filter by skills
+        if (filters.skills.length > 0) {
+          const matchSkills = Array.isArray(match.skills) 
+            ? match.skills.map(s => (s || '').toLowerCase())
+            : [];
+          const hasMatchingSkill = filters.skills.some(skill => 
+            matchSkills.some(ms => ms.includes(skill.toLowerCase()))
+          );
+          if (!hasMatchingSkill) return false;
+        }
+        
+        return true;
+      });
   }, [matches, filters]);
 
   const handleConnect = async (targetProfile: MatchProfile) => {

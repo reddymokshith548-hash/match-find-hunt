@@ -380,7 +380,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in get-visible-matches:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    // Always return a valid response shape even on error
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message,
+      matches: [],
+      total: 0
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

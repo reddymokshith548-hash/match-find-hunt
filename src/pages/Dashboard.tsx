@@ -15,6 +15,7 @@ import ProfileEditor from '@/components/ProfileEditor';
 import NotificationCenter from '@/components/NotificationCenter';
 import ConnectionRequests from '@/components/ConnectionRequests';
 import FounderSyncBanner from '@/components/FounderSyncBanner';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface Profile {
   id: string;
@@ -246,8 +247,12 @@ export default function Dashboard() {
 
           {/* Live AI Matchmaking */}
           <TabsContent value="matches" className="space-y-6">
-            <ConnectionRequests />
-            <LiveMatchmaking />
+            <ErrorBoundary title="Connection requests">
+              <ConnectionRequests />
+            </ErrorBoundary>
+            <ErrorBoundary title="Matches">
+              <LiveMatchmaking />
+            </ErrorBoundary>
           </TabsContent>
 
           {/* Messages */}

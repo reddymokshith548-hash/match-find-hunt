@@ -5,11 +5,23 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Check, X, Users, Clock, Send, Inbox, CheckCircle2, Loader2 } from 'lucide-react';
+import { Check, X, Users, Clock, Send, Inbox, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import MutualNDAModal from './MutualNDAModal';
+import { ProfileHoverCard } from './ProfileHoverCard';
+
+interface ProfileDetails {
+  id: string;
+  name: string;
+  role: string;
+  profile_pic_url?: string;
+  bio?: string;
+  location?: string;
+  skills?: string[];
+  interests?: string[];
+}
 
 interface ConnectionRequest {
   id: string;
@@ -19,12 +31,7 @@ interface ConnectionRequest {
   created_at: string;
   nda_signed_by_user1: boolean;
   nda_signed_by_user2: boolean;
-  requester: {
-    id: string;
-    name: string;
-    role: string;
-    profile_pic_url?: string;
-  };
+  requester: ProfileDetails;
 }
 
 interface SentRequest {
@@ -35,12 +42,7 @@ interface SentRequest {
   created_at: string;
   nda_signed_by_user1: boolean;
   nda_signed_by_user2: boolean;
-  recipient: {
-    id: string;
-    name: string;
-    role: string;
-    profile_pic_url?: string;
-  };
+  recipient: ProfileDetails;
 }
 
 export default function ConnectionRequests() {
@@ -96,7 +98,7 @@ export default function ConnectionRequests() {
           created_at,
           nda_signed_by_user1,
           nda_signed_by_user2,
-          requester:profiles!connections_user1_id_fkey(id, name, role, profile_pic_url)
+          requester:profiles!connections_user1_id_fkey(id, name, role, profile_pic_url, bio, location, skills, interests)
         `)
         .eq('user2_id', profile.id)
         .eq('status', 'pending')
@@ -116,7 +118,7 @@ export default function ConnectionRequests() {
           created_at,
           nda_signed_by_user1,
           nda_signed_by_user2,
-          recipient:profiles!connections_user2_id_fkey(id, name, role, profile_pic_url)
+          recipient:profiles!connections_user2_id_fkey(id, name, role, profile_pic_url, bio, location, skills, interests)
         `)
         .eq('user1_id', profile.id)
         .in('status', ['pending', 'accepted'])
@@ -357,10 +359,24 @@ export default function ConnectionRequests() {
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={request.requester.profile_pic_url} />
-                      <AvatarFallback>{request.requester.name?.charAt(0)}</AvatarFallback>
-                    </Avatar>
+                    <ProfileHoverCard
+                      profile={{
+                        id: request.requester.id,
+                        name: request.requester.name,
+                        role: request.requester.role,
+                        profile_pic_url: request.requester.profile_pic_url,
+                        bio: request.requester.bio,
+                        location: request.requester.location,
+                        skills: request.requester.skills || [],
+                        interests: request.requester.interests || [],
+                      }}
+                      side="right"
+                    >
+                      <Avatar className="h-12 w-12 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
+                        <AvatarImage src={request.requester.profile_pic_url} />
+                        <AvatarFallback>{request.requester.name?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    </ProfileHoverCard>
                     <div>
                       <h4 className="font-semibold">{request.requester.name}</h4>
                       <p className="text-sm text-muted-foreground">{request.requester.role}</p>
@@ -410,10 +426,24 @@ export default function ConnectionRequests() {
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={request.recipient.profile_pic_url} />
-                      <AvatarFallback>{request.recipient.name?.charAt(0)}</AvatarFallback>
-                    </Avatar>
+                    <ProfileHoverCard
+                      profile={{
+                        id: request.recipient.id,
+                        name: request.recipient.name,
+                        role: request.recipient.role,
+                        profile_pic_url: request.recipient.profile_pic_url,
+                        bio: request.recipient.bio,
+                        location: request.recipient.location,
+                        skills: request.recipient.skills || [],
+                        interests: request.recipient.interests || [],
+                      }}
+                      side="right"
+                    >
+                      <Avatar className="h-12 w-12 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
+                        <AvatarImage src={request.recipient.profile_pic_url} />
+                        <AvatarFallback>{request.recipient.name?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    </ProfileHoverCard>
                     <div>
                       <h4 className="font-semibold">{request.recipient.name}</h4>
                       <p className="text-sm text-muted-foreground">{request.recipient.role}</p>

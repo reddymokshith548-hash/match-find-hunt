@@ -223,17 +223,17 @@ Document ID: NDA-${connectionId.slice(0, 8).toUpperCase()}
 
     try {
       // Get user's profile information
-      const { data: profile } = await supabase
+      const { data: profile, error: profileErr } = await supabase
         .from('profiles')
         .select('name, id')
         .eq('user_id', user.id)
         .single();
 
-      if (!profile) {
-        throw new Error('Profile not found');
+      if (profileErr || !profile?.id) {
+        throw profileErr ?? new Error('Profile not found');
       }
 
-      // Sign the NDA with signature data
+      // Sign the NDA (treat duplicates as success)
       const { error: ndaError } = await supabase
         .from('nda_signatures')
         .insert({
@@ -242,75 +242,92 @@ Document ID: NDA-${connectionId.slice(0, 8).toUpperCase()}
           full_name: profile.name || 'Unknown',
           email: user.email || '',
           profile_id: profile.id,
-          signature_data: signature, // Store the signature image data
+          signature_data: signature,
         });
 
-      // Ignore duplicate key error (user already signed)
-      if (ndaError && ndaError.code !== '23505') {
+      // PostgREST returns HTTP 409 on unique constraint conflicts; Supabase error code is usually 23505
+      if (ndaError && ndaError.code !== '23505' && (ndaError as any).status !== 409) {
         throw ndaError;
       }
 
-      // Get connection details to determine which user we are
-      const { data: connection } = await supabase
+      // Determine which side we are and update the connection
+      const { data: connection, error: connErr } = await supabase
         .from('connections')
-        .select('user1_id, user2_id, nda_signed_by_user1, nda_signed_by_user2')
+        .select('user1_id, user2_id, nda_signed_by_user1, nda_signed_by_user2, status')
         .eq('id', connectionId)
         .single();
 
-      if (connection) {
-        // Determine which field to update based on profile ID
-        const isUser1 = connection.user1_id === profile.id;
-        const updateField = isUser1 ? 'nda_signed_by_user1' : 'nda_signed_by_user2';
-        const timestampField = isUser1 ? 'user1_accepted_at' : 'user2_accepted_at';
+      if (connErr || !connection) {
+        throw connErr ?? new Error('Connection not found');
+      }
 
-        // Update connection with NDA signature
-        await supabase
-          .from('connections')
-          .update({ 
-            [updateField]: true,
-            [timestampField]: new Date().toISOString()
-          })
-          .eq('id', connectionId);
+      const isUser1 = connection.user1_id === profile.id;
+      const updateField = isUser1 ? 'nda_signed_by_user1' : 'nda_signed_by_user2';
+      const timestampField = isUser1 ? 'user1_accepted_at' : 'user2_accepted_at';
 
-        // Check if both have now signed
-        const otherSigned = isUser1 ? connection.nda_signed_by_user2 : connection.nda_signed_by_user1;
-        
-        if (otherSigned) {
-          // Both signed - update status to accepted and navigate to chat
-          await supabase
+      const { error: updateErr } = await supabase
+        .from('connections')
+        .update({
+          [updateField]: true,
+          [timestampField]: new Date().toISOString(),
+        })
+        .eq('id', connectionId);
+
+      if (updateErr) throw updateErr;
+
+      // Re-check after update to avoid stale "otherSigned" races
+      const { data: updatedConn, error: recheckErr } = await supabase
+        .from('connections')
+        .select('nda_signed_by_user1, nda_signed_by_user2, status')
+        .eq('id', connectionId)
+        .single();
+
+      if (recheckErr || !updatedConn) throw recheckErr ?? new Error('Failed to verify NDA status');
+
+      const bothSigned = !!updatedConn.nda_signed_by_user1 && !!updatedConn.nda_signed_by_user2;
+
+      if (bothSigned) {
+        // Ensure accepted status
+        if (updatedConn.status !== 'accepted') {
+          const { error: acceptErr } = await supabase
             .from('connections')
             .update({ status: 'accepted' })
             .eq('id', connectionId);
-
-          toast({
-            title: "🎉 Both parties have signed!",
-            description: `You and ${targetUserName} can now chat securely.`
-          });
-
-          onOpenChange(false);
-          onAccept();
-          
-          // Navigate to messages with this connection
-          navigate(`/messages?connection=${connectionId}`);
-          return;
+          if (acceptErr) throw acceptErr;
         }
+
+        toast({
+          title: "🎉 NDA Complete",
+          description: `You and ${targetUserName} can now chat securely.`,
+        });
+
+        onOpenChange(false);
+        onAccept();
+        navigate(`/messages?connection=${connectionId}`);
+        return;
       }
 
       toast({
         title: "🤝 NDA Signed!",
-        description: isInitiator 
-          ? `Waiting for ${targetUserName} to sign the NDA.`
-          : `You've signed the NDA. The connection is now active!`
+        description: `Waiting for ${targetUserName} to sign before chat unlocks.`,
       });
 
       onOpenChange(false);
       onAccept();
     } catch (error) {
       console.error('Error signing NDA:', error);
+      const e = error as any;
+      const msg =
+        typeof e?.message === 'string'
+          ? e.message
+          : typeof e?.error?.message === 'string'
+            ? e.error.message
+            : 'Failed to sign NDA. Please try again.';
+
       toast({
         title: "Error",
-        description: "Failed to sign NDA. Please try again.",
-        variant: "destructive"
+        description: msg,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);

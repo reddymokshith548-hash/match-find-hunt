@@ -174,7 +174,7 @@ Document ID: NDA-${connectionId.slice(0, 8).toUpperCase()}
           full_name: profile.name || 'Unknown',
           email: user.email || '',
           profile_id: profile.id,
-          // Note: signature data could be stored in a separate column if needed
+          signature_data: signature, // Store the signature image data
         });
 
       // Ignore duplicate key error (user already signed)

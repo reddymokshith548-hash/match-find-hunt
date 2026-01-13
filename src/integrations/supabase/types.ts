@@ -608,6 +608,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_connection: {
+        Args: { _connection_id: string }
+        Returns: boolean
+      }
       create_notification: {
         Args: {
           p_message: string
@@ -617,6 +621,10 @@ export type Database = {
           p_type: string
           p_user_id: string
         }
+        Returns: string
+      }
+      extract_connection_id_from_storage_path: {
+        Args: { _name: string }
         Returns: string
       }
       foundersync_compatibility: {

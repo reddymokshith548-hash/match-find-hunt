@@ -34,11 +34,15 @@ export default function NDAModal({
 
     try {
       // Get user's profile information
-      const { data: profile } = await supabase
+      const { data: profile, error: profileErr } = await supabase
         .from('profiles')
         .select('name, id')
         .eq('user_id', user.id)
         .single();
+
+      if (profileErr || !profile?.id) {
+        throw profileErr ?? new Error('Profile not found');
+      }
 
       // Sign the NDA
       const { error: ndaError } = await supabase
@@ -46,50 +50,56 @@ export default function NDAModal({
         .insert({
           user_id: user.id,
           connection_id: connectionId,
-          full_name: profile?.name || 'Unknown',
+          full_name: profile.name || 'Unknown',
           email: user.email || '',
-          profile_id: profile?.id || '',
+          profile_id: profile.id,
         });
 
-      if (ndaError && ndaError.code !== '23505') {
+      // 409 = duplicate constraint conflict (treat as already signed)
+      if (ndaError && ndaError.code !== '23505' && (ndaError as any).status !== 409) {
         throw ndaError;
       }
 
-      // Get connection details to determine which user we are
-      const { data: connection } = await supabase
+      // Get connection details to determine which user we are (by profile id)
+      const { data: connection, error: connErr } = await supabase
         .from('connections')
         .select('user1_id, user2_id')
         .eq('id', connectionId)
         .single();
 
-      if (connection) {
-        const isUser1 = connection.user1_id === user.id;
-        const updateField = isUser1 ? 'nda_signed_by_user1' : 'nda_signed_by_user2';
-        const timestampField = isUser1 ? 'user1_accepted_at' : 'user2_accepted_at';
-
-        // Update connection with NDA signature
-        await supabase
-          .from('connections')
-          .update({ 
-            [updateField]: true,
-            [timestampField]: new Date().toISOString()
-          })
-          .eq('id', connectionId);
+      if (connErr || !connection) {
+        throw connErr ?? new Error('Connection not found');
       }
+
+      const isUser1 = connection.user1_id === profile.id;
+      const updateField = isUser1 ? 'nda_signed_by_user1' : 'nda_signed_by_user2';
+      const timestampField = isUser1 ? 'user1_accepted_at' : 'user2_accepted_at';
+
+      // Update connection with NDA signature
+      const { error: updateErr } = await supabase
+        .from('connections')
+        .update({
+          [updateField]: true,
+          [timestampField]: new Date().toISOString(),
+        })
+        .eq('id', connectionId);
+
+      if (updateErr) throw updateErr;
 
       toast({
         title: "NDA Signed",
-        description: `You've agreed to keep conversations with ${targetUserName} confidential`
+        description: `You've agreed to keep conversations with ${targetUserName} confidential`,
       });
 
       onOpenChange(false);
       onAccept();
     } catch (error) {
       console.error('Error signing NDA:', error);
+      const e = error as any;
       toast({
         title: "Error",
-        description: "Failed to sign NDA",
-        variant: "destructive"
+        description: typeof e?.message === 'string' ? e.message : "Failed to sign NDA",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);

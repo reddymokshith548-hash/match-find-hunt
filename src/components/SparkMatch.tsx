@@ -5,7 +5,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import SwipeCard from './SwipeCard';
-import NDAModal from './NDAModal';
+import MutualNDAModal from './MutualNDAModal';
+import { createConnectionRequest, recordPass } from '@/lib/connectionHelpers';
 
 interface Profile {
   id: string;
@@ -30,17 +31,38 @@ export default function SparkMatch() {
   const [loading, setLoading] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [ndaModalOpen, setNdaModalOpen] = useState(false);
+  const [myProfileId, setMyProfileId] = useState<string | null>(null);
   const [pendingConnection, setPendingConnection] = useState<{
-    targetUserId: string;
-    targetUserName: string;
+    targetProfileId: string;
+    targetName: string;
     connectionId: string;
   } | null>(null);
 
   useEffect(() => {
     if (user) {
-      fetchProfiles();
+      fetchMyProfile();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (myProfileId) {
+      fetchProfiles();
+    }
+  }, [myProfileId]);
+
+  const fetchMyProfile = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!error && data) {
+      setMyProfileId(data.id);
+    }
+  };
 
   const fetchProfiles = async () => {
     if (!user) return;
@@ -66,24 +88,6 @@ export default function SparkMatch() {
     }
   };
 
-  const recordInteraction = async (targetUserId: string, interactionType: 'like' | 'pass') => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('user_interactions')
-        .insert([{
-          user_id: user.id,
-          target_user_id: targetUserId,
-          interaction_type: interactionType
-        }]);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error recording interaction:', error);
-    }
-  };
-
   const loadNextProfile = () => {
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
@@ -92,12 +96,13 @@ export default function SparkMatch() {
   };
 
   const handleSwipeLeft = async () => {
-    if (isAnimating || currentIndex >= profiles.length) return;
+    if (isAnimating || currentIndex >= profiles.length || !user) return;
     
     setIsAnimating(true);
     const profile = profiles[currentIndex];
     
-    await recordInteraction(profile.id, 'pass');
+    // Use the unified helper with auth user ID (it handles conversion internally)
+    await recordPass(user.id, profile.id);
     
     setTimeout(() => {
       loadNextProfile();
@@ -105,52 +110,53 @@ export default function SparkMatch() {
   };
 
   const handleSwipeRight = async () => {
-    if (isAnimating || currentIndex >= profiles.length) return;
+    if (isAnimating || currentIndex >= profiles.length || !myProfileId) return;
     
     setIsAnimating(true);
     const profile = profiles[currentIndex];
-    
-    await recordInteraction(profile.id, 'like');
-    
-    // Get profile user_id for connection
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('user_id')
-      .eq('id', profile.id)
-      .single();
-    
-    if (profileData) {
-      // Create connection with pending status
-      const { data: connection, error } = await supabase
-        .from('connections')
-        .insert({
-          user1_id: user?.id,
-          user2_id: profileData.user_id,
-          status: 'pending',
-          nda_signed_by_user1: false,
-          nda_signed_by_user2: false
-        })
-        .select()
-        .single();
 
-      if (!error && connection) {
-        // CRITICAL: Show NDA BEFORE proceeding
-        setPendingConnection({
-          targetUserId: profileData.user_id,
-          targetUserName: profile.name,
-          connectionId: connection.id
-        });
-        setNdaModalOpen(true);
-        
-        // Don't load next profile yet - wait for NDA acceptance
-        return;
-      }
+    // Use the unified connection helper with PROFILE IDs
+    const result = await createConnectionRequest(myProfileId, profile.id);
+
+    if (result.success && result.connectionId) {
+      // Show NDA modal for sender to sign
+      setPendingConnection({
+        targetProfileId: profile.id,
+        targetName: profile.name,
+        connectionId: result.connectionId,
+      });
+      setNdaModalOpen(true);
+      // Don't load next profile yet - wait for NDA acceptance
+      setIsAnimating(false);
+      return;
+    } else if (result.alreadyExists) {
+      toast({
+        title: "Already connected",
+        description: "You've already sent a connection request to this person",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to send connection request",
+        variant: "destructive"
+      });
     }
     
-    // Only load next profile if no NDA modal shown
     setTimeout(() => {
       loadNextProfile();
     }, 300);
+  };
+
+  const handleNDAAccepted = () => {
+    if (pendingConnection) {
+      toast({
+        title: "✅ Connection sent!",
+        description: `We'll notify ${pendingConnection.targetName} about your request.`
+      });
+      setPendingConnection(null);
+      loadNextProfile();
+    }
   };
 
   const handleButtonPass = () => {
@@ -272,26 +278,20 @@ export default function SparkMatch() {
 
       {/* NDA Modal */}
       {pendingConnection && (
-        <NDAModal
+        <MutualNDAModal
           open={ndaModalOpen}
           onOpenChange={(open) => {
             setNdaModalOpen(open);
             if (!open) {
               // User closed modal without accepting - load next profile
+              setPendingConnection(null);
               loadNextProfile();
             }
           }}
-          targetUserId={pendingConnection.targetUserId}
-          targetUserName={pendingConnection.targetUserName}
+          targetUserName={pendingConnection.targetName}
           connectionId={pendingConnection.connectionId}
-          onAccept={() => {
-            toast({
-              title: "Connection initiated!",
-              description: `Waiting for ${pendingConnection.targetUserName} to sign the NDA and accept`
-            });
-            // Now load next profile after NDA acceptance
-            loadNextProfile();
-          }}
+          isInitiator={true}
+          onAccept={handleNDAAccepted}
         />
       )}
     </div>

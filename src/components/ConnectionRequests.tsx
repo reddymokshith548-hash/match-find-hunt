@@ -45,18 +45,32 @@ interface SentRequest {
   recipient: ProfileDetails;
 }
 
+interface AcceptedConnection {
+  id: string;
+  user1_id: string;
+  user2_id: string;
+  status: string;
+  created_at: string;
+  nda_signed_by_user1: boolean;
+  nda_signed_by_user2: boolean;
+  other_user: ProfileDetails;
+  isReceivedRequest: boolean; // true if current user is user2 (received the request)
+}
+
 export default function ConnectionRequests() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [receivedRequests, setReceivedRequests] = useState<ConnectionRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [ndaModalOpen, setNdaModalOpen] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<{
     id: string;
     userName: string;
+    isInitiator: boolean;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('received');
 
@@ -186,6 +200,18 @@ export default function ConnectionRequests() {
     setSelectedConnection({
       id: request.id,
       userName: request.requester.name,
+      isInitiator: false,
+    });
+    setNdaModalOpen(true);
+  };
+
+  const handleChatClick = (connectionId: string, userName: string, isReceivedRequest: boolean) => {
+    // For accepted connections, check if NDA is signed
+    // If not, open NDA modal, otherwise navigate to messages
+    setSelectedConnection({
+      id: connectionId,
+      userName: userName,
+      isInitiator: !isReceivedRequest, // If user received the request, they're not the initiator
     });
     setNdaModalOpen(true);
   };
@@ -472,7 +498,7 @@ export default function ConnectionRequests() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => navigate(`/messages?connection=${request.id}`)}
+                        onClick={() => handleChatClick(request.id, request.recipient.name, false)}
                       >
                         Chat
                       </Button>
@@ -485,7 +511,7 @@ export default function ConnectionRequests() {
         </Tabs>
       </CardContent>
 
-      {/* NDA Modal for accepting connection */}
+      {/* NDA Modal for accepting connection or starting chat */}
       {selectedConnection && (
         <MutualNDAModal
           open={ndaModalOpen}
@@ -495,7 +521,7 @@ export default function ConnectionRequests() {
           }}
           targetUserName={selectedConnection.userName}
           connectionId={selectedConnection.id}
-          isInitiator={false}
+          isInitiator={selectedConnection.isInitiator}
           onAccept={handleNDAComplete}
         />
       )}

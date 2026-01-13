@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,11 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, AlertCircle, Brain, BarChart3, Wand2 } from "lucide-react";
+import { Heart, X, MapPin, Briefcase, Star, Sparkles, Eye, RefreshCw, Loader2, AlertCircle, Brain, BarChart3, Wand2, Wifi } from "lucide-react";
 
 import { createConnectionRequest, recordPass } from "@/lib/connectionHelpers";
 import { CompatibilityBreakdown } from "@/components/CompatibilityBreakdown";
 import MutualNDAModal from "@/components/MutualNDAModal";
+import MatchFilters, { MatchFiltersState } from "@/components/MatchFilters";
+import { useRealtimeMatches } from "@/hooks/useRealtimeMatches";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();
@@ -79,6 +81,13 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [generatingSummaryFor, setGeneratingSummaryFor] = useState<string | null>(null);
   
+  // Filters state
+  const [filters, setFilters] = useState<MatchFiltersState>({
+    minCompatibility: 0,
+    phase: 'all',
+    skills: [],
+  });
+  
   // NDA Modal state
   const [ndaModalOpen, setNdaModalOpen] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<{
@@ -88,6 +97,15 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   } | null>(null);
   
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  // Real-time match notifications
+  const { isSubscribed } = useRealtimeMatches({
+    minScoreForNotification: 75,
+    onNewMatch: () => {
+      // Refresh matches when a new high-compatibility match is found
+      fetchMatches();
+    }
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -258,6 +276,32 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     return () => clearInterval(interval);
   }, [loading]);
 
+  // Apply filters to matches
+  const filteredMatches = useMemo(() => {
+    return matches.filter(match => {
+      // Filter by minimum compatibility
+      if (filters.minCompatibility > 0 && match.match_score < filters.minCompatibility) {
+        return false;
+      }
+      
+      // Filter by phase
+      if (filters.phase !== 'all' && match.phase !== filters.phase) {
+        return false;
+      }
+      
+      // Filter by skills
+      if (filters.skills.length > 0) {
+        const matchSkills = (match.skills || []).map(s => s.toLowerCase());
+        const hasMatchingSkill = filters.skills.some(skill => 
+          matchSkills.some(ms => ms.includes(skill.toLowerCase()))
+        );
+        if (!hasMatchingSkill) return false;
+      }
+      
+      return true;
+    });
+  }, [matches, filters]);
+
   const handleConnect = async (targetProfile: MatchProfile) => {
     if (!profileId || !user) {
       toast({
@@ -369,17 +413,25 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   return (
     <section className={`py-12 ${className}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h2 className="text-3xl font-bold mb-2">
-              {useIntelligenceEngine ? (
-                <>
-                  <span className="gradient-text">FounderSync</span> Matches
-                </>
-              ) : (
-                <>Live <span className="gradient-text">AI Matches</span></>
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-3xl font-bold">
+                {useIntelligenceEngine ? (
+                  <>
+                    <span className="gradient-text">FounderSync</span> Matches
+                  </>
+                ) : (
+                  <>Live <span className="gradient-text">AI Matches</span></>
+                )}
+              </h2>
+              {isSubscribed && (
+                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Wifi className="w-3 h-3 text-green-500" />
+                  Live
+                </Badge>
               )}
-            </h2>
+            </div>
             <p className="text-muted-foreground">
               {useIntelligenceEngine 
                 ? "Compatibility-scored matches based on your working style"
@@ -387,11 +439,49 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
               }
             </p>
           </div>
-          <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm">
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <MatchFilters 
+              filters={filters} 
+              onFiltersChange={setFilters}
+              availableSkills={[
+                'React', 'Python', 'Marketing', 'Sales', 'Product', 'Design',
+                'AI/ML', 'Growth', 'Finance', 'DevOps', 'Business Strategy', 'JavaScript'
+              ]}
+            />
+            <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm">
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              Refresh
+            </Button>
+          </div>
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-destructive" />
+            <span className="text-sm text-destructive">{error}</span>
+          </div>
+        )}
+
+        {/* Active Filters Summary */}
+        {(filters.minCompatibility > 0 || filters.phase !== 'all' || filters.skills.length > 0) && (
+          <div className="mb-6 p-3 bg-muted/50 rounded-lg flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Filtering:</span>
+            {filters.minCompatibility > 0 && (
+              <Badge variant="secondary">≥{filters.minCompatibility}%</Badge>
+            )}
+            {filters.phase !== 'all' && (
+              <Badge variant="secondary">
+                {filters.phase === 'phase2' ? 'FounderSync' : 'Profile-based'}
+              </Badge>
+            )}
+            {filters.skills.map(skill => (
+              <Badge key={skill} variant="secondary">{skill}</Badge>
+            ))}
+            <span className="text-muted-foreground ml-auto">
+              {filteredMatches.length} of {matches.length} matches
+            </span>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
@@ -407,6 +497,17 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
           </div>
         )}
 
+        {!loading && filteredMatches.length === 0 && matches.length > 0 && (
+          <div className="text-center py-12">
+            <Sparkles className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No matches found with current filters</h3>
+            <p className="text-muted-foreground mb-4">Try adjusting your filter criteria</p>
+            <Button onClick={() => setFilters({ minCompatibility: 0, phase: 'all', skills: [] })} variant="outline">
+              Clear Filters
+            </Button>
+          </div>
+        )}
+
         {!loading && matches.length === 0 && !error && (
           <div className="text-center py-12">
             <Sparkles className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -416,9 +517,9 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
           </div>
         )}
 
-        {matches.length > 0 && (
+        {filteredMatches.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {matches.map((profile, index) => (
+            {filteredMatches.map((profile, index) => (
               <div key={profile.id} ref={el => (cardRefs.current[profile.id] = el)} className="relative" style={{ animationDelay: `${index * 0.1}s` }}>
                 <Card variant="match" className="overflow-hidden group relative cursor-pointer transition-transform duration-300 ease-out hover:scale-[1.03] hover:shadow-2xl">
                   <div className="absolute top-4 right-4 z-10 flex gap-1">

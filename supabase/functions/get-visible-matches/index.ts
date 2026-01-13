@@ -285,9 +285,9 @@ serve(async (req) => {
 
     console.log(`Found ${candidates?.length || 0} potential candidates`);
 
-    // Filter out interacted users
+    // Filter out interacted users AND ensure all required fields exist
     const filteredCandidates = (candidates || []).filter(
-      c => !excludedUserIds.has(c.user_id)
+      c => c && c.id && c.user_id && !excludedUserIds.has(c.user_id)
     );
 
     console.log(`After filtering interactions: ${filteredCandidates.length} candidates`);
@@ -295,14 +295,21 @@ serve(async (req) => {
     // Get FounderSync results for all candidates (batch query)
     const candidateUserIds = filteredCandidates.map(c => c.user_id).filter(Boolean);
     
-    const { data: allFS } = await supabase
-      .from('foundersync_results')
-      .select('user_id, personality_type, leadership_style, risk_tolerance')
-      .in('user_id', candidateUserIds);
+    // Only query if we have candidates
+    let allFS: FounderSyncRow[] = [];
+    if (candidateUserIds.length > 0) {
+      const { data } = await supabase
+        .from('foundersync_results')
+        .select('user_id, personality_type, leadership_style, risk_tolerance')
+        .in('user_id', candidateUserIds);
+      allFS = data || [];
+    }
 
     const fsMap = new Map<string, FounderSyncRow>();
-    for (const fs of allFS || []) {
-      fsMap.set(fs.user_id, fs);
+    for (const fs of allFS) {
+      if (fs && fs.user_id) {
+        fsMap.set(fs.user_id, fs);
+      }
     }
 
     // Score and rank all candidates

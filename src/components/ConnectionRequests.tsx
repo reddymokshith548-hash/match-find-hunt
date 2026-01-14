@@ -217,6 +217,18 @@ export default function ConnectionRequests() {
           fetchProfileAndRequests();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'nda_signatures',
+        },
+        () => {
+          // Refetch when NDA signatures are added
+          fetchProfileAndRequests();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -272,37 +284,26 @@ export default function ConnectionRequests() {
   };
 
   const handleNDAComplete = async () => {
-    if (!selectedConnection || !user) return;
+    if (!selectedConnection || !user) {
+      setSelectedConnection(null);
+      fetchProfileAndRequests();
+      return;
+    }
     
-    // Get requester's email for notification
     try {
-      const connection = receivedRequests.find(r => r.id === selectedConnection.id);
-      if (connection) {
-        // Get the requester's user_id and email
-        const { data: requesterProfile } = await supabase
-          .from('profiles')
-          .select('user_id, name')
-          .eq('id', connection.user1_id)
-          .single();
-
-        if (requesterProfile) {
-          // Get current user's profile name
-          const { data: myProfile } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('user_id', user.id)
-            .single();
-
-          // Get requester's email from auth
-          const { data: { user: requesterUser } } = await supabase.auth.admin?.getUserById?.(requesterProfile.user_id) || { data: { user: null } };
-          
-          // Since we can't access admin API from client, we'll use the profile lookup
-          // For now, we'll note the email should be sent from the server side
-          console.log(`Connection accepted - notification would be sent to ${requesterProfile.name}`);
-        }
+      // Check if both NDAs are now signed
+      const { data: connection } = await supabase
+        .from('connections')
+        .select('nda_signed_by_user1, nda_signed_by_user2, status')
+        .eq('id', selectedConnection.id)
+        .single();
+      
+      if (connection && connection.nda_signed_by_user1 && connection.nda_signed_by_user2) {
+        // Both signed - navigate to messages
+        navigate(`/messages?connection=${selectedConnection.id}`);
       }
-    } catch (err) {
-      console.error('Error sending acceptance notification:', err);
+    } catch (error) {
+      console.error('Error checking NDA completion:', error);
     }
     
     setSelectedConnection(null);

@@ -15,6 +15,7 @@ import ProfileEditor from '@/components/ProfileEditor';
 import NotificationCenter from '@/components/NotificationCenter';
 import ConnectionRequests from '@/components/ConnectionRequests';
 import FounderSyncBanner from '@/components/FounderSyncBanner';
+import MessagesPanel from '@/components/MessagesPanel';
 
 interface Profile {
   id: string;
@@ -250,18 +251,9 @@ export default function Dashboard() {
             <LiveMatchmaking />
           </TabsContent>
 
-          {/* Messages */}
+          {/* Messages - Embedded directly */}
           <TabsContent value="messages" className="space-y-6">
-            <div className="flex flex-col items-center justify-center h-64 text-center">
-              <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Messages</h3>
-              <p className="text-muted-foreground mb-4">
-                View all your conversations in the Messages page
-              </p>
-              <Button onClick={() => navigate('/messages')} variant="hero">
-                Go to Messages
-              </Button>
-            </div>
+            <MessagesPanel />
           </TabsContent>
 
           {/* Opportunities */}

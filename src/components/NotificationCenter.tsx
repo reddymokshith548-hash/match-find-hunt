@@ -122,6 +122,14 @@ export default function NotificationCenter() {
         // Navigate to dashboard matches tab which shows connection requests
         navigate('/dashboard?tab=matches');
         break;
+      case 'nda_signed':
+        // Other party signed - navigate to dashboard to sign or start chatting
+        if (notification.related_id) {
+          navigate(`/dashboard?tab=matches&connection=${notification.related_id}`);
+        } else {
+          navigate('/dashboard?tab=matches');
+        }
+        break;
       case 'connection_accepted':
         // Navigate to messages with the connection
         if (notification.related_id) {

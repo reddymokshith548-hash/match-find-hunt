@@ -175,8 +175,12 @@ export type Database = {
           connection_id: string | null
           content: string
           created_at: string | null
+          delivery_status: string | null
           id: string
           is_read: boolean
+          media_duration_seconds: number | null
+          media_url: string | null
+          message_type: string | null
           receiver_id: string | null
           sender_id: string | null
         }
@@ -184,8 +188,12 @@ export type Database = {
           connection_id?: string | null
           content: string
           created_at?: string | null
+          delivery_status?: string | null
           id?: string
           is_read?: boolean
+          media_duration_seconds?: number | null
+          media_url?: string | null
+          message_type?: string | null
           receiver_id?: string | null
           sender_id?: string | null
         }
@@ -193,8 +201,12 @@ export type Database = {
           connection_id?: string | null
           content?: string
           created_at?: string | null
+          delivery_status?: string | null
           id?: string
           is_read?: boolean
+          media_duration_seconds?: number | null
+          media_url?: string | null
+          message_type?: string | null
           receiver_id?: string | null
           sender_id?: string | null
         }

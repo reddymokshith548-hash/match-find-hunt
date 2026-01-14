@@ -120,10 +120,15 @@ export default function NotificationCenter() {
     switch (notification.type) {
       case 'connection_request':
         // Navigate to dashboard matches tab which shows connection requests
-        navigate('/dashboard?tab=matches');
+        // Deep link to connection so the NDA modal opens
+        if (notification.related_id) {
+          navigate(`/dashboard?tab=matches&connection=${notification.related_id}`);
+        } else {
+          navigate('/dashboard?tab=matches');
+        }
         break;
       case 'nda_signed':
-        // Other party signed - navigate to dashboard to sign or start chatting
+        // Other party signed NDA - navigate to matches tab with connection ID to open NDA modal for signing
         if (notification.related_id) {
           navigate(`/dashboard?tab=matches&connection=${notification.related_id}`);
         } else {

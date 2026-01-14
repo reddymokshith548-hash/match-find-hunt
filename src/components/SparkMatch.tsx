@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/useAuth';
 import SwipeCard from './SwipeCard';
 import MutualNDAModal from './MutualNDAModal';
 import { createConnectionRequest, recordPass } from '@/lib/connectionHelpers';
-
 interface Profile {
   id: string;
   name: string;
@@ -22,10 +21,13 @@ interface Profile {
   looking_for: string[];
   profile_pic_url?: string;
 }
-
 export default function SparkMatch() {
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const {
+    user
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -37,38 +39,29 @@ export default function SparkMatch() {
     targetName: string;
     connectionId: string;
   } | null>(null);
-
   useEffect(() => {
     if (user) {
       fetchMyProfile();
     }
   }, [user]);
-
   useEffect(() => {
     if (myProfileId) {
       fetchProfiles();
     }
   }, [myProfileId]);
-
   const fetchMyProfile = async () => {
     if (!user) return;
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
+    const {
+      data,
+      error
+    } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
     if (!error && data) {
       setMyProfileId(data.id);
     }
   };
-
   const fetchProfiles = async () => {
     if (!user || !myProfileId) return;
-
     setLoading(true);
-
     const normalizeProfile = (p: any): Profile | null => {
       if (!p || !p.id) return null;
       return {
@@ -80,92 +73,80 @@ export default function SparkMatch() {
         interests: Array.isArray(p.interests) ? p.interests : [],
         location: p.location || '',
         age: typeof p.age === 'number' ? p.age : 0,
-        match_score: typeof p.match_score === 'number' ? p.match_score : (80 + Math.floor(Math.random() * 20)),
+        match_score: typeof p.match_score === 'number' ? p.match_score : 80 + Math.floor(Math.random() * 20),
         stage: p.stage || '',
         looking_for: Array.isArray(p.looking_for) ? p.looking_for : [],
-        profile_pic_url: p.profile_pic_url || undefined,
+        profile_pic_url: p.profile_pic_url || undefined
       };
     };
-
     try {
-      const { data, error } = await supabase.rpc('get_matchmaking_candidates', {
+      const {
+        data,
+        error
+      } = await supabase.rpc('get_matchmaking_candidates', {
         limit_count: 20,
-        exclude_interacted: true,
+        exclude_interacted: true
       });
-
       if (error) throw error;
-
-      const mapped = Array.isArray(data)
-        ? data.map(normalizeProfile).filter(Boolean) as Profile[]
-        : [];
-
+      const mapped = Array.isArray(data) ? data.map(normalizeProfile).filter(Boolean) as Profile[] : [];
       setProfiles(mapped);
     } catch (error: any) {
       console.error('Error fetching profiles (RPC):', error);
 
       // Fallback: fetch directly from profiles table (prevents the whole UI from breaking)
-      const { data: fallbackRows, error: fallbackError } = await supabase
-        .from('profiles')
-        .select('id, name, bio, role, skills, interests, location, age, stage, looking_for, profile_pic_url')
-        .eq('is_active', true)
-        .neq('id', myProfileId)
-        .limit(20);
-
+      const {
+        data: fallbackRows,
+        error: fallbackError
+      } = await supabase.from('profiles').select('id, name, bio, role, skills, interests, location, age, stage, looking_for, profile_pic_url').eq('is_active', true).neq('id', myProfileId).limit(20);
       if (fallbackError) {
         console.error('Error fetching profiles (fallback):', fallbackError);
         toast({
           title: 'Error',
           description: fallbackError.message || 'Failed to load profiles',
-          variant: 'destructive',
+          variant: 'destructive'
         });
         setProfiles([]);
       } else {
-        const mapped = Array.isArray(fallbackRows)
-          ? fallbackRows.map((p) => normalizeProfile({ ...p, match_score: 80 + Math.floor(Math.random() * 20) })).filter(Boolean) as Profile[]
-          : [];
+        const mapped = Array.isArray(fallbackRows) ? fallbackRows.map(p => normalizeProfile({
+          ...p,
+          match_score: 80 + Math.floor(Math.random() * 20)
+        })).filter(Boolean) as Profile[] : [];
         setProfiles(mapped);
       }
     } finally {
       setLoading(false);
     }
   };
-
   const loadNextProfile = () => {
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
       setIsAnimating(false);
     }, 100);
   };
-
   const handleSwipeLeft = async () => {
     if (isAnimating || currentIndex >= profiles.length || !user) return;
-    
     setIsAnimating(true);
     const profile = profiles[currentIndex];
-    
+
     // Use the unified helper with auth user ID (it handles conversion internally)
     await recordPass(user.id, profile.id);
-    
     setTimeout(() => {
       loadNextProfile();
     }, 300);
   };
-
   const handleSwipeRight = async () => {
     if (isAnimating || currentIndex >= profiles.length || !myProfileId) return;
-    
     setIsAnimating(true);
     const profile = profiles[currentIndex];
 
     // Use the unified connection helper with PROFILE IDs
     const result = await createConnectionRequest(myProfileId, profile.id);
-
     if (result.success && result.connectionId) {
       // Show NDA modal for sender to sign
       setPendingConnection({
         targetProfileId: profile.id,
         targetName: profile.name,
-        connectionId: result.connectionId,
+        connectionId: result.connectionId
       });
       setNdaModalOpen(true);
       // Don't load next profile yet - wait for NDA acceptance
@@ -184,12 +165,10 @@ export default function SparkMatch() {
         variant: "destructive"
       });
     }
-    
     setTimeout(() => {
       loadNextProfile();
     }, 300);
   };
-
   const handleNDAAccepted = () => {
     if (pendingConnection) {
       toast({
@@ -200,7 +179,6 @@ export default function SparkMatch() {
       loadNextProfile();
     }
   };
-
   const handleButtonPass = () => {
     const cardElement = document.querySelector('.swipe-card-container');
     if (cardElement) {
@@ -208,7 +186,6 @@ export default function SparkMatch() {
       setTimeout(handleSwipeLeft, 300);
     }
   };
-
   const handleButtonLike = () => {
     const cardElement = document.querySelector('.swipe-card-container');
     if (cardElement) {
@@ -216,26 +193,20 @@ export default function SparkMatch() {
       setTimeout(handleSwipeRight, 300);
     }
   };
-
   const handleReset = () => {
     setCurrentIndex(0);
     fetchProfiles();
   };
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[600px]">
+    return <div className="flex items-center justify-center h-[600px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Finding your perfect matches...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (profiles.length === 0 || currentIndex >= profiles.length) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[600px] text-center px-4">
+    return <div className="flex flex-col items-center justify-center h-[600px] text-center px-4">
         <Zap className="w-20 h-20 text-primary mb-4" />
         <h3 className="text-2xl font-bold mb-2">No more profiles!</h3>
         <p className="text-muted-foreground mb-6">
@@ -245,14 +216,10 @@ export default function SparkMatch() {
           <RotateCcw className="w-4 h-4 mr-2" />
           Start Over
         </Button>
-      </div>
-    );
+      </div>;
   }
-
   const currentProfile = profiles[currentIndex];
-
-  return (
-    <div className="w-full max-w-2xl mx-auto">
+  return <div className="w-full max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -264,51 +231,29 @@ export default function SparkMatch() {
             Swipe right to connect • Swipe left to pass
           </p>
         </div>
-        <div className="text-sm font-medium px-4 py-2 rounded-full bg-primary/10">
-          {currentIndex + 1} / {profiles.length}
-        </div>
+        
       </div>
 
       {/* Card Stack */}
       <div className="relative h-[600px] mb-6">
         {/* Next card preview */}
-        {currentIndex + 1 < profiles.length && (
-          <div className="absolute inset-0 scale-95 opacity-50">
+        {currentIndex + 1 < profiles.length && <div className="absolute inset-0 scale-95 opacity-50">
             <div className="w-full h-full bg-card rounded-lg border-2 shadow-xl" />
-          </div>
-        )}
+          </div>}
 
         {/* Current card */}
-        {currentProfile && (
-          <div className="absolute inset-0 swipe-card-container" key={currentProfile.id}>
-            <SwipeCard
-              profile={currentProfile}
-              onSwipeLeft={handleSwipeLeft}
-              onSwipeRight={handleSwipeRight}
-            />
-          </div>
-        )}
+        {currentProfile && <div className="absolute inset-0 swipe-card-container" key={currentProfile.id}>
+            <SwipeCard profile={currentProfile} onSwipeLeft={handleSwipeLeft} onSwipeRight={handleSwipeRight} />
+          </div>}
       </div>
 
       {/* Action Buttons */}
       <div className="flex justify-center items-center gap-6">
-        <Button
-          size="lg"
-          variant="outline"
-          className="w-16 h-16 rounded-full border-2 border-red-500 hover:bg-red-500/10 hover:scale-110 transition-all"
-          onClick={handleButtonPass}
-          disabled={isAnimating}
-        >
+        <Button size="lg" variant="outline" className="w-16 h-16 rounded-full border-2 border-red-500 hover:bg-red-500/10 hover:scale-110 transition-all" onClick={handleButtonPass} disabled={isAnimating}>
           <X className="w-8 h-8 text-red-500" />
         </Button>
 
-        <Button
-          size="lg"
-          variant="outline"
-          className="w-20 h-20 rounded-full border-2 border-green-500 hover:bg-green-500/10 hover:scale-110 transition-all shadow-lg"
-          onClick={handleButtonLike}
-          disabled={isAnimating}
-        >
+        <Button size="lg" variant="outline" className="w-20 h-20 rounded-full border-2 border-green-500 hover:bg-green-500/10 hover:scale-110 transition-all shadow-lg" onClick={handleButtonLike} disabled={isAnimating}>
           <Heart className="w-10 h-10 text-green-500 fill-green-500" />
         </Button>
       </div>
@@ -319,23 +264,13 @@ export default function SparkMatch() {
       </div>
 
       {/* NDA Modal */}
-      {pendingConnection && (
-        <MutualNDAModal
-          open={ndaModalOpen}
-          onOpenChange={(open) => {
-            setNdaModalOpen(open);
-            if (!open) {
-              // User closed modal without accepting - load next profile
-              setPendingConnection(null);
-              loadNextProfile();
-            }
-          }}
-          targetUserName={pendingConnection.targetName}
-          connectionId={pendingConnection.connectionId}
-          isInitiator={true}
-          onAccept={handleNDAAccepted}
-        />
-      )}
-    </div>
-  );
+      {pendingConnection && <MutualNDAModal open={ndaModalOpen} onOpenChange={open => {
+      setNdaModalOpen(open);
+      if (!open) {
+        // User closed modal without accepting - load next profile
+        setPendingConnection(null);
+        loadNextProfile();
+      }
+    }} targetUserName={pendingConnection.targetName} connectionId={pendingConnection.connectionId} isInitiator={true} onAccept={handleNDAAccepted} />}
+    </div>;
 }

@@ -31,11 +31,28 @@ export async function createConnectionRequest(
     }
 
     if (existingConnection) {
-      return {
-        success: false,
-        alreadyExists: true,
-        error: 'Connection already exists',
-      };
+      // If connection was rejected, delete it so a new request can be sent
+      if (existingConnection.status === 'rejected') {
+        const { error: deleteError } = await supabase
+          .from('connections')
+          .delete()
+          .eq('id', existingConnection.id);
+
+        if (deleteError) {
+          console.error('Error deleting rejected connection:', deleteError);
+          throw deleteError;
+        }
+        // Continue to create new connection below
+      } else {
+        // For pending or accepted connections, don't allow new request
+        return {
+          success: false,
+          alreadyExists: true,
+          error: existingConnection.status === 'pending' 
+            ? 'Connection request already pending' 
+            : 'Already connected with this user',
+        };
+      }
     }
 
     // 2. Insert the new connection (uses Profile IDs)

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Check, X, Users, Clock, Send, Inbox, Loader2 } from 'lucide-react';
+import { Check, X, Users, Clock, Send, Inbox, Loader2, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
@@ -61,6 +61,7 @@ export default function ConnectionRequests() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [receivedRequests, setReceivedRequests] = useState<ConnectionRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
   const [acceptedConnections, setAcceptedConnections] = useState<AcceptedConnection[]>([]);
@@ -73,6 +74,41 @@ export default function ConnectionRequests() {
     isInitiator: boolean;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('received');
+
+  // Handle deep-link to specific connection (for NDA signing from notifications)
+  useEffect(() => {
+    const connectionParam = searchParams.get('connection');
+    if (connectionParam && profileId && !loading) {
+      // Find the connection and open NDA modal
+      const sentRequest = sentRequests.find(r => r.id === connectionParam);
+      const receivedRequest = receivedRequests.find(r => r.id === connectionParam);
+      
+      if (sentRequest) {
+        setActiveTab('sent');
+        // If sender and recipient signed, go to messages
+        if (sentRequest.nda_signed_by_user1 && sentRequest.nda_signed_by_user2) {
+          navigate(`/messages?connection=${connectionParam}`);
+        } else {
+          // Open NDA modal
+          setSelectedConnection({
+            id: sentRequest.id,
+            userName: sentRequest.recipient.name,
+            isInitiator: true,
+          });
+          setNdaModalOpen(true);
+        }
+      } else if (receivedRequest) {
+        setActiveTab('received');
+        // Open NDA modal
+        setSelectedConnection({
+          id: receivedRequest.id,
+          userName: receivedRequest.requester.name,
+          isInitiator: false,
+        });
+        setNdaModalOpen(true);
+      }
+    }
+  }, [searchParams, sentRequests, receivedRequests, profileId, loading]);
 
   useEffect(() => {
     if (user) {
@@ -102,6 +138,7 @@ export default function ConnectionRequests() {
       setProfileId(profile.id);
 
       // Fetch received requests (where this profile is user2)
+      // Include pending AND accepted (where NDA flow may be incomplete)
       const { data: received, error: receivedError } = await supabase
         .from('connections')
         .select(`
@@ -115,15 +152,19 @@ export default function ConnectionRequests() {
           requester:profiles!connections_user1_id_fkey(id, name, role, profile_pic_url, bio, location, skills, interests)
         `)
         .eq('user2_id', profile.id)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'accepted'])
         .order('created_at', { ascending: false });
 
       if (receivedError) throw receivedError;
       
       // Filter out connections with null requester profiles
-      const validReceived = (received || []).filter(
-        (r: any) => r && r.id && r.requester && r.requester.id
-      );
+      // Also filter out fully-signed accepted connections (they belong in messages)
+      const validReceived = (received || []).filter((r: any) => {
+        if (!r || !r.id || !r.requester || !r.requester.id) return false;
+        // Exclude if both have signed NDA (chat is ready)
+        if (r.status === 'accepted' && r.nda_signed_by_user1 && r.nda_signed_by_user2) return false;
+        return true;
+      });
       setReceivedRequests(validReceived as ConnectionRequest[]);
 
       // Fetch sent requests (where this profile is user1)
@@ -146,9 +187,13 @@ export default function ConnectionRequests() {
       if (sentError) throw sentError;
       
       // Filter out connections with null recipient profiles
-      const validSent = (sent || []).filter(
-        (r: any) => r && r.id && r.recipient && r.recipient.id
-      );
+      // Also filter out fully-signed accepted connections (they belong in messages)
+      const validSent = (sent || []).filter((r: any) => {
+        if (!r || !r.id || !r.recipient || !r.recipient.id) return false;
+        // Exclude if both have signed NDA (chat is ready)
+        if (r.status === 'accepted' && r.nda_signed_by_user1 && r.nda_signed_by_user2) return false;
+        return true;
+      });
       setSentRequests(validSent as SentRequest[]);
 
     } catch (error) {
@@ -393,6 +438,13 @@ export default function ConnectionRequests() {
                 // Skip rendering if requester data is missing
                 if (!request || !request.requester || !request.requester.id) return null;
                 
+                // Determine NDA status for received requests (I am user2)
+                const theirNdaSigned = request.nda_signed_by_user1; // They are user1 (sender)
+                const myNdaSigned = request.nda_signed_by_user2; // I am user2 (receiver)
+                const isAccepted = request.status === 'accepted';
+                const needsMySignature = isAccepted && theirNdaSigned && !myNdaSigned;
+                const waitingForThem = isAccepted && myNdaSigned && !theirNdaSigned;
+                
                 return (
                 <div
                   key={request.id}
@@ -425,27 +477,72 @@ export default function ConnectionRequests() {
                         <span className="text-xs text-muted-foreground">
                           {formatTimeAgo(request.created_at)}
                         </span>
+                        {/* NDA Status Indicator for accepted requests */}
+                        {isAccepted && (
+                          <>
+                            {needsMySignature && (
+                              <Badge variant="outline" className="text-xs py-0 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                                Sign NDA to chat
+                              </Badge>
+                            )}
+                            {waitingForThem && (
+                              <Badge variant="outline" className="text-xs py-0 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">
+                                Waiting for their NDA
+                              </Badge>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleReject(request.id)}
-                      className="hover:bg-destructive/10"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleAccept(request)}
-                      className="bg-green-500 hover:bg-green-600"
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Accept
-                    </Button>
+                    {/* Pending: Accept/Reject buttons */}
+                    {request.status === 'pending' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleReject(request.id)}
+                          className="hover:bg-destructive/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAccept(request)}
+                          className="bg-green-500 hover:bg-green-600"
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Accept & Sign NDA
+                        </Button>
+                      </>
+                    )}
+                    {/* Accepted but needs my NDA signature */}
+                    {needsMySignature && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleAccept(request)}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        Sign NDA to Chat
+                      </Button>
+                    )}
+                    {/* Waiting for their signature */}
+                    {waitingForThem && (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        Awaiting
+                      </Badge>
+                    )}
+                    {/* Accepted but neither signed yet (shouldn't happen but handle it) */}
+                    {isAccepted && !theirNdaSigned && !myNdaSigned && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleAccept(request)}
+                      >
+                        Sign NDA
+                      </Button>
+                    )}
                   </div>
                 </div>
                 );
@@ -464,6 +561,13 @@ export default function ConnectionRequests() {
               sentRequests.map(request => {
                 // Skip rendering if recipient data is missing
                 if (!request || !request.recipient || !request.recipient.id) return null;
+                
+                // Determine NDA status for better UX
+                const yourNdaSigned = request.nda_signed_by_user1; // You are user1 (sender)
+                const theirNdaSigned = request.nda_signed_by_user2; // They are user2 (recipient)
+                const bothSigned = yourNdaSigned && theirNdaSigned;
+                const waitingForThem = yourNdaSigned && !theirNdaSigned;
+                const waitingForYou = !yourNdaSigned && theirNdaSigned;
                 
                 return (
                 <div
@@ -497,29 +601,71 @@ export default function ConnectionRequests() {
                         <span className="text-xs text-muted-foreground">
                           {formatTimeAgo(request.created_at)}
                         </span>
+                        {/* NDA Status Indicator */}
+                        {request.status === 'accepted' && !bothSigned && (
+                          <span className="text-xs">
+                            {waitingForThem && (
+                              <Badge variant="outline" className="text-xs py-0 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">
+                                Waiting for their NDA
+                              </Badge>
+                            )}
+                            {waitingForYou && (
+                              <Badge variant="outline" className="text-xs py-0 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                                Sign NDA to chat
+                              </Badge>
+                            )}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {getStatusBadge(request.status)}
                     {request.status === 'pending' && (
+                      <>
+                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                          Pending
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCancelRequest(request.id)}
+                          className="hover:bg-destructive/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                    {request.status === 'accepted' && bothSigned && (
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => handleCancelRequest(request.id)}
-                        className="hover:bg-destructive/10"
+                        onClick={() => navigate(`/messages?connection=${request.id}`)}
+                        className="bg-green-500 hover:bg-green-600"
                       >
-                        <X className="h-4 w-4" />
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        Chat
                       </Button>
                     )}
-                    {request.status === 'accepted' && (
+                    {request.status === 'accepted' && waitingForYou && (
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => handleChatClick(request.id, request.recipient.name, false)}
+                        onClick={() => handleChatClick(request.id, request.recipient.name, true)}
+                        className="bg-primary hover:bg-primary/90"
                       >
-                        Chat
+                        Sign NDA
+                      </Button>
+                    )}
+                    {request.status === 'accepted' && waitingForThem && (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        Awaiting
+                      </Badge>
+                    )}
+                    {request.status === 'accepted' && !yourNdaSigned && !theirNdaSigned && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleChatClick(request.id, request.recipient.name, true)}
+                      >
+                        Sign NDA
                       </Button>
                     )}
                   </div>

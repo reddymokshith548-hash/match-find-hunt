@@ -1,20 +1,28 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Send, MessageSquare, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, MessageSquare, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePresence } from '@/hooks/usePresence';
+import { MessageBubble } from '@/components/messages/MessageBubble';
+import { VoiceRecorder } from '@/components/messages/VoiceRecorder';
+import { ImagePicker } from '@/components/messages/ImagePicker';
+import { TypingIndicator } from '@/components/messages/TypingIndicator';
+import { OnlineStatus } from '@/components/messages/OnlineStatus';
+import { cn } from '@/lib/utils';
 
 interface Conversation {
   id: string;
   connection_id: string;
   other_user: {
     profile_id: string;
+    auth_user_id?: string;
     name: string;
     profile_pic_url?: string | null;
   };
@@ -30,6 +38,16 @@ interface Message {
   content: string;
   created_at: string;
   is_read: boolean;
+  message_type?: string;
+  media_url?: string | null;
+  media_duration_seconds?: number | null;
+  delivery_status?: string;
+}
+
+// Pending message for optimistic UI
+interface PendingMessage extends Message {
+  tempId: string;
+  retryCount: number;
 }
 
 export default function Messages() {
@@ -40,11 +58,22 @@ export default function Messages() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [retryingMessage, setRetryingMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const { isUserOnline, isUserTyping, setTyping } = usePresence(
+    user?.id ?? null,
+    selectedConversation?.connection_id ?? null
+  );
 
   useEffect(() => {
     if (user) {
@@ -73,7 +102,22 @@ export default function Messages() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, pendingMessages]);
+
+  // Handle typing indicator
+  const handleTyping = useCallback(() => {
+    if (!selectedConversation) return;
+    
+    setTyping(true);
+    
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    typingTimeoutRef.current = setTimeout(() => {
+      setTyping(false);
+    }, 2000);
+  }, [selectedConversation, setTyping]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -115,45 +159,70 @@ export default function Messages() {
       if (error) throw error;
 
       // Filter to only connections where both NDAs are signed and build conversation list
-      const conversationsData: Conversation[] = [];
+      const validConnections = (connections || []).filter(
+        conn => conn.nda_signed_by_user1 && conn.nda_signed_by_user2
+      );
 
-      for (const conn of connections || []) {
-        // Both must have signed
-        if (!conn.nda_signed_by_user1 || !conn.nda_signed_by_user2) continue;
+      // Get all other profile IDs
+      const otherProfileIds = validConnections.map(conn =>
+        conn.user1_id === profile.id ? conn.user2_id : conn.user1_id
+      ).filter(Boolean);
 
+      // Batch fetch profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, profile_pic_url, user_id')
+        .in('id', otherProfileIds);
+
+      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      // Batch fetch last messages
+      const connectionIds = validConnections.map(c => c.id);
+      const { data: allMessages } = await supabase
+        .from('messages')
+        .select('connection_id, content, created_at, receiver_id, is_read')
+        .in('connection_id', connectionIds)
+        .order('created_at', { ascending: false });
+
+      // Group messages by connection and get last + unread count
+      const messagesByConnection = new Map<string, { last?: any; unread: number }>();
+      allMessages?.forEach(msg => {
+        if (!messagesByConnection.has(msg.connection_id!)) {
+          messagesByConnection.set(msg.connection_id!, { last: msg, unread: 0 });
+        }
+        const entry = messagesByConnection.get(msg.connection_id!)!;
+        if (!entry.last) entry.last = msg;
+        if (msg.receiver_id === profile.id && !msg.is_read) {
+          entry.unread++;
+        }
+      });
+
+      const conversationsData: Conversation[] = validConnections.map(conn => {
         const otherProfileId = conn.user1_id === profile.id ? conn.user2_id : conn.user1_id;
+        const otherProfile = profilesMap.get(otherProfileId!);
+        const msgData = messagesByConnection.get(conn.id);
 
-        // Get other user's profile
-        const { data: otherProfile } = await supabase
-          .from('profiles')
-          .select('id, name, profile_pic_url')
-          .eq('id', otherProfileId)
-          .single();
-
-        if (!otherProfile) continue;
-
-        // Get last message
-        const { data: lastMsg } = await supabase
-          .from('messages')
-          .select('content, created_at')
-          .eq('connection_id', conn.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        conversationsData.push({
+        return {
           id: conn.id,
           connection_id: conn.id,
           other_user: {
-            profile_id: otherProfile.id,
-            name: otherProfile.name || 'Unknown',
-            profile_pic_url: otherProfile.profile_pic_url,
+            profile_id: otherProfileId!,
+            auth_user_id: otherProfile?.user_id ?? undefined,
+            name: otherProfile?.name || 'Unknown',
+            profile_pic_url: otherProfile?.profile_pic_url,
           },
-          last_message: lastMsg?.content,
-          last_message_time: lastMsg?.created_at,
-          unread_count: 0,
-        });
-      }
+          last_message: msgData?.last?.content,
+          last_message_time: msgData?.last?.created_at,
+          unread_count: msgData?.unread || 0,
+        };
+      }).filter(c => c.other_user.profile_id);
+
+      // Sort by last message time
+      conversationsData.sort((a, b) => {
+        if (!a.last_message_time) return 1;
+        if (!b.last_message_time) return -1;
+        return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
+      });
 
       setConversations(conversationsData);
 
@@ -173,8 +242,13 @@ export default function Messages() {
       console.error('Error fetching conversations:', error);
       toast({
         title: "Error",
-        description: "Failed to load conversations",
-        variant: "destructive"
+        description: "Failed to load conversations. Tap to retry.",
+        variant: "destructive",
+        action: (
+          <Button variant="outline" size="sm" onClick={fetchProfileAndConversations}>
+            <RefreshCw className="h-4 w-4 mr-1" /> Retry
+          </Button>
+        ),
       });
     } finally {
       setLoadingConversations(false);
@@ -183,6 +257,8 @@ export default function Messages() {
 
   const fetchMessages = async (connectionId: string) => {
     if (!user || !profileId) return;
+
+    setLoadingMessages(true);
 
     try {
       const { data, error } = await supabase
@@ -202,8 +278,22 @@ export default function Messages() {
         .eq('connection_id', connectionId)
         .eq('receiver_id', profileId)
         .eq('is_read', false);
+
+      // Update unread count in conversations
+      setConversations(prev =>
+        prev.map(c =>
+          c.connection_id === connectionId ? { ...c, unread_count: 0 } : c
+        )
+      );
     } catch (error) {
       console.error('Error fetching messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load messages",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingMessages(false);
     }
   };
 
@@ -219,7 +309,14 @@ export default function Messages() {
           filter: `connection_id=eq.${connectionId}`
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message]);
+          const newMsg = payload.new as Message;
+          // Only add if not already in messages (avoid duplicates from optimistic UI)
+          setMessages((prev) => {
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+          // Remove from pending if exists
+          setPendingMessages(prev => prev.filter(p => p.id !== newMsg.id));
         }
       )
       .subscribe();
@@ -229,35 +326,188 @@ export default function Messages() {
     };
   };
 
-  const handleSendMessage = async () => {
-    if (!user || !selectedConversation || !newMessage.trim() || !profileId) return;
+  const sendMessage = async (
+    content: string,
+    messageType: 'text' | 'image' | 'voice' = 'text',
+    mediaUrl?: string,
+    mediaDuration?: number
+  ) => {
+    if (!user || !selectedConversation || !profileId) return;
 
-    setLoading(true);
+    const tempId = `temp-${Date.now()}`;
+    const tempMessage: PendingMessage = {
+      id: tempId,
+      tempId,
+      sender_id: profileId,
+      receiver_id: selectedConversation.other_user.profile_id,
+      content: content || (messageType === 'image' ? '📷 Photo' : '🎤 Voice message'),
+      created_at: new Date().toISOString(),
+      is_read: false,
+      message_type: messageType,
+      media_url: mediaUrl,
+      media_duration_seconds: mediaDuration,
+      delivery_status: 'sending',
+      retryCount: 0,
+    };
+
+    // Optimistic update
+    setPendingMessages(prev => [...prev, tempMessage]);
 
     try {
-      // Use profile IDs for sender/receiver
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('messages')
         .insert({
           sender_id: profileId,
           receiver_id: selectedConversation.other_user.profile_id,
-          content: newMessage.trim(),
+          content: content || '',
           connection_id: selectedConversation.connection_id,
-          is_read: false
-        });
+          is_read: false,
+          message_type: messageType,
+          media_url: mediaUrl,
+          media_duration_seconds: mediaDuration,
+          delivery_status: 'sent',
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      setNewMessage('');
+      // Replace temp message with real one
+      setPendingMessages(prev => prev.filter(p => p.tempId !== tempId));
+      setMessages(prev => [...prev, data]);
+
+      // Update conversation last message
+      setConversations(prev =>
+        prev.map(c =>
+          c.connection_id === selectedConversation.connection_id
+            ? { ...c, last_message: content || tempMessage.content, last_message_time: new Date().toISOString() }
+            : c
+        )
+      );
     } catch (error) {
       console.error('Error sending message:', error);
+      // Mark as failed
+      setPendingMessages(prev =>
+        prev.map(p =>
+          p.tempId === tempId ? { ...p, delivery_status: 'failed' } : p
+        )
+      );
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+    
+    setSending(true);
+    await sendMessage(newMessage.trim());
+    setNewMessage('');
+    setSending(false);
+  };
+
+  const handleRetryMessage = async (tempId: string) => {
+    const pendingMsg = pendingMessages.find(p => p.tempId === tempId);
+    if (!pendingMsg || pendingMsg.retryCount >= 3) return;
+
+    setRetryingMessage(tempId);
+
+    // Update to sending state
+    setPendingMessages(prev =>
+      prev.map(p =>
+        p.tempId === tempId
+          ? { ...p, delivery_status: 'sending', retryCount: p.retryCount + 1 }
+          : p
+      )
+    );
+
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: pendingMsg.sender_id,
+          receiver_id: pendingMsg.receiver_id,
+          content: pendingMsg.content,
+          connection_id: selectedConversation?.connection_id,
+          is_read: false,
+          message_type: pendingMsg.message_type,
+          media_url: pendingMsg.media_url,
+          media_duration_seconds: pendingMsg.media_duration_seconds,
+          delivery_status: 'sent',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPendingMessages(prev => prev.filter(p => p.tempId !== tempId));
+      setMessages(prev => [...prev, data]);
+    } catch (error) {
+      setPendingMessages(prev =>
+        prev.map(p =>
+          p.tempId === tempId ? { ...p, delivery_status: 'failed' } : p
+        )
+      );
+    } finally {
+      setRetryingMessage(null);
+    }
+  };
+
+  const handleImageSelected = async (file: File) => {
+    if (!user || !selectedConversation) return;
+
+    setSending(true);
+
+    try {
+      const fileName = `${user.id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('chat-media')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('chat-media')
+        .getPublicUrl(fileName);
+
+      await sendMessage('', 'image', urlData.publicUrl);
+    } catch (error) {
+      console.error('Error uploading image:', error);
       toast({
         title: "Error",
-        description: "Failed to send message",
-        variant: "destructive"
+        description: "Failed to upload image",
+        variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setSending(false);
+    }
+  };
+
+  const handleVoiceRecording = async (blob: Blob, duration: number) => {
+    if (!user || !selectedConversation) return;
+
+    setSending(true);
+
+    try {
+      const fileName = `${user.id}/${Date.now()}-voice.webm`;
+      const { error: uploadError } = await supabase.storage
+        .from('chat-media')
+        .upload(fileName, blob, { contentType: 'audio/webm' });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('chat-media')
+        .getPublicUrl(fileName);
+
+      await sendMessage('', 'voice', urlData.publicUrl, duration);
+    } catch (error) {
+      console.error('Error uploading voice:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload voice message",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -272,16 +522,28 @@ export default function Messages() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  // Filter messages by search
+  const filteredMessages = searchQuery
+    ? messages.filter(m => m.content?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : messages;
+
+  // Combine real messages and pending messages for display
+  const allMessages = [...filteredMessages, ...pendingMessages].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mr-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <h1 className="text-2xl font-bold gradient-text">Messages</h1>
+      <header className="border-b bg-card shadow-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mr-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-2xl font-bold gradient-text">Messages</h1>
+          </div>
         </div>
       </header>
 
@@ -289,8 +551,8 @@ export default function Messages() {
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
           {/* Conversations List */}
-          <Card className="lg:col-span-1">
-            <ScrollArea className="h-full">
+          <Card className="lg:col-span-1 flex flex-col">
+            <ScrollArea className="flex-1">
               {loadingConversations ? (
                 <div className="flex items-center justify-center h-64">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -302,36 +564,61 @@ export default function Messages() {
                   <p className="text-muted-foreground text-sm">
                     Connect with people and sign NDAs to start chatting!
                   </p>
+                  <Button className="mt-4" onClick={fetchProfileAndConversations}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
                 </div>
               ) : (
                 <div className="p-2">
-                  {conversations.map((conv) => (
-                    <button
-                      key={conv.id}
-                      onClick={() => setSelectedConversation(conv)}
-                      className={`w-full p-4 flex items-center space-x-3 rounded-lg transition-colors ${
-                        selectedConversation?.id === conv.id
-                          ? 'bg-accent'
-                          : 'hover:bg-accent/50'
-                      }`}
-                    >
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={conv.other_user.profile_pic_url || undefined} />
-                        <AvatarFallback>{conv.other_user.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 text-left">
-                        <h3 className="font-semibold">{conv.other_user.name}</h3>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {conv.last_message || 'No messages yet'}
-                        </p>
-                      </div>
-                      {conv.last_message_time && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatTime(conv.last_message_time)}
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                  {conversations.map((conv) => {
+                    if (!conv?.other_user?.profile_id) return null;
+                    
+                    const isOnline = conv.other_user.auth_user_id
+                      ? isUserOnline(conv.other_user.auth_user_id)
+                      : false;
+
+                    return (
+                      <button
+                        key={conv.id}
+                        onClick={() => setSelectedConversation(conv)}
+                        className={cn(
+                          'w-full p-4 flex items-center space-x-3 rounded-lg transition-colors',
+                          selectedConversation?.id === conv.id
+                            ? 'bg-accent'
+                            : 'hover:bg-accent/50'
+                        )}
+                      >
+                        <div className="relative">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src={conv.other_user.profile_pic_url || undefined} />
+                            <AvatarFallback>{conv.other_user.name?.charAt(0) || '?'}</AvatarFallback>
+                          </Avatar>
+                          {isOnline && (
+                            <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-background" />
+                          )}
+                        </div>
+                        <div className="flex-1 text-left min-w-0">
+                          <h3 className="font-semibold truncate">{conv.other_user.name || 'Unknown'}</h3>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {conv.last_message || 'No messages yet'}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          {conv.last_message_time && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatTime(conv.last_message_time)}
+                            </span>
+                          )}
+                          {conv.unread_count > 0 && (
+                            <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                              {conv.unread_count}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </ScrollArea>
@@ -342,62 +629,135 @@ export default function Messages() {
             {selectedConversation ? (
               <>
                 {/* Chat Header */}
-                <div className="p-4 border-b flex items-center space-x-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={selectedConversation.other_user.profile_pic_url || undefined} />
-                    <AvatarFallback>
-                      {selectedConversation.other_user.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <h3 className="font-semibold">{selectedConversation.other_user.name}</h3>
+                <div className="p-4 border-b flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={selectedConversation.other_user.profile_pic_url || undefined} />
+                      <AvatarFallback>
+                        {selectedConversation.other_user.name?.charAt(0) || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold">{selectedConversation.other_user.name || 'Unknown'}</h3>
+                      <OnlineStatus
+                        isOnline={
+                          selectedConversation.other_user.auth_user_id
+                            ? isUserOnline(selectedConversation.other_user.auth_user_id)
+                            : false
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {showSearch ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Search messages..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-48"
+                          autoFocus
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setShowSearch(false);
+                            setSearchQuery('');
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="ghost" size="icon" onClick={() => setShowSearch(true)}>
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Messages */}
                 <ScrollArea className="flex-1 p-4">
-                  {messages.length === 0 ? (
+                  {loadingMessages ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : allMessages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                       <MessageSquare className="h-12 w-12 text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">No messages yet. Say hello! 👋</p>
+                      <p className="text-muted-foreground">
+                        {searchQuery ? 'No messages match your search' : 'No messages yet. Say hello! 👋'}
+                      </p>
                     </div>
                   ) : (
-                    messages.map((message) => {
-                      const isSender = message.sender_id === profileId;
-                      return (
-                        <div
-                          key={message.id}
-                          className={`flex mb-4 ${isSender ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[70%] rounded-lg p-3 ${
-                              isSender
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
-                            }`}
-                          >
-                            <p className="text-sm">{message.content}</p>
-                            <span className="text-xs opacity-70 mt-1 block">
-                              {formatTime(message.created_at)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
+                    <>
+                      {allMessages.map((message) => {
+                        const isPending = 'tempId' in message;
+                        const isSender = message.sender_id === profileId;
+                        
+                        return (
+                          <MessageBubble
+                            key={message.id}
+                            id={message.id}
+                            content={message.content}
+                            messageType={(message.message_type as 'text' | 'image' | 'voice') || 'text'}
+                            mediaUrl={message.media_url}
+                            mediaDuration={message.media_duration_seconds}
+                            deliveryStatus={
+                              isPending
+                                ? (message as PendingMessage).delivery_status as any
+                                : 'delivered'
+                            }
+                            isSender={isSender}
+                            timestamp={message.created_at}
+                            onRetry={
+                              isPending && (message as PendingMessage).delivery_status === 'failed'
+                                ? () => handleRetryMessage((message as PendingMessage).tempId)
+                                : undefined
+                            }
+                          />
+                        );
+                      })}
+                      
+                      {/* Typing indicator */}
+                      {selectedConversation.other_user.auth_user_id &&
+                        isUserTyping(selectedConversation.other_user.auth_user_id) && (
+                          <TypingIndicator userName={selectedConversation.other_user.name} />
+                        )}
+                    </>
                   )}
                   <div ref={messagesEndRef} />
                 </ScrollArea>
 
                 {/* Message Input */}
                 <div className="p-4 border-t">
-                  <div className="flex space-x-2">
+                  <div className="flex items-center space-x-2">
+                    <ImagePicker onImageSelected={handleImageSelected} disabled={sending} />
+                    <VoiceRecorder onRecordingComplete={handleVoiceRecording} disabled={sending} />
+                    
                     <Input
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      onChange={(e) => {
+                        setNewMessage(e.target.value);
+                        handleTyping();
+                      }}
+                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                       placeholder="Type a message..."
-                      disabled={loading}
+                      disabled={sending}
+                      className="flex-1"
                     />
-                    <Button onClick={handleSendMessage} disabled={loading || !newMessage.trim()}>
-                      <Send className="h-4 w-4" />
+                    
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={sending || !newMessage.trim()}
+                      size="icon"
+                    >
+                      {sending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>

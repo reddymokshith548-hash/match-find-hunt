@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -13,6 +13,7 @@ export function usePresence(userId: string | null, conversationId: string | null
     typingUsers: new Map(),
   });
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+  const typingChannelRef = useRef<RealtimeChannel | null>(null);
 
   // Track online status
   useEffect(() => {
@@ -58,6 +59,11 @@ export function usePresence(userId: string | null, conversationId: string | null
   useEffect(() => {
     if (!userId || !conversationId) return;
 
+    // Clean up previous typing channel
+    if (typingChannelRef.current) {
+      supabase.removeChannel(typingChannelRef.current);
+    }
+
     const typingChannel = supabase.channel(`typing:${conversationId}`, {
       config: { presence: { key: userId } },
     });
@@ -76,18 +82,28 @@ export function usePresence(userId: string | null, conversationId: string | null
         
         setPresenceState(prev => ({ ...prev, typingUsers: typingMap }));
       })
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          typingChannelRef.current = typingChannel;
+        }
+      });
 
     return () => {
-      supabase.removeChannel(typingChannel);
+      if (typingChannelRef.current) {
+        supabase.removeChannel(typingChannelRef.current);
+        typingChannelRef.current = null;
+      }
     };
   }, [userId, conversationId]);
 
   const setTyping = useCallback(async (isTyping: boolean) => {
-    if (!userId || !conversationId) return;
+    if (!userId || !conversationId || !typingChannelRef.current) return;
 
-    const typingChannel = supabase.channel(`typing:${conversationId}`);
-    await typingChannel.track({ isTyping, user_id: userId });
+    try {
+      await typingChannelRef.current.track({ isTyping, user_id: userId });
+    } catch (error) {
+      console.error('Error setting typing status:', error);
+    }
   }, [userId, conversationId]);
 
   const isUserOnline = useCallback((checkUserId: string) => {

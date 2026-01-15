@@ -646,17 +646,16 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Spark Room Chat Dialog */}
+      {/* Spark Room Chat - Full Screen */}
       {selectedRoom && (
-        <Dialog open={!!selectedRoom} onOpenChange={() => setSelectedRoom(null)}>
-          <DialogContent className="max-w-2xl h-[700px] p-0">
-            <SparkRoomChat
-              roomId={selectedRoom.id}
-              roomName={selectedRoom.name}
-              onClose={() => setSelectedRoom(null)}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="fixed inset-0 z-50 bg-background">
+          <SparkRoomChat
+            roomId={selectedRoom.id}
+            roomName={selectedRoom.name}
+            onClose={() => setSelectedRoom(null)}
+            onLeaveRoom={() => setSelectedRoom(null)}
+          />
+        </div>
       )}
     </div>
   );

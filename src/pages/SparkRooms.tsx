@@ -6,16 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, Plus, Search, Clock, MessageCircle, ArrowLeft, Hash, Settings, LogOut } from 'lucide-react';
+import { Calendar, Users, Plus, Video, Search, Clock, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import SparkRoomChat from '@/components/SparkRoomChat';
-import { cn } from '@/lib/utils';
 
 interface SparkRoom {
   id: string;
@@ -26,8 +22,6 @@ interface SparkRoom {
   created_at: string;
   member_count?: number;
   is_member?: boolean;
-  last_message?: string;
-  last_message_time?: string;
 }
 
 export default function SparkRooms() {
@@ -43,8 +37,7 @@ export default function SparkRooms() {
     topic: '',
     is_public: true,
   });
-  const [selectedRoom, setSelectedRoom] = useState<SparkRoom | null>(null);
-  const [activeTab, setActiveTab] = useState<'my-rooms' | 'discover'>('my-rooms');
+  const [selectedRoom, setSelectedRoom] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -61,8 +54,8 @@ export default function SparkRooms() {
 
       if (roomsError) throw roomsError;
 
-      // Get member counts, check membership, and get last message
-      const roomsWithDetails = await Promise.all(
+      // Get member counts and check if user is a member
+      const roomsWithCounts = await Promise.all(
         (roomsData || []).map(async (room) => {
           const { count } = await supabase
             .from('spark_room_members')
@@ -76,26 +69,15 @@ export default function SparkRooms() {
             .eq('user_id', user?.id)
             .single();
 
-          // Get last message
-          const { data: lastMessageData } = await supabase
-            .from('spark_room_messages')
-            .select('message, created_at')
-            .eq('room_id', room.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
           return {
             ...room,
             member_count: count || 0,
             is_member: !!memberData,
-            last_message: lastMessageData?.message,
-            last_message_time: lastMessageData?.created_at,
           };
         })
       );
 
-      setRooms(roomsWithDetails);
+      setRooms(roomsWithCounts);
     } catch (error) {
       console.error('Error fetching rooms:', error);
       toast({
@@ -151,9 +133,6 @@ export default function SparkRooms() {
       setCreateDialogOpen(false);
       setNewRoom({ name: '', description: '', topic: '', is_public: true });
       fetchRooms();
-      
-      // Auto-select the new room
-      setSelectedRoom({ ...room, member_count: 1, is_member: true });
     } catch (error) {
       console.error('Error creating room:', error);
       toast({
@@ -164,14 +143,14 @@ export default function SparkRooms() {
     }
   };
 
-  const joinRoom = async (room: SparkRoom) => {
+  const joinRoom = async (roomId: string) => {
     if (!user) return;
 
     try {
       const { error } = await supabase
         .from('spark_room_members')
         .insert({
-          room_id: room.id,
+          room_id: roomId,
           user_id: user.id,
         });
 
@@ -182,11 +161,7 @@ export default function SparkRooms() {
         description: 'You are now a member of this Spark Room',
       });
 
-      // Update local state and select the room
-      const updatedRoom = { ...room, is_member: true, member_count: (room.member_count || 0) + 1 };
-      setRooms(prev => prev.map(r => r.id === room.id ? updatedRoom : r));
-      setSelectedRoom(updatedRoom);
-      setActiveTab('my-rooms');
+      fetchRooms();
     } catch (error: any) {
       console.error('Error joining room:', error);
       toast({
@@ -214,9 +189,6 @@ export default function SparkRooms() {
         description: 'You are no longer a member',
       });
 
-      if (selectedRoom?.id === roomId) {
-        setSelectedRoom(null);
-      }
       fetchRooms();
     } catch (error) {
       console.error('Error leaving room:', error);
@@ -228,12 +200,10 @@ export default function SparkRooms() {
     }
   };
 
-  const myRooms = rooms.filter(room => room.is_member);
-  const discoverRooms = rooms.filter(room => 
-    !room.is_member && 
-    (room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredRooms = rooms.filter(room =>
+    room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     room.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    room.topic?.toLowerCase().includes(searchQuery.toLowerCase()))
+    room.topic?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
@@ -248,241 +218,175 @@ export default function SparkRooms() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar - Room List */}
-      <div className={cn(
-        "w-full md:w-96 border-r bg-card flex flex-col",
-        selectedRoom ? "hidden md:flex" : "flex"
-      )}>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="p-4 border-b bg-card/50 backdrop-blur">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Hash className="h-6 w-6 text-primary" />
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold gradient-text flex items-center gap-3">
+              <Video className="h-8 w-8" />
               Spark Rooms
             </h1>
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="icon" variant="ghost">
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create Spark Room</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Room Name *</Label>
-                    <Input
-                      id="name"
-                      placeholder="e.g., Founder Coffee Chat"
-                      value={newRoom.name}
-                      onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="topic">Topic</Label>
-                    <Input
-                      id="topic"
-                      placeholder="e.g., SaaS, B2B, Marketing"
-                      value={newRoom.topic}
-                      onChange={(e) => setNewRoom({ ...newRoom, topic: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="What's this room about?"
-                      value={newRoom.description}
-                      onChange={(e) => setNewRoom({ ...newRoom, description: e.target.value })}
-                      rows={3}
-                    />
-                  </div>
-
-                  <Button onClick={createRoom} className="w-full">
-                    Create Room
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <p className="text-muted-foreground mt-2">
+              Join virtual events and connect with the community
+            </p>
           </div>
 
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList className="w-full">
-              <TabsTrigger value="my-rooms" className="flex-1">
-                My Rooms ({myRooms.length})
-              </TabsTrigger>
-              <TabsTrigger value="discover" className="flex-1">
-                Discover
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="gap-2">
+                <Plus className="h-5 w-5" />
+                Create Room
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create Spark Room</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Room Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="e.g., Founder Coffee Chat"
+                    value={newRoom.name}
+                    onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
+                  />
+                </div>
 
-        {/* Room List */}
-        <ScrollArea className="flex-1">
-          {activeTab === 'my-rooms' ? (
-            myRooms.length === 0 ? (
-              <div className="p-8 text-center">
-                <Hash className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground mb-4">You haven't joined any rooms yet</p>
-                <Button variant="outline" onClick={() => setActiveTab('discover')}>
-                  Discover Rooms
+                <div className="space-y-2">
+                  <Label htmlFor="topic">Topic</Label>
+                  <Input
+                    id="topic"
+                    placeholder="e.g., SaaS, B2B, Marketing"
+                    value={newRoom.topic}
+                    onChange={(e) => setNewRoom({ ...newRoom, topic: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="What's this room about?"
+                    value={newRoom.description}
+                    onChange={(e) => setNewRoom({ ...newRoom, description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+
+                <Button onClick={createRoom} className="w-full">
+                  Create Room
                 </Button>
               </div>
-            ) : (
-              <div className="divide-y">
-                {myRooms.map((room) => (
-                  <button
-                    key={room.id}
-                    onClick={() => setSelectedRoom(room)}
-                    className={cn(
-                      "w-full p-4 text-left hover:bg-accent/50 transition-colors flex items-start gap-3",
-                      selectedRoom?.id === room.id && "bg-accent"
-                    )}
-                  >
-                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Hash className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold truncate">{room.name}</h3>
-                        {room.last_message_time && (
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            {formatDistanceToNow(new Date(room.last_message_time), { addSuffix: false })}
-                          </span>
-                        )}
-                      </div>
-                      {room.topic && (
-                        <Badge variant="secondary" className="text-xs mb-1">
-                          {room.topic}
-                        </Badge>
-                      )}
-                      <p className="text-sm text-muted-foreground truncate">
-                        {room.last_message || room.description || 'No messages yet'}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                        <Users className="h-3 w-3" />
-                        <span>{room.member_count} members</span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )
-          ) : (
-            <div className="p-4 space-y-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search rooms..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-              {/* Discover Grid */}
-              <div className="space-y-3">
-                {discoverRooms.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      {searchQuery ? 'No rooms found' : 'No rooms available to join'}
-                    </p>
+        {/* Search */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search rooms..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {/* Rooms Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredRooms.map((room) => (
+            <Card key={room.id} className="hover-scale">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-xl mb-2">{room.name}</CardTitle>
+                    {room.topic && (
+                      <Badge variant="secondary" className="mb-2">
+                        {room.topic}
+                      </Badge>
+                    )}
                   </div>
-                ) : (
-                  discoverRooms.map((room) => (
-                    <Card key={room.id} className="hover:bg-accent/30 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <Hash className="h-6 w-6 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold truncate">{room.name}</h3>
-                              {room.is_public && (
-                                <Badge variant="outline" className="text-xs">Public</Badge>
-                              )}
-                            </div>
-                            {room.topic && (
-                              <Badge variant="secondary" className="text-xs mb-2">
-                                {room.topic}
-                              </Badge>
-                            )}
-                            {room.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                                {room.description}
-                              </p>
-                            )}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Users className="h-3 w-3" />
-                                <span>{room.member_count} members</span>
-                              </div>
-                              <Button size="sm" onClick={() => joinRoom(room)}>
-                                Join
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                  {room.is_public && (
+                    <Badge variant="outline" className="ml-2">Public</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {room.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {room.description}
+                  </p>
                 )}
-              </div>
-            </div>
-          )}
-        </ScrollArea>
+
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    <span>{room.member_count} members</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    <span>{formatDistanceToNow(new Date(room.created_at), { addSuffix: true })}</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {room.is_member ? (
+                    <>
+                      <Button
+                        variant="default"
+                        className="flex-1"
+                        onClick={() => setSelectedRoom({ id: room.id, name: room.name })}
+                      >
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Chat
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => leaveRoom(room.id)}
+                      >
+                        Leave
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      onClick={() => joinRoom(room.id)}
+                    >
+                      Join Room
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredRooms.length === 0 && (
+          <div className="text-center py-12">
+            <Video className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground">
+              {searchQuery ? 'No rooms found' : 'No Spark Rooms yet. Create the first one!'}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Chat Area */}
-      <div className={cn(
-        "flex-1 flex flex-col",
-        !selectedRoom ? "hidden md:flex" : "flex"
-      )}>
-        {selectedRoom ? (
-          <>
-            {/* Mobile Back Button */}
-            <div className="md:hidden p-2 border-b bg-card">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedRoom(null)}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Rooms
-              </Button>
-            </div>
+      {/* Chat Dialog */}
+      {selectedRoom && (
+        <Dialog open={!!selectedRoom} onOpenChange={() => setSelectedRoom(null)}>
+          <DialogContent className="max-w-2xl h-[700px] p-0">
             <SparkRoomChat
               roomId={selectedRoom.id}
               roomName={selectedRoom.name}
               onClose={() => setSelectedRoom(null)}
-              onLeaveRoom={() => leaveRoom(selectedRoom.id)}
-              showHeader={true}
             />
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center bg-muted/30">
-            <div className="text-center p-8">
-              <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                <MessageCircle className="h-12 w-12 text-primary" />
-              </div>
-              <h2 className="text-2xl font-semibold mb-2">Select a Room</h2>
-              <p className="text-muted-foreground max-w-sm">
-                Choose a room from the sidebar to start chatting with other founders
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

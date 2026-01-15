@@ -3,13 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, X, Users, Loader2 } from 'lucide-react';
+import { Send, ArrowLeft, Users, Loader2, Smile, Paperclip, Mic, MoreVertical, Phone, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
-import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import SparkRoomInfoDialog from './SparkRoomInfoDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Message {
   id: string;
@@ -31,14 +37,20 @@ interface RoomMember {
 export interface SparkRoomChatProps {
   roomId: string;
   roomName: string;
+  roomDescription?: string;
+  roomTopic?: string;
   onClose: () => void;
+  onLeaveRoom: () => void;
   onProfileClick?: (profileId: string) => void;
 }
 
 export default function SparkRoomChat({
   roomId,
   roomName,
+  roomDescription,
+  roomTopic,
   onClose,
+  onLeaveRoom,
   onProfileClick,
 }: SparkRoomChatProps) {
   const { user } = useAuth();
@@ -49,9 +61,10 @@ export default function SparkRoomChat({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
-  const [showMembers, setShowMembers] = useState(false);
+  const [showInfoDialog, setShowInfoDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch profile
   const fetchProfile = async () => {
@@ -257,6 +270,7 @@ export default function SparkRoomChat({
       if (error) throw error;
 
       setNewMessage('');
+      inputRef.current?.focus();
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -287,138 +301,187 @@ export default function SparkRoomChat({
     return groups;
   };
 
+  const getDateLabel = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    }
+    return dateStr;
+  };
+
   const messageGroups = groupMessagesByDate(messages);
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header */}
-      <div className="flex-shrink-0 border-b p-4 flex items-center justify-between bg-card">
+      {/* WhatsApp-style Header */}
+      <div className="flex-shrink-0 bg-primary text-primary-foreground px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Users className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-lg">{roomName}</h2>
-            <p className="text-xs text-muted-foreground">{members.length} members</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
+          {/* Back Button */}
           <Button
             variant="ghost"
-            size="sm"
-            onClick={() => setShowMembers(!showMembers)}
-            className="gap-2"
+            size="icon"
+            onClick={onClose}
+            className="text-primary-foreground hover:bg-primary-foreground/10 -ml-2"
           >
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Members</span>
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
+
+          {/* Group Avatar & Info - Clickable */}
+          <button
+            onClick={() => setShowInfoDialog(true)}
+            className="flex items-center gap-3 flex-1 text-left hover:opacity-80 transition-opacity"
+          >
+            <div className="h-10 w-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+              <Users className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-base truncate">{roomName}</h2>
+              <p className="text-xs opacity-80 truncate">
+                {members.length} participants
+              </p>
+            </div>
+          </button>
+
+          {/* Action Icons */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              <Video className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              <Phone className="h-5 w-5" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-primary-foreground hover:bg-primary-foreground/10"
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowInfoDialog(true)}>
+                  Group info
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowInfoDialog(true)}>
+                  Group media
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={onLeaveRoom}
+                  className="text-destructive focus:text-destructive"
+                >
+                  Exit group
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Messages Area */}
-        <div className="flex-1 flex flex-col">
-          <ScrollArea className="flex-1 p-4">
+      {/* Messages Area with Chat Background Pattern */}
+      <div className="flex-1 overflow-hidden bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCI+CjxyZWN0IHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzBhMGEwYSI+PC9yZWN0Pgo8Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIxLjUiIGZpbGw9IiMxYTFhMWEiPjwvY2lyY2xlPgo8L3N2Zz4=')] dark:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCI+CjxyZWN0IHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iIzBhMGEwYSI+PC9yZWN0Pgo8Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIxLjUiIGZpbGw9IiMxYTFhMWEiPjwvY2lyY2xlPgo8L3N2Zz4=')] bg-muted/30">
+        <ScrollArea className="h-full">
+          <div className="p-4 min-h-full">
             {loading ? (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center p-6 bg-card/80 backdrop-blur-sm rounded-lg shadow-sm">
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold mb-1">{roomName}</h3>
+                  {roomTopic && (
+                    <Badge variant="secondary" className="mb-2">
+                      {roomTopic}
+                    </Badge>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    No messages yet. Start the conversation!
+                  </p>
                 </div>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {messageGroups.map((group) => (
                   <div key={group.date}>
-                    {/* Date Separator */}
+                    {/* Date Separator - WhatsApp Style */}
                     <div className="flex items-center justify-center my-4">
-                      <div className="bg-muted px-3 py-1 rounded-full">
-                        <span className="text-xs text-muted-foreground">{group.date}</span>
+                      <div className="bg-card/90 backdrop-blur-sm px-4 py-1.5 rounded-lg shadow-sm">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {getDateLabel(group.date)}
+                        </span>
                       </div>
                     </div>
 
                     {/* Messages */}
-                    <div className="space-y-3">
+                    <div className="space-y-1">
                       {group.messages.map((msg, idx) => {
                         const isOwnMessage = msg.profile?.id === profileId;
                         const profileName = msg.profile?.name || 'Unknown User';
                         const senderId = msg.profile?.id;
-                        const showAvatar =
-                          idx === 0 ||
-                          group.messages[idx - 1]?.profile?.id !== msg.profile?.id;
+                        const showName =
+                          !isOwnMessage &&
+                          (idx === 0 ||
+                            group.messages[idx - 1]?.profile?.id !== msg.profile?.id);
 
                         return (
                           <div
                             key={msg.id}
                             className={cn(
-                              'flex gap-2',
-                              isOwnMessage ? 'flex-row-reverse' : 'flex-row'
+                              'flex',
+                              isOwnMessage ? 'justify-end' : 'justify-start'
                             )}
                           >
-                            {/* Avatar */}
-                            <div className="w-8 flex-shrink-0">
-                              {showAvatar && !isOwnMessage && (
-                                <button
-                                  onClick={() => senderId && onProfileClick?.(senderId)}
-                                  className="focus:outline-none focus:ring-2 focus:ring-primary rounded-full"
-                                  disabled={!senderId || !onProfileClick}
-                                >
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage src={msg.profile?.profile_pic_url || undefined} />
-                                    <AvatarFallback className="text-xs">
-                                      {profileName.charAt(0) || '?'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                </button>
-                              )}
-                            </div>
-
                             <div
                               className={cn(
-                                'flex flex-col max-w-[70%]',
-                                isOwnMessage ? 'items-end' : 'items-start'
+                                'relative max-w-[85%] sm:max-w-[70%] px-3 py-2 rounded-lg shadow-sm',
+                                isOwnMessage
+                                  ? 'bg-primary text-primary-foreground rounded-br-sm'
+                                  : 'bg-card rounded-bl-sm'
                               )}
                             >
-                              {/* Name and time */}
-                              {showAvatar && (
-                                <div
-                                  className={cn(
-                                    'flex items-center gap-2 mb-1',
-                                    isOwnMessage ? 'flex-row-reverse' : 'flex-row'
-                                  )}
+                              {/* Sender Name */}
+                              {showName && (
+                                <button
+                                  onClick={() => senderId && onProfileClick?.(senderId)}
+                                  className="text-xs font-semibold text-primary mb-1 hover:underline block"
                                 >
-                                  {!isOwnMessage && (
-                                    <span
-                                      className="text-xs font-medium text-primary cursor-pointer hover:underline"
-                                      onClick={() => senderId && onProfileClick?.(senderId)}
-                                    >
-                                      {profileName}
-                                    </span>
-                                  )}
-                                </div>
+                                  {profileName}
+                                </button>
                               )}
 
-                              {/* Message Bubble */}
-                              <div
-                                className={cn(
-                                  'px-4 py-2 rounded-2xl max-w-full',
-                                  isOwnMessage
-                                    ? 'bg-primary text-primary-foreground rounded-br-md'
-                                    : 'bg-muted rounded-bl-md'
-                                )}
-                              >
-                                <p className="text-sm break-words whitespace-pre-wrap">{msg.message}</p>
-                              </div>
+                              {/* Message Text */}
+                              <p className="text-sm break-words whitespace-pre-wrap leading-relaxed">
+                                {msg.message}
+                              </p>
 
                               {/* Time */}
-                              <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                              <span
+                                className={cn(
+                                  'text-[10px] float-right mt-1 ml-3',
+                                  isOwnMessage
+                                    ? 'text-primary-foreground/70'
+                                    : 'text-muted-foreground'
+                                )}
+                              >
                                 {new Date(msg.created_at).toLocaleTimeString([], {
                                   hour: '2-digit',
                                   minute: '2-digit',
@@ -434,67 +497,79 @@ export default function SparkRoomChat({
                 <div ref={messagesEndRef} />
               </div>
             )}
-          </ScrollArea>
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* WhatsApp-style Input Area */}
+      <div className="flex-shrink-0 bg-card border-t px-2 py-2">
+        <form onSubmit={sendMessage} className="flex items-center gap-2">
+          {/* Emoji Button */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground flex-shrink-0"
+          >
+            <Smile className="h-5 w-5" />
+          </Button>
+
+          {/* Attachment Button */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground flex-shrink-0"
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
 
           {/* Input */}
-          <div className="flex-shrink-0 p-4 border-t bg-card">
-            <form onSubmit={sendMessage} className="flex gap-2">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
-                disabled={sending || !profileId}
-                className="flex-1"
-                autoComplete="off"
-              />
-              <Button
-                type="submit"
-                disabled={sending || !newMessage.trim() || !profileId}
-                size="icon"
-              >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </form>
-          </div>
-        </div>
+          <Input
+            ref={inputRef}
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message"
+            disabled={sending || !profileId}
+            className="flex-1 rounded-full bg-muted/50 border-0 focus-visible:ring-1"
+            autoComplete="off"
+          />
 
-        {/* Members Sidebar */}
-        {showMembers && (
-          <div className="w-64 border-l bg-card flex-shrink-0 hidden sm:block">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold">Members ({members.length})</h3>
-            </div>
-            <ScrollArea className="h-[calc(100%-60px)]">
-              <div className="p-2">
-                {members.map((member) => (
-                  <button
-                    key={member.id}
-                    onClick={() => onProfileClick?.(member.id)}
-                    className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors"
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={member.profile_pic_url || undefined} />
-                      <AvatarFallback className="text-xs">
-                        {member.name?.charAt(0) || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium truncate">{member.name}</span>
-                    {member.id === profileId && (
-                      <Badge variant="secondary" className="ml-auto text-xs">
-                        You
-                      </Badge>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        )}
+          {/* Send or Voice Button */}
+          {newMessage.trim() ? (
+            <Button
+              type="submit"
+              disabled={sending || !newMessage.trim() || !profileId}
+              size="icon"
+              className="rounded-full flex-shrink-0"
+            >
+              {sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground flex-shrink-0"
+            >
+              <Mic className="h-5 w-5" />
+            </Button>
+          )}
+        </form>
       </div>
+
+      {/* Group Info Dialog */}
+      <SparkRoomInfoDialog
+        open={showInfoDialog}
+        onOpenChange={setShowInfoDialog}
+        roomId={roomId}
+        onLeaveRoom={onLeaveRoom}
+        onProfileClick={onProfileClick}
+      />
     </div>
   );
 }

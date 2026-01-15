@@ -37,7 +37,7 @@ export default function SparkRooms() {
     topic: '',
     is_public: true,
   });
-  const [selectedRoom, setSelectedRoom] = useState<{ id: string; name: string } | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<{ id: string; name: string; description?: string; topic?: string } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -339,7 +339,7 @@ export default function SparkRooms() {
                       <Button
                         variant="default"
                         className="flex-1"
-                        onClick={() => setSelectedRoom({ id: room.id, name: room.name })}
+                        onClick={() => setSelectedRoom({ id: room.id, name: room.name, description: room.description, topic: room.topic })}
                       >
                         <MessageCircle className="h-4 w-4 mr-2" />
                         Chat
@@ -375,17 +375,21 @@ export default function SparkRooms() {
         )}
       </div>
 
-      {/* Chat Dialog */}
+      {/* Full-screen Chat View */}
       {selectedRoom && (
-        <Dialog open={!!selectedRoom} onOpenChange={() => setSelectedRoom(null)}>
-          <DialogContent className="max-w-2xl h-[700px] p-0">
-            <SparkRoomChat
-              roomId={selectedRoom.id}
-              roomName={selectedRoom.name}
-              onClose={() => setSelectedRoom(null)}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="fixed inset-0 z-50 bg-background">
+          <SparkRoomChat
+            roomId={selectedRoom.id}
+            roomName={selectedRoom.name}
+            roomDescription={selectedRoom.description}
+            roomTopic={selectedRoom.topic}
+            onClose={() => setSelectedRoom(null)}
+            onLeaveRoom={() => {
+              leaveRoom(selectedRoom.id);
+              setSelectedRoom(null);
+            }}
+          />
+        </div>
       )}
     </div>
   );

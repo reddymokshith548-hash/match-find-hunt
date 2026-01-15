@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,7 @@ import {
   MessageCircle,
   Crown,
   LogOut,
-  Trash2,
+  ChevronRight,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -58,6 +59,7 @@ export default function SparkRoomInfoDialog({
   onProfileClick,
 }: SparkRoomInfoDialogProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [roomInfo, setRoomInfo] = useState<SparkRoomInfo | null>(null);
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [creatorProfile, setCreatorProfile] = useState<RoomMember | null>(null);
@@ -120,6 +122,47 @@ export default function SparkRoomInfoDialog({
       supabase.removeChannel(channel);
     };
   }, [open, roomId]);
+
+  // Realtime subscription for profile name/picture updates
+  useEffect(() => {
+    if (!open || members.length === 0) return;
+
+    const userIds = members.map((m) => m.user_id).filter(Boolean);
+    if (userIds.length === 0) return;
+
+    const channel = supabase
+      .channel(`room-profiles-${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+        },
+        (payload) => {
+          const updated = payload.new as { user_id: string; name: string; profile_pic_url: string | null; id: string };
+          // Update member if they're in this room
+          setMembers((prev) =>
+            prev.map((m) =>
+              m.user_id === updated.user_id
+                ? { ...m, name: updated.name, profile_pic_url: updated.profile_pic_url }
+                : m
+            )
+          );
+          // Update creator profile if needed
+          if (creatorProfile && updated.id === creatorProfile.id) {
+            setCreatorProfile((prev) =>
+              prev ? { ...prev, name: updated.name, profile_pic_url: updated.profile_pic_url } : null
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [open, roomId, members.length, creatorProfile?.id]);
 
   const fetchUserProfile = async () => {
     if (!user) return;
@@ -279,21 +322,30 @@ export default function SparkRoomInfoDialog({
                 {members.length} Participants
               </h3>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {members.map((member) => {
                   const isAdmin = member.user_id === roomInfo?.creator_id;
                   const isCurrentUser = member.id === userProfileId;
 
+                  const handleProfileClick = () => {
+                    if (onProfileClick) {
+                      onProfileClick(member.id);
+                    } else {
+                      // Navigate to profile page
+                      onOpenChange(false);
+                      navigate(`/profile/${member.id}`);
+                    }
+                  };
+
                   return (
                     <button
                       key={member.id}
-                      onClick={() => onProfileClick?.(member.id)}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-left"
-                      disabled={!onProfileClick}
+                      onClick={handleProfileClick}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-left group"
                     >
-                      <Avatar className="h-10 w-10">
+                      <Avatar className="h-11 w-11 ring-2 ring-background">
                         <AvatarImage src={member.profile_pic_url || undefined} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
+                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
                           {member.name?.charAt(0).toUpperCase() || '?'}
                         </AvatarFallback>
                       </Avatar>
@@ -304,7 +356,7 @@ export default function SparkRoomInfoDialog({
                             {member.name}
                           </span>
                           {isCurrentUser && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs py-0">
                               You
                             </Badge>
                           )}
@@ -324,6 +376,8 @@ export default function SparkRoomInfoDialog({
                           </p>
                         )}
                       </div>
+
+                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                   );
                 })}

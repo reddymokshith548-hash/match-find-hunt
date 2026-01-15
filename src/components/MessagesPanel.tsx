@@ -583,12 +583,12 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
     }
   };
 
-  const ConversationsList = () => (
-    <div className="h-full flex flex-col">
+  const renderConversationsList = () => (
+    <div className="h-full flex flex-col min-h-0">
       <div className="p-4 border-b">
         <h3 className="font-semibold text-lg">Conversations</h3>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         {loadingConversations ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -657,8 +657,8 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
     </div>
   );
 
-  const ChatArea = () => (
-    <Card className="flex-1 flex flex-col h-full">
+  const renderChatArea = () => (
+    <Card className="flex-1 flex flex-col h-full min-h-0">
       {selectedConversation ? (
         <>
           {/* Chat Header */}
@@ -714,7 +714,7 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 min-h-0 p-4">
             {loadingMessages ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -810,28 +810,28 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
   // Mobile layout with collapsible sheet
   if (isMobile) {
     return (
-      <div className={cn('h-[calc(100vh-200px)] min-h-[500px] flex flex-col', className)}>
+      <div className={cn('h-full min-h-0 flex flex-col overflow-hidden', className)}>
         <Sheet open={mobileInboxOpen} onOpenChange={setMobileInboxOpen}>
           <SheetContent side="left" className="w-[300px] p-0">
-            <ConversationsList />
+            {renderConversationsList()}
           </SheetContent>
         </Sheet>
-        <ChatArea />
+        {renderChatArea()}
       </div>
     );
   }
 
   // Desktop layout
   return (
-    <div className={cn('grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]', className)}>
+    <div className={cn('grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0 overflow-hidden', className)}>
       {/* Conversations List */}
-      <Card className="lg:col-span-1 flex flex-col">
-        <ConversationsList />
+      <Card className="lg:col-span-1 flex flex-col min-h-0">
+        {renderConversationsList()}
       </Card>
 
       {/* Chat Area */}
-      <div className="lg:col-span-2 flex flex-col">
-        <ChatArea />
+      <div className="lg:col-span-2 flex flex-col min-h-0">
+        {renderChatArea()}
       </div>
     </div>
   );

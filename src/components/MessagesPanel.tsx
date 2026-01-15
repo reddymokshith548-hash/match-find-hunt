@@ -248,16 +248,23 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
     scrollToBottom();
   }, [messages, pendingMessages]);
 
+  // Debounced typing indicator - use ref to avoid causing re-renders
+  const isTypingRef = useRef(false);
   const handleTyping = useCallback(() => {
     if (!selectedConversation) return;
 
-    setTyping(true);
+    // Only call setTyping if not already typing
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      setTyping(true);
+    }
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
     typingTimeoutRef.current = setTimeout(() => {
+      isTypingRef.current = false;
       setTyping(false);
     }, 2000);
   }, [selectedConversation, setTyping]);
@@ -760,16 +767,20 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
               <ImagePicker onImageSelected={handleImageSelected} disabled={sending} />
               <VoiceRecorder onRecordingComplete={handleVoiceRecording} disabled={sending} />
 
-              <Input
+              <input
+                type="text"
                 value={newMessage}
-                onChange={e => {
-                  setNewMessage(e.target.value);
-                  handleTyping();
+                onChange={e => setNewMessage(e.target.value)}
+                onInput={handleTyping}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
                 }}
-                onKeyPress={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                 placeholder="Type a message..."
                 disabled={sending}
-                className="flex-1"
+                className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
 
               <Button onClick={handleSendMessage} disabled={sending || !newMessage.trim()} size="icon">

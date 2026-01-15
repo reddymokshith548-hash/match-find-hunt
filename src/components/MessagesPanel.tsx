@@ -82,10 +82,21 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
     selectedConversation?.connection_id ?? null
   );
 
+  // Background refresh interval ref
+  const backgroundRefreshRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (user) {
       fetchProfileAndConversations();
     }
+    
+    // Set up background refresh every 30 seconds
+    backgroundRefreshRef.current = setInterval(() => {
+      if (user && selectedConversation) {
+        // Silently refresh messages
+        refreshMessages();
+      }
+    }, 30000);
     
     return () => {
       // Cleanup channels on unmount
@@ -94,6 +105,9 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
       }
       if (messageChannelRef.current) {
         supabase.removeChannel(messageChannelRef.current);
+      }
+      if (backgroundRefreshRef.current) {
+        clearInterval(backgroundRefreshRef.current);
       }
     };
   }, [user]);
@@ -271,6 +285,29 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Silent background refresh for messages
+  const refreshMessages = async () => {
+    if (!selectedConversation || !profileId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('connection_id', selectedConversation.connection_id)
+        .order('created_at', { ascending: true });
+
+      if (error) return;
+      
+      // Only update if there are new messages
+      if (data && data.length > messages.length) {
+        setMessages(data);
+      }
+    } catch (error) {
+      // Silently fail - background refresh shouldn't interrupt user
+      console.error('Background refresh failed:', error);
+    }
   };
 
   const fetchProfileAndConversations = async () => {

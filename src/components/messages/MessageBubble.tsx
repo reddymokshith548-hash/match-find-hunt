@@ -209,10 +209,11 @@ export function MessageBubble({
 
   return (
     <div className={cn('flex mb-3 group', isSender ? 'justify-end' : 'justify-start')}>
-      <div className={cn('flex items-end gap-1', isSender ? 'flex-row-reverse' : 'flex-row')}>
+      <div className={cn('flex items-end gap-1 max-w-[85%] sm:max-w-[75%]', isSender ? 'flex-row-reverse' : 'flex-row')}>
         <div
           className={cn(
-            'max-w-[75%] rounded-2xl p-3 shadow-sm relative',
+            'rounded-2xl p-3 shadow-sm relative overflow-hidden',
+            messageType === 'voice' ? 'min-w-[200px] max-w-[280px]' : 'max-w-full',
             isSender
               ? 'bg-primary text-primary-foreground rounded-br-md'
               : 'bg-muted rounded-bl-md'
@@ -266,42 +267,42 @@ export function MessageBubble({
 
           {/* Voice Message */}
           {messageType === 'voice' && mediaUrl && (
-            <div className="flex items-center gap-3 min-w-[200px]">
+            <div className="flex items-center gap-2 w-full">
               <Button
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'h-10 w-10 rounded-full shrink-0',
+                  'h-9 w-9 rounded-full shrink-0',
                   isSender ? 'bg-primary-foreground/20 hover:bg-primary-foreground/30' : 'bg-background'
                 )}
                 onClick={handlePlayVoice}
               >
                 {isPlaying ? (
-                  <Pause className={cn('h-5 w-5', isSender ? 'text-primary-foreground' : '')} />
+                  <Pause className={cn('h-4 w-4', isSender ? 'text-primary-foreground' : '')} />
                 ) : (
-                  <Play className={cn('h-5 w-5', isSender ? 'text-primary-foreground' : '')} />
+                  <Play className={cn('h-4 w-4', isSender ? 'text-primary-foreground' : '')} />
                 )}
               </Button>
               
-              <div className="flex-1">
-                {/* Audio waveform visualization (simplified) */}
-                <div className="h-8 flex items-center gap-[2px]">
-                  {Array.from({ length: 30 }).map((_, i) => (
+              <div className="flex-1 min-w-0 overflow-hidden">
+                {/* Audio waveform visualization */}
+                <div className="h-6 flex items-center gap-[2px] overflow-hidden">
+                  {Array.from({ length: 20 }).map((_, i) => (
                     <div
                       key={i}
                       className={cn(
-                        'w-1 rounded-full transition-all',
-                        i < (audioProgress / 100) * 30
+                        'w-1 shrink-0 rounded-full transition-all',
+                        i < (audioProgress / 100) * 20
                           ? isSender ? 'bg-primary-foreground' : 'bg-primary'
                           : isSender ? 'bg-primary-foreground/30' : 'bg-muted-foreground/30'
                       )}
                       style={{
-                        height: `${Math.random() * 60 + 40}%`,
+                        height: `${Math.random() * 50 + 30}%`,
                       }}
                     />
                   ))}
                 </div>
-                <span className={cn('text-xs', isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+                <span className={cn('text-xs block', isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
                   {mediaDuration ? formatDuration(mediaDuration) : '0:00'}
                 </span>
               </div>

@@ -21,9 +21,10 @@ interface MessageBubbleProps {
   messageType: 'text' | 'image' | 'voice';
   mediaUrl?: string | null;
   mediaDuration?: number | null;
-  deliveryStatus: 'sending' | 'sent' | 'delivered' | 'failed';
+  deliveryStatus: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   isSender: boolean;
   timestamp: string;
+  isRead?: boolean;
   onRetry?: () => void;
 }
 
@@ -36,6 +37,7 @@ export function MessageBubble({
   deliveryStatus,
   isSender,
   timestamp,
+  isRead,
   onRetry,
 }: MessageBubbleProps) {
   const { user } = useAuth();
@@ -188,6 +190,16 @@ export function MessageBubble({
   const DeliveryIndicator = () => {
     if (!isSender) return null;
 
+    // Check if message has been read
+    if (isRead) {
+      return (
+        <span className="flex items-center gap-1">
+          <CheckCheck className="h-3 w-3 text-blue-500" />
+          <span className="text-[10px] text-blue-500 font-medium">Seen</span>
+        </span>
+      );
+    }
+
     switch (deliveryStatus) {
       case 'sending':
         return <Clock className="h-3 w-3 text-muted-foreground animate-pulse" />;
@@ -195,6 +207,13 @@ export function MessageBubble({
         return <Check className="h-3 w-3 text-muted-foreground" />;
       case 'delivered':
         return <CheckCheck className="h-3 w-3 text-primary" />;
+      case 'read':
+        return (
+          <span className="flex items-center gap-1">
+            <CheckCheck className="h-3 w-3 text-blue-500" />
+            <span className="text-[10px] text-blue-500 font-medium">Seen</span>
+          </span>
+        );
       case 'failed':
         return (
           <button onClick={onRetry} className="flex items-center gap-1 text-destructive">

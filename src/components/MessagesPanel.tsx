@@ -90,13 +90,13 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
       fetchProfileAndConversations();
     }
     
-    // Set up background refresh every 30 seconds
+    // Set up background refresh every 2 seconds
     backgroundRefreshRef.current = setInterval(() => {
       if (user && selectedConversation) {
-        // Silently refresh messages
+        // Silently refresh messages and read receipts
         refreshMessages();
       }
-    }, 30000);
+    }, 2000);
     
     return () => {
       // Cleanup channels on unmount
@@ -669,10 +669,14 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
                       <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-background" />
                     )}
                   </div>
-                  <div className="flex-1 text-left min-w-0">
+                  <div className="flex-1 text-left min-w-0 overflow-hidden">
                     <h3 className="font-semibold truncate">{conv.other_user.name || 'Unknown'}</h3>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {conv.last_message || 'No messages yet'}
+                    <p className="text-sm text-muted-foreground truncate max-w-[180px]">
+                      {conv.last_message 
+                        ? (conv.last_message.length > 30 
+                            ? conv.last_message.substring(0, 30) + '...' 
+                            : conv.last_message)
+                        : 'No messages yet'}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
@@ -769,24 +773,25 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
                   const isPending = 'tempId' in message;
                   const isSender = message.sender_id === profileId;
 
-                  return (
-                    <MessageBubble
-                      key={message.id}
-                      id={message.id}
-                      content={message.content}
-                      messageType={(message.message_type as 'text' | 'image' | 'voice') || 'text'}
-                      mediaUrl={message.media_url}
-                      mediaDuration={message.media_duration_seconds}
-                      deliveryStatus={isPending ? ((message as PendingMessage).delivery_status as any) : 'delivered'}
-                      isSender={isSender}
-                      timestamp={message.created_at}
-                      onRetry={
-                        isPending && (message as PendingMessage).delivery_status === 'failed'
-                          ? () => handleRetryMessage((message as PendingMessage).tempId)
-                          : undefined
-                      }
-                    />
-                  );
+                    return (
+                      <MessageBubble
+                        key={message.id}
+                        id={message.id}
+                        content={message.content}
+                        messageType={(message.message_type as 'text' | 'image' | 'voice') || 'text'}
+                        mediaUrl={message.media_url}
+                        mediaDuration={message.media_duration_seconds}
+                        deliveryStatus={isPending ? ((message as PendingMessage).delivery_status as any) : (message.is_read ? 'read' : 'delivered')}
+                        isSender={isSender}
+                        timestamp={message.created_at}
+                        isRead={isSender && message.is_read}
+                        onRetry={
+                          isPending && (message as PendingMessage).delivery_status === 'failed'
+                            ? () => handleRetryMessage((message as PendingMessage).tempId)
+                            : undefined
+                        }
+                      />
+                    );
                 })}
 
                 {selectedConversation.other_user.auth_user_id &&

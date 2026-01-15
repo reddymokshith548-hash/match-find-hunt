@@ -45,6 +45,54 @@ export default function SparkRooms() {
     }
   }, [user]);
 
+  // Realtime subscription for member count updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('spark-room-members-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'spark_room_members',
+        },
+        (payload) => {
+          const roomId = (payload.new as any)?.room_id || (payload.old as any)?.room_id;
+          if (roomId) {
+            // Update member count for the affected room
+            updateRoomMemberCount(roomId);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const updateRoomMemberCount = async (roomId: string) => {
+    const { count } = await supabase
+      .from('spark_room_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', roomId);
+
+    const { data: memberData } = await supabase
+      .from('spark_room_members')
+      .select('id')
+      .eq('room_id', roomId)
+      .eq('user_id', user?.id)
+      .maybeSingle();
+
+    setRooms((prevRooms) =>
+      prevRooms.map((room) =>
+        room.id === roomId
+          ? { ...room, member_count: count || 0, is_member: !!memberData }
+          : room
+      )
+    );
+  };
+
   const fetchRooms = async () => {
     try {
       const { data: roomsData, error: roomsError } = await supabase

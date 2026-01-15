@@ -72,6 +72,55 @@ export default function SparkRoomInfoDialog({
     }
   }, [open, roomId]);
 
+  // Realtime subscription for member updates
+  useEffect(() => {
+    if (!open || !roomId) return;
+
+    const channel = supabase
+      .channel(`room-members-${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'spark_room_members',
+          filter: `room_id=eq.${roomId}`,
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // Fetch the new member's profile
+            const newMember = payload.new as { user_id: string; joined_at: string };
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('id, name, profile_pic_url')
+              .eq('user_id', newMember.user_id)
+              .maybeSingle();
+
+            if (profile) {
+              setMembers((prev) => [
+                ...prev,
+                {
+                  ...profile,
+                  user_id: newMember.user_id,
+                  joined_at: newMember.joined_at,
+                },
+              ]);
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const leftMember = payload.old as { user_id: string };
+            setMembers((prev) =>
+              prev.filter((m) => m.user_id !== leftMember.user_id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [open, roomId]);
+
   const fetchUserProfile = async () => {
     if (!user) return;
     const { data } = await supabase

@@ -630,6 +630,8 @@ export default function Dashboard() {
                   </p>
                 </div>
               )}
+            </div>
+          </TabsContent>
         </Tabs>
         </div>
       </main>

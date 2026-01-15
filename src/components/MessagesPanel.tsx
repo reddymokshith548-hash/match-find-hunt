@@ -158,12 +158,91 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
   }, [searchParams, conversations, isMobile]);
 
   useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.connection_id);
-      const cleanup = subscribeToMessages(selectedConversation.connection_id);
-      return cleanup;
+    if (!selectedConversation || !profileId) return;
+
+    let isCancelled = false;
+    const connectionId = selectedConversation.connection_id;
+
+    const loadMessages = async () => {
+      setLoadingMessages(true);
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('connection_id', connectionId)
+          .order('created_at', { ascending: true });
+
+        if (isCancelled) return;
+
+        if (error) {
+          console.error('Error fetching messages:', error);
+          return;
+        }
+
+        setMessages(data || []);
+
+        // Mark messages as read
+        await supabase
+          .from('messages')
+          .update({ is_read: true })
+          .eq('connection_id', connectionId)
+          .eq('receiver_id', profileId)
+          .eq('is_read', false);
+
+        if (!isCancelled) {
+          setConversations(prev =>
+            prev.map(c => (c.connection_id === connectionId ? { ...c, unread_count: 0 } : c))
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      } finally {
+        if (!isCancelled) {
+          setLoadingMessages(false);
+        }
+      }
+    };
+
+    loadMessages();
+
+    // Set up realtime subscription after initial load
+    if (messageChannelRef.current) {
+      supabase.removeChannel(messageChannelRef.current);
+      messageChannelRef.current = null;
     }
-  }, [selectedConversation]);
+
+    const channel = supabase
+      .channel(`messages-realtime-${connectionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `connection_id=eq.${connectionId}`,
+        },
+        payload => {
+          if (isCancelled) return;
+          const newMsg = payload.new as Message;
+          setMessages(prev => {
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+          setPendingMessages(prev => prev.filter(p => p.id !== newMsg.id));
+        }
+      )
+      .subscribe();
+
+    messageChannelRef.current = channel;
+
+    return () => {
+      isCancelled = true;
+      if (messageChannelRef.current) {
+        supabase.removeChannel(messageChannelRef.current);
+        messageChannelRef.current = null;
+      }
+    };
+  }, [selectedConversation?.connection_id, profileId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -305,75 +384,7 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
     }
   };
 
-  const fetchMessages = async (connectionId: string) => {
-    if (!user || !profileId) return;
-
-    setLoadingMessages(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('connection_id', connectionId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      setMessages(data || []);
-
-      await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('connection_id', connectionId)
-        .eq('receiver_id', profileId)
-        .eq('is_read', false);
-
-      setConversations(prev =>
-        prev.map(c => (c.connection_id === connectionId ? { ...c, unread_count: 0 } : c))
-      );
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-
-  const subscribeToMessages = (connectionId: string) => {
-    // Remove existing message channel before creating new one
-    if (messageChannelRef.current) {
-      supabase.removeChannel(messageChannelRef.current);
-    }
-
-    const channel = supabase
-      .channel(`messages-${connectionId}-${Date.now()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `connection_id=eq.${connectionId}`,
-        },
-        payload => {
-          const newMsg = payload.new as Message;
-          setMessages(prev => {
-            if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-          setPendingMessages(prev => prev.filter(p => p.id !== newMsg.id));
-        }
-      )
-      .subscribe();
-
-    messageChannelRef.current = channel;
-
-    return () => {
-      if (messageChannelRef.current) {
-        supabase.removeChannel(messageChannelRef.current);
-        messageChannelRef.current = null;
-      }
-    };
-  };
+  // fetchMessages and subscribeToMessages are now combined in the useEffect above
 
   const sendMessage = async (
     content: string,
@@ -420,8 +431,14 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
 
       if (error) throw error;
 
+      // Remove pending message and add the real message
+      // The realtime subscription may also add it, but we dedupe by id
       setPendingMessages(prev => prev.filter(p => p.tempId !== tempId));
-      setMessages(prev => [...prev, data]);
+      setMessages(prev => {
+        // Check if already added by realtime
+        if (prev.some(m => m.id === data.id)) return prev;
+        return [...prev, data];
+      });
 
       setConversations(prev =>
         prev.map(c =>
@@ -477,7 +494,11 @@ export default function MessagesPanel({ className }: MessagesPanelProps) {
       if (error) throw error;
 
       setPendingMessages(prev => prev.filter(p => p.tempId !== tempId));
-      setMessages(prev => [...prev, data]);
+      setMessages(prev => {
+        // Check if already added by realtime
+        if (prev.some(m => m.id === data.id)) return prev;
+        return [...prev, data];
+      });
     } catch (error) {
       setPendingMessages(prev =>
         prev.map(p => (p.tempId === tempId ? { ...p, delivery_status: 'failed' } : p))

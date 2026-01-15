@@ -40,9 +40,12 @@ const getSkillColorClass = (skill: string) => {
 };
 
 interface TraitData {
-  thinking_style: string;
-  leadership_style: string;
-  risk_tolerance: string;
+  thinking_style?: string;
+  leadership_style?: string;
+  risk_tolerance?: string;
+  founder_archetype?: string;
+  decision_style?: string;
+  values_profile?: string;
 }
 
 interface MatchProfile {
@@ -62,6 +65,8 @@ interface MatchProfile {
   phase?: string;
   viewer_traits?: TraitData | null;
   candidate_traits?: TraitData | null;
+  partnership_type?: string | null;
+  model_dominance?: string | null;
 }
 
 interface LiveMatchmakingProps {
@@ -198,6 +203,8 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
             phase: m.phase || 'phase1',
             viewer_traits: m.viewer_traits || null,
             candidate_traits: m.candidate_traits || null,
+            partnership_type: m.partnership_type || null,
+            model_dominance: m.model_dominance || null,
           }));
 
           setMatches(mapped);

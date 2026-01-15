@@ -358,14 +358,14 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-dvh bg-background overflow-hidden flex flex-col">
       {/* FounderSync Banner */}
       {showFounderSyncBanner && !bannerDismissed && (
         <FounderSyncBanner onDismiss={handleDismissBanner} />
       )}
 
       {/* Header */}
-      <header className="border-b bg-card shadow-sm">
+      <header className="border-b bg-card shadow-sm shrink-0">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <h1 className="text-2xl gradient-text font-bold text-[#59b0bf]">Lexach</h1>
@@ -398,9 +398,10 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-fit">
+      <main className="flex-1 overflow-hidden">
+        <div className="container mx-auto px-4 py-6 h-full flex flex-col overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
+            <TabsList className="grid w-full grid-cols-4 lg:w-fit shrink-0 mb-6">
             <TabsTrigger value="spark" className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
               <span className="hidden sm:inline">Spark Match</span>
@@ -420,23 +421,23 @@ export default function Dashboard() {
           </TabsList>
 
           {/* Spark Match - Swipe Feature */}
-          <TabsContent value="spark" className="space-y-6">
+          <TabsContent value="spark" className="flex-1 min-h-0 overflow-y-auto space-y-6">
             <SparkMatch />
           </TabsContent>
 
           {/* Live AI Matchmaking */}
-          <TabsContent value="matches" className="space-y-6">
+          <TabsContent value="matches" className="flex-1 min-h-0 overflow-y-auto space-y-6">
             <ConnectionRequests />
             <LiveMatchmaking />
           </TabsContent>
 
           {/* Messages - Embedded directly */}
-          <TabsContent value="messages" className="space-y-6">
-            <MessagesPanel />
+          <TabsContent value="messages" className="flex-1 min-h-0 overflow-hidden">
+            <MessagesPanel className="h-full" />
           </TabsContent>
 
           {/* Opportunities with integrated Spark Rooms */}
-          <TabsContent value="opportunities" className="space-y-6">
+          <TabsContent value="opportunities" className="flex-1 min-h-0 overflow-y-auto space-y-6">
             {/* Opportunities Section */}
             <div>
               <h2 className="font-bold text-3xl mb-4">Upcoming Opportunities</h2>
@@ -629,10 +630,9 @@ export default function Dashboard() {
                   </p>
                 </div>
               )}
-            </div>
-          </TabsContent>
         </Tabs>
-      </div>
+        </div>
+      </main>
 
       {/* Profile Editor Dialog */}
       {profile && (

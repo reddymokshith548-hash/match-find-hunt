@@ -279,9 +279,11 @@ export default function SparkRoomChat({
     fetchProfile();
     fetchMessages();
     fetchMembers();
-    const cleanup = subscribeToMessages();
+    const cleanupMessages = subscribeToMessages();
+    const cleanupMembers = subscribeToMembers();
     return () => {
-      if (cleanup) cleanup();
+      if (cleanupMessages) cleanupMessages();
+      if (cleanupMembers) cleanupMembers();
     };
   }, [user, roomId]);
 

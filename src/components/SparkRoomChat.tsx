@@ -73,7 +73,7 @@ export default function SparkRoomChat({
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name')
+        .select('id, name, profile_pic_url')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -81,7 +81,7 @@ export default function SparkRoomChat({
         throw error;
       }
 
-      const profileData = data as { id: string; name: string } | null;
+      const profileData = data as { id: string; name: string; profile_pic_url?: string | null } | null;
 
       if (!profileData) {
         console.warn('Profile not found for authenticated user.');
@@ -95,6 +95,12 @@ export default function SparkRoomChat({
       }
 
       setProfileId(profileData.id);
+      // Cache own profile for optimistic updates
+      profileCacheRef.current.set(profileData.id, {
+        id: profileData.id,
+        name: profileData.name,
+        profile_pic_url: profileData.profile_pic_url || null,
+      });
     } catch (err) {
       console.error('Error fetching profile:', err);
     }
@@ -154,7 +160,10 @@ export default function SparkRoomChat({
     }
   };
 
-  // Realtime subscription
+  // Cache profile data to avoid repeated lookups
+  const profileCacheRef = useRef<Map<string, Message['profile']>>(new Map());
+
+  // Realtime subscription for messages
   const subscribeToMessages = () => {
     if (!roomId) return () => {};
 
@@ -176,35 +185,57 @@ export default function SparkRoomChat({
         },
         async (payload) => {
           try {
-            const profileIdFromPayload = (payload.new as any)?.profile_id;
+            const newRow = payload.new as any;
+            const pid = newRow?.profile_id;
 
-            let profileData = null;
-            if (profileIdFromPayload) {
-              const { data: profileRes } = await supabase
-                .from('profiles')
-                .select('id, name, profile_pic_url')
-                .eq('id', profileIdFromPayload)
-                .maybeSingle();
-
-              profileData = profileRes;
-            }
-
-            const fallbackProfile: Message['profile'] = {
-              id: profileIdFromPayload || 'unknown',
-              name: 'Unknown User',
-              profile_pic_url: null,
-            };
-
-            const newMsg: Message = {
-              id: (payload.new as any).id,
-              message: (payload.new as any).message,
-              created_at: (payload.new as any).created_at,
-              profile: (profileData as Message['profile'] | null) ?? fallbackProfile,
-            };
-
+            // Skip if we already have this message (optimistic insert)
             setMessages((prev) => {
-              if (prev.some((m) => m.id === newMsg.id)) return prev;
-              return [...prev, newMsg];
+              if (prev.some((m) => m.id === newRow.id)) return prev;
+
+              // Try cache first
+              const cached = pid ? profileCacheRef.current.get(pid) : null;
+              if (cached) {
+                return [...prev, {
+                  id: newRow.id,
+                  message: newRow.message,
+                  created_at: newRow.created_at,
+                  profile: cached,
+                }];
+              }
+
+              // If not cached, add with fallback and fetch async
+              const fallback: Message['profile'] = {
+                id: pid || 'unknown',
+                name: 'Unknown User',
+                profile_pic_url: null,
+              };
+
+              const tempMsg: Message = {
+                id: newRow.id,
+                message: newRow.message,
+                created_at: newRow.created_at,
+                profile: fallback,
+              };
+
+              // Fetch profile asynchronously and update
+              if (pid) {
+                supabase
+                  .from('profiles')
+                  .select('id, name, profile_pic_url')
+                  .eq('id', pid)
+                  .maybeSingle()
+                  .then(({ data }) => {
+                    if (data) {
+                      const prof = data as Message['profile'];
+                      profileCacheRef.current.set(pid, prof);
+                      setMessages((p) =>
+                        p.map((m) => m.id === newRow.id ? { ...m, profile: prof } : m)
+                      );
+                    }
+                  });
+              }
+
+              return [...prev, tempMsg];
             });
           } catch (err) {
             console.error('Error handling realtime payload:', err);
@@ -223,14 +254,42 @@ export default function SparkRoomChat({
     };
   };
 
+  // Realtime subscription for members
+  const subscribeToMembers = () => {
+    if (!roomId) return () => {};
+
+    const channel = supabase
+      .channel(`room-members-${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'spark_room_members',
+          filter: `room_id=eq.${roomId}`,
+        },
+        () => {
+          // Re-fetch members on any change
+          fetchMembers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
   useEffect(() => {
     if (!user) return;
     fetchProfile();
     fetchMessages();
     fetchMembers();
-    const cleanup = subscribeToMessages();
+    const cleanupMessages = subscribeToMessages();
+    const cleanupMembers = subscribeToMembers();
     return () => {
-      if (cleanup) cleanup();
+      if (cleanupMessages) cleanupMessages();
+      if (cleanupMembers) cleanupMembers();
     };
   }, [user, roomId]);
 
@@ -242,7 +301,7 @@ export default function SparkRoomChat({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Send message
+  // Send message with optimistic update
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -257,22 +316,54 @@ export default function SparkRoomChat({
       return;
     }
 
+    const messageText = newMessage.trim();
+    const tempId = `temp-${Date.now()}`;
+    
+    // Get current profile info from cache or create fallback
+    const myProfile: Message['profile'] = profileCacheRef.current.get(profileId) || {
+      id: profileId,
+      name: 'You',
+      profile_pic_url: null,
+    };
+
+    // Optimistic insert - show message immediately
+    const optimisticMsg: Message = {
+      id: tempId,
+      message: messageText,
+      created_at: new Date().toISOString(),
+      profile: myProfile,
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setNewMessage('');
+    inputRef.current?.focus();
     setSending(true);
 
     try {
-      const { error } = await supabase.from('spark_room_messages').insert({
-        room_id: roomId,
-        user_id: user.id,
-        profile_id: profileId,
-        message: newMessage.trim(),
-      });
+      const { data, error } = await supabase
+        .from('spark_room_messages')
+        .insert({
+          room_id: roomId,
+          user_id: user.id,
+          profile_id: profileId,
+          message: messageText,
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
 
-      setNewMessage('');
-      inputRef.current?.focus();
+      // Replace temp ID with real ID so realtime dedup works
+      if (data) {
+        setMessages((prev) =>
+          prev.map((m) => m.id === tempId ? { ...m, id: data.id } : m)
+        );
+      }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Remove optimistic message on failure
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setNewMessage(messageText); // Restore the message text
       toast({
         title: 'Error',
         description: 'Failed to send message',

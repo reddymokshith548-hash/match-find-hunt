@@ -99,7 +99,7 @@ export default function SparkRoomChat({
       profileCacheRef.current.set(profileData.id, {
         id: profileData.id,
         name: profileData.name,
-        profile_pic_url: null,
+        profile_pic_url: profileData.profile_pic_url || null,
       });
     } catch (err) {
       console.error('Error fetching profile:', err);

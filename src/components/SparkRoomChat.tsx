@@ -95,6 +95,12 @@ export default function SparkRoomChat({
       }
 
       setProfileId(profileData.id);
+      // Cache own profile for optimistic updates
+      profileCacheRef.current.set(profileData.id, {
+        id: profileData.id,
+        name: profileData.name,
+        profile_pic_url: null,
+      });
     } catch (err) {
       console.error('Error fetching profile:', err);
     }

@@ -295,7 +295,7 @@ export default function SparkRoomChat({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Send message
+  // Send message with optimistic update
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -310,22 +310,54 @@ export default function SparkRoomChat({
       return;
     }
 
+    const messageText = newMessage.trim();
+    const tempId = `temp-${Date.now()}`;
+    
+    // Get current profile info from cache or create fallback
+    const myProfile: Message['profile'] = profileCacheRef.current.get(profileId) || {
+      id: profileId,
+      name: 'You',
+      profile_pic_url: null,
+    };
+
+    // Optimistic insert - show message immediately
+    const optimisticMsg: Message = {
+      id: tempId,
+      message: messageText,
+      created_at: new Date().toISOString(),
+      profile: myProfile,
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setNewMessage('');
+    inputRef.current?.focus();
     setSending(true);
 
     try {
-      const { error } = await supabase.from('spark_room_messages').insert({
-        room_id: roomId,
-        user_id: user.id,
-        profile_id: profileId,
-        message: newMessage.trim(),
-      });
+      const { data, error } = await supabase
+        .from('spark_room_messages')
+        .insert({
+          room_id: roomId,
+          user_id: user.id,
+          profile_id: profileId,
+          message: messageText,
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
 
-      setNewMessage('');
-      inputRef.current?.focus();
+      // Replace temp ID with real ID so realtime dedup works
+      if (data) {
+        setMessages((prev) =>
+          prev.map((m) => m.id === tempId ? { ...m, id: data.id } : m)
+        );
+      }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Remove optimistic message on failure
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setNewMessage(messageText); // Restore the message text
       toast({
         title: 'Error',
         description: 'Failed to send message',

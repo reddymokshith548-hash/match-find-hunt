@@ -81,7 +81,7 @@ export default function SparkRoomChat({
         throw error;
       }
 
-      const profileData = data as { id: string; name: string } | null;
+      const profileData = data as { id: string; name: string; profile_pic_url?: string | null } | null;
 
       if (!profileData) {
         console.warn('Profile not found for authenticated user.');

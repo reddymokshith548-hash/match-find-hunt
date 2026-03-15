@@ -73,7 +73,7 @@ export default function SparkRoomChat({
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name')
+        .select('id, name, profile_pic_url')
         .eq('user_id', user.id)
         .maybeSingle();
 

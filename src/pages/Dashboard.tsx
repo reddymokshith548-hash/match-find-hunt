@@ -22,6 +22,7 @@ import FounderSyncBanner from '@/components/FounderSyncBanner';
 import MessagesPanel from '@/components/MessagesPanel';
 import SparkRoomChat from '@/components/SparkRoomChat';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import IntroAnimation from '@/components/IntroAnimation';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Profile {
@@ -359,6 +360,7 @@ export default function Dashboard() {
 
   return (
     <div className="h-dvh bg-background overflow-hidden flex flex-col">
+      <IntroAnimation storageKey="lexach-intro-dashboard" />
       {/* FounderSync Banner */}
       {showFounderSyncBanner && !bannerDismissed && (
         <FounderSyncBanner onDismiss={handleDismissBanner} />

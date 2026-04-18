@@ -9,10 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Globe, Phone, Mail } from "lucide-react";
 import { loginSchema, type LoginFormData } from "@/lib/validationSchemas";
+import WireframeLoader from "@/components/WireframeLoader";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
   const navigate = useNavigate();
   const {
     toast
@@ -25,7 +27,8 @@ const Login = () => {
       }
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        navigate("/dashboard");
+        setShowLoader(true);
+        setTimeout(() => navigate("/dashboard"), 2200);
       }
     });
     return () => subscription.unsubscribe();
@@ -50,7 +53,8 @@ const Login = () => {
         title: "Welcome back!",
         description: "You've successfully signed in."
       });
-      navigate('/dashboard');
+      setShowLoader(true);
+      setTimeout(() => navigate('/dashboard'), 2200);
     } catch (error: any) {
       if (error.issues) {
         // Zod validation errors
@@ -124,7 +128,9 @@ const Login = () => {
       });
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+  return <>
+    {showLoader && <WireframeLoader />}
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(0,191,165,0.1),transparent_50%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(28,61,90,0.1),transparent_50%)]" />
       
@@ -210,6 +216,7 @@ const Login = () => {
           </div>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  </>;
 };
 export default Login;

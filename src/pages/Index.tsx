@@ -12,7 +12,7 @@ const Index = () => {
 
   useEffect(() => {
     // Trigger UI reveal slightly before loader fully exits for smooth handoff
-    const t = setTimeout(() => setRevealed(true), 1800);
+    const t = setTimeout(() => setRevealed(true), 4000);
     return () => clearTimeout(t);
   }, []);
 

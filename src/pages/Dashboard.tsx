@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Users, MessageSquare, Calendar, Settings, LogOut, ExternalLink, Zap, User, Plus, Video, Search, Clock, MessageCircle } from 'lucide-react';
+import { Users, MessageSquare, Calendar, Settings, LogOut, ExternalLink, Zap, User, Plus, Video, Search, Clock, MessageCircle, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -384,6 +384,10 @@ export default function Dashboard() {
             <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
               <User className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">My Profile</span>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/pricing')}>
+              <Sparkles className="h-4 w-4 mr-2 text-primary" />
+              <span className="hidden sm:inline">Pricing</span>
             </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>
               <Settings className="h-4 w-4 mr-2" />

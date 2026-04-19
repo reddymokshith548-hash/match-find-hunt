@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Users, MessageCircle, Settings, Search, Menu, X } from "lucide-react";
+import { Users, MessageCircle, Settings, Search, Menu, X, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuthRouting } from "@/hooks/useAuthRouting";
@@ -16,6 +16,7 @@ const Navigation = () => {
     { name: "Matches", href: "#", icon: Users },
     { name: "Messages", href: "#", icon: MessageCircle },
     { name: "Profile", href: "#", icon: Settings },
+    { name: "Pricing", href: "/pricing", icon: Sparkles },
   ];
 
   return (

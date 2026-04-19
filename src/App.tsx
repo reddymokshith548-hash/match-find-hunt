@@ -19,6 +19,7 @@ import Settings from "./pages/Settings";
 import Messages from "./pages/Messages";
 import SparkRooms from "./pages/SparkRooms";
 import Profile from "./pages/Profile";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/about" element={<About />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
               <Route path="/signup" element={<AuthRoute><SignUp /></AuthRoute>} />
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

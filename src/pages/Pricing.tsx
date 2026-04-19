@@ -1,0 +1,236 @@
+import { Check, Infinity as InfinityIcon, Sparkles, ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
+type PlanKey = "monthly" | "halfyear";
+
+const FREE_FEATURES = [
+  { icon: InfinityIcon, label: "Unlimited patent-style profile browsing" },
+  { icon: Check, label: "10 swipes per day + basic matching" },
+  { icon: Check, label: "FounderSync personality test (full 30 questions)" },
+  { icon: Check, label: "Browse Spark Rooms (read-only)" },
+  { icon: Check, label: "Chat with mutual matches (after Mutual NDA)" },
+];
+
+const PRO_FEATURES = [
+  "Unlimited swipes & matches per day",
+  "FounderSync Intelligence Engine — deep compatibility breakdown",
+  "Priority placement in the matchmaking queue",
+  "See who liked you",
+  "Advanced match filters (stage, role, skills, location)",
+  "AI match summaries on every profile",
+  "Unlimited Spark Rooms (create + message)",
+  "Verified badge on your profile",
+  "Read receipts & typing indicators",
+  "Priority support",
+];
+
+const Pricing = () => {
+  const navigate = useNavigate();
+  const [selected, setSelected] = useState<PlanKey>("halfyear");
+
+  const handleSubscribe = (plan: PlanKey) => {
+    toast.info("Payments coming soon", {
+      description:
+        plan === "halfyear"
+          ? "The ₹999 / 6-month plan will be available once checkout is wired up."
+          : "The ₹499 / 1-month plan will be available once checkout is wired up.",
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navigation />
+
+      <main className="flex-1">
+        {/* Header */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="mb-6 -ml-2"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+
+          <div className="text-center max-w-2xl mx-auto">
+            <Badge variant="outline" className="mb-4 border-primary/30 text-primary">
+              <Sparkles className="w-3 h-3 mr-1.5" />
+              Lexach Pro
+            </Badge>
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-3">
+              Choose your <span className="gradient-text">Plan</span>
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Find your co-founder faster. Unlock unlimited matches, deeper
+              compatibility insights, and priority placement.
+            </p>
+          </div>
+        </section>
+
+        {/* Plans */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+          <div className="grid md:grid-cols-2 gap-6 lg:gap-8 mt-8">
+            {/* Monthly Plan */}
+            <Card
+              variant="profile"
+              className={`relative p-8 cursor-pointer transition-all ${
+                selected === "monthly"
+                  ? "ring-2 ring-primary/40 shadow-lg"
+                  : "hover:ring-1 hover:ring-border"
+              }`}
+              onClick={() => setSelected("monthly")}
+            >
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-2xl font-bold mb-2">Starter</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Try Pro for a month. Cancel anytime.
+                  </p>
+                </div>
+
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-bold tracking-tight">₹499</span>
+                  <span className="text-muted-foreground">/ month</span>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                    Everything in Free, plus:
+                  </p>
+                  <ul className="space-y-3">
+                    {PRO_FEATURES.slice(0, 6).map((feature) => (
+                      <li key={feature} className="flex items-start gap-3 text-sm">
+                        <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSubscribe("monthly");
+                  }}
+                >
+                  Get Started
+                </Button>
+              </div>
+            </Card>
+
+            {/* 6-Month Plan (recommended) */}
+            <Card
+              variant="profile"
+              className={`relative p-8 cursor-pointer transition-all bg-gradient-to-br from-primary/5 via-background to-background ${
+                selected === "halfyear"
+                  ? "ring-2 ring-primary shadow-2xl shadow-primary/20"
+                  : "hover:ring-1 hover:ring-primary/40"
+              }`}
+              onClick={() => setSelected("halfyear")}
+            >
+              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground shadow-md">
+                Best Value · Save 67%
+              </Badge>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-2xl font-bold mb-2">Pro · 6 Months</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Everything in Starter — at one-third the price.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg text-muted-foreground line-through">
+                      ₹2,994
+                    </span>
+                    <span className="text-5xl font-bold tracking-tight">₹999</span>
+                    <span className="text-muted-foreground">/ 6 months</span>
+                  </div>
+                  <p className="text-xs text-primary mt-1 font-medium">
+                    Just ₹166/month — billed once
+                  </p>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                    Everything in Starter, plus:
+                  </p>
+                  <ul className="space-y-3">
+                    {PRO_FEATURES.map((feature) => (
+                      <li key={feature} className="flex items-start gap-3 text-sm">
+                        <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Button
+                  variant="hero"
+                  size="lg"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSubscribe("halfyear");
+                  }}
+                >
+                  Upgrade to Pro
+                </Button>
+              </div>
+            </Card>
+          </div>
+
+          {/* Free tier reference */}
+          <div className="mt-10 max-w-3xl mx-auto">
+            <Card className="p-6 bg-muted/30">
+              <div className="flex items-start justify-between flex-wrap gap-4 mb-4">
+                <div>
+                  <h4 className="font-semibold text-lg">Free tier</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Always free. No card required.
+                  </p>
+                </div>
+                <Badge variant="secondary">₹0</Badge>
+              </div>
+              <ul className="grid sm:grid-cols-2 gap-2">
+                {FREE_FEATURES.map(({ icon: Icon, label }) => (
+                  <li key={label} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <Icon className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <span>{label}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground mt-8">
+            Prices in INR. GST included where applicable. Secure payments coming
+            soon — your subscription auto-renews unless cancelled.
+          </p>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
+};
+
+export default Pricing;

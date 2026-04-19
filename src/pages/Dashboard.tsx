@@ -385,6 +385,10 @@ export default function Dashboard() {
               <User className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">My Profile</span>
             </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/pricing')}>
+              <Sparkles className="h-4 w-4 mr-2 text-primary" />
+              <span className="hidden sm:inline">Pricing</span>
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>
               <Settings className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Settings</span>

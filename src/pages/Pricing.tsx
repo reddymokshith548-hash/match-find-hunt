@@ -231,6 +231,103 @@ const Pricing = () => {
             Prices in INR. GST included where applicable. Secure payments coming
             soon — your subscription auto-renews unless cancelled.
           </p>
+
+          {/* FAQ */}
+          <div className="mt-16 max-w-3xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold tracking-tight mb-2">
+                Frequently asked questions
+              </h2>
+              <p className="text-muted-foreground">
+                Everything you need to know about Lexach Pro.
+              </p>
+            </div>
+
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="refunds">
+                <AccordionTrigger className="text-left">
+                  Do you offer refunds?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Yes. We offer a <strong>7-day no-questions-asked refund</strong> on
+                  your first Pro purchase — both the ₹499 monthly and ₹999 6-month
+                  plans. After 7 days, refunds are reviewed case-by-case. Email{" "}
+                  <span className="text-foreground">support@lexach.com</span> with
+                  your order ID and we'll process eligible refunds within 5–7
+                  business days back to your original payment method.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="cancellation">
+                <AccordionTrigger className="text-left">
+                  How do I cancel my subscription?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Cancel anytime from <strong>Settings → Billing</strong> in one
+                  click — no calls, no forms. Your Pro features stay active until
+                  the end of your current billing period (the rest of the month
+                  for Starter, or the rest of the 6 months for Pro). After that
+                  you automatically move to the Free tier. We never charge a
+                  cancellation fee.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="downgrade-matches">
+                <AccordionTrigger className="text-left">
+                  What happens to my matches and chats if I downgrade?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground space-y-2">
+                  <p>
+                    <strong>Nothing is deleted.</strong> All your existing
+                    connections, signed NDAs, chat history, and Spark Room
+                    memberships stay exactly as they are.
+                  </p>
+                  <p>What changes on the Free tier:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>Daily swipes drop back to 10 per day</li>
+                    <li>"Who liked you" and advanced filters are hidden</li>
+                    <li>You can still chat with everyone you're already connected to</li>
+                    <li>Spark Rooms become read-only (you can browse but not post)</li>
+                  </ul>
+                  <p>Upgrade again anytime to instantly restore everything.</p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="gst-invoicing">
+                <AccordionTrigger className="text-left">
+                  Is GST included? Can I get a tax invoice?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground space-y-2">
+                  <p>
+                    Yes — all listed prices (₹499 and ₹999) are{" "}
+                    <strong>inclusive of 18% GST</strong>. No hidden charges at
+                    checkout.
+                  </p>
+                  <p>
+                    A GST-compliant tax invoice is emailed to you automatically
+                    after every successful payment. If you're a registered
+                    business and want your <strong>GSTIN</strong> on the invoice,
+                    add it under{" "}
+                    <strong>Settings → Billing → Business details</strong> before
+                    paying, and it'll appear on all future invoices. Download
+                    past invoices anytime from the same screen.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="payment-methods">
+                <AccordionTrigger className="text-left">
+                  What payment methods do you accept?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  Once checkout goes live, we'll accept UPI, all major Indian
+                  credit & debit cards (Visa, Mastercard, RuPay, Amex), net
+                  banking, and popular wallets. Payments are processed securely
+                  — Lexach never stores your card details.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
         </section>
       </main>
 

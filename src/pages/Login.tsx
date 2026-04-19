@@ -28,7 +28,7 @@ const Login = () => {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setShowLoader(true);
-        setTimeout(() => navigate("/dashboard"), 2200);
+        setTimeout(() => navigate("/dashboard"), 3200);
       }
     });
     return () => subscription.unsubscribe();
@@ -54,7 +54,7 @@ const Login = () => {
         description: "You've successfully signed in."
       });
       setShowLoader(true);
-      setTimeout(() => navigate('/dashboard'), 2200);
+      setTimeout(() => navigate('/dashboard'), 3200);
     } catch (error: any) {
       if (error.issues) {
         // Zod validation errors

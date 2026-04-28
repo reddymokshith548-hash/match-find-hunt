@@ -11,3 +11,12 @@ verify_jwt = false
 
 [functions.send-connection-email]
 verify_jwt = false
+
+[functions.get-incoming-likes]
+verify_jwt = false
+
+[functions.check-feature-access]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false

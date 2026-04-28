@@ -124,12 +124,12 @@ export default function SparkMatch() {
     }, 100);
   };
   const handleSwipeLeft = async () => {
-    if (isAnimating || currentIndex >= profiles.length || !user) return;
+    if (isAnimating || currentIndex >= profiles.length || !myProfileId) return;
     setIsAnimating(true);
     const profile = profiles[currentIndex];
 
-    // Use the unified helper with auth user ID (it handles conversion internally)
-    await recordPass(user.id, profile.id);
+    // RPC also enforces the daily 10/free swipe cap server-side.
+    await recordPass(myProfileId, profile.id);
     setTimeout(() => {
       loadNextProfile();
     }, 300);

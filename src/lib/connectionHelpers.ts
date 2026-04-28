@@ -6,6 +6,8 @@ export interface ConnectionResult {
   error?: string;
   alreadyExists?: boolean;
   requiresNDA?: boolean;
+  /** True when the daily 10-swipe cap was hit (free plan). */
+  swipeLimitReached?: boolean;
 }
 
 /**
@@ -129,12 +131,18 @@ export async function createConnectionRequest(
       }
     }
 
-    // 5. Record the 'like' interaction (uses auth user IDs for RLS)
+    // 5. Record the 'like' interaction via RPC (enforces daily swipe cap server-side)
     try {
-      if (fromProfile?.user_id && toProfile?.user_id) {
-        await recordInteractionDirect(fromProfile.user_id, toProfile.user_id, 'like');
-      }
+      await recordInteractionViaRpc(fromProfileId, toProfileId, 'like');
     } catch (interactionError) {
+      const msg = interactionError instanceof Error ? interactionError.message : '';
+      if (msg.includes('DAILY_SWIPE_LIMIT_REACHED')) {
+        return {
+          success: false,
+          swipeLimitReached: true,
+          error: "You've used all 10 swipes for today. Upgrade to keep swiping.",
+        };
+      }
       console.error('Error recording interaction:', interactionError);
     }
 
@@ -161,44 +169,54 @@ export async function createConnectionRequest(
 }
 
 /**
- * Records an interaction using auth user IDs (required by RLS)
+ * Records an interaction via the SECURITY DEFINER RPC. The RPC also runs the
+ * daily swipe limiter (10/day for free plan, unlimited for paid).
  */
-async function recordInteractionDirect(fromAuthUserId: string, toAuthUserId: string, type: 'like' | 'pass') {
-  const { error } = await supabase.from('user_interactions').insert({
-    user_id: fromAuthUserId,
-    target_user_id: toAuthUserId,
-    interaction_type: type,
+async function recordInteractionViaRpc(
+  fromProfileId: string,
+  toProfileId: string,
+  type: 'like' | 'pass'
+) {
+  const { error } = await supabase.rpc('record_interaction', {
+    p_from_profile_id: fromProfileId,
+    p_to_profile_id: toProfileId,
+    p_interaction_type: type,
   });
 
   if (error) {
-    console.error('Error recording interaction:', error.message);
-    throw new Error(`Failed to record interaction: ${error.message}`);
+    // Surface the limiter error verbatim so callers can detect it
+    if (error.message?.includes('DAILY_SWIPE_LIMIT_REACHED')) {
+      throw new Error('DAILY_SWIPE_LIMIT_REACHED');
+    }
+    console.error('record_interaction RPC error:', error.message);
+    throw new Error(error.message || 'Failed to record interaction');
   }
 }
 
 /**
- * Records a pass interaction
- * @param fromUserId - The AUTH user ID of the person passing
- * @param toProfileId - The PROFILE ID of the person being passed on
+ * Records a pass interaction. Returns `{ swipeLimitReached: true }` when the
+ * caller is a Free user who has used today's quota.
+ * @param fromProfileId - The PROFILE ID of the person passing
+ * @param toProfileId   - The PROFILE ID of the person being passed on
  */
-export async function recordPass(fromUserId: string, toProfileId: string): Promise<void> {
+export async function recordPass(
+  fromProfileId: string,
+  toProfileId: string
+): Promise<{ success: boolean; swipeLimitReached?: boolean; error?: string }> {
   try {
-    // Get the target profile's auth user_id
-    const { data: toProfile } = await supabase
-      .from('profiles')
-      .select('user_id')
-      .eq('id', toProfileId)
-      .single();
-
-    if (!toProfile?.user_id) {
-      console.error('Cannot record pass: Target profile not found for profile ID.', toProfileId);
-      return;
-    }
-
-    // Record the 'pass' interaction with auth user IDs
-    await recordInteractionDirect(fromUserId, toProfile.user_id, 'pass');
+    await recordInteractionViaRpc(fromProfileId, toProfileId, 'pass');
+    return { success: true };
   } catch (error) {
+    const msg = error instanceof Error ? error.message : '';
+    if (msg.includes('DAILY_SWIPE_LIMIT_REACHED')) {
+      return {
+        success: false,
+        swipeLimitReached: true,
+        error: "You've used all 10 swipes for today.",
+      };
+    }
     console.error('Error recording pass:', error);
+    return { success: false, error: msg || 'Failed to record pass' };
   }
 }
 

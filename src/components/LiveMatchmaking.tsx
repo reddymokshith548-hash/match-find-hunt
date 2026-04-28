@@ -15,6 +15,7 @@ import MatchFilters, { MatchFiltersState } from "@/components/MatchFilters";
 import { useRealtimeMatches } from "@/hooks/useRealtimeMatches";
 import { usePlan } from "@/hooks/usePlan";
 import { Lock } from "lucide-react";
+import { useDailySwipes } from "@/hooks/useDailySwipes";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();
@@ -88,6 +89,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [generatingSummaryFor, setGeneratingSummaryFor] = useState<string | null>(null);
   const { isPaid } = usePlan();
+  const { used, remaining, exhausted, refresh: refreshSwipes } = useDailySwipes();
 
   const requirePaid = (featureLabel: string) => {
     if (isPaid) return true;
@@ -354,6 +356,14 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         description: `Connection request sent to ${targetProfile.name}. They'll be notified!`
       });
       removeMatch(targetProfile.id, "right");
+      refreshSwipes();
+    } else if (result.swipeLimitReached) {
+      toast({
+        title: "Daily swipe limit reached",
+        description: "You've used all 10 swipes today. Upgrade to keep swiping.",
+        variant: "destructive",
+      });
+      navigate("/pricing");
     } else if (result.alreadyExists) {
       toast({
         title: "Already connected",
@@ -372,10 +382,23 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   // NDA modal removed from connect flow - only shows when trying to chat
 
   const handlePass = async (targetProfileId: string) => {
-    if (user) {
-      await recordPass(user.id, targetProfileId);
+    if (!profileId) {
+      removeMatch(targetProfileId, "left");
+      return;
+    }
+    const result = await recordPass(profileId, targetProfileId);
+    if (result.swipeLimitReached) {
+      toast({
+        title: "Daily swipe limit reached",
+        description: "You've used all 10 swipes today. Upgrade to keep swiping.",
+        variant: "destructive",
+      });
+      navigate("/pricing");
+      refreshSwipes();
+      return;
     }
     removeMatch(targetProfileId, "left");
+    refreshSwipes();
   };
 
   const removeMatch = (id: string, direction: "left" | "right") => {
@@ -452,6 +475,16 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                 <Badge variant="outline" className="text-xs flex items-center gap-1">
                   <Wifi className="w-3 h-3 text-green-500" />
                   Live
+                </Badge>
+              )}
+              {!isPaid && (
+                <Badge
+                  variant={exhausted ? "destructive" : "outline"}
+                  className="text-xs cursor-pointer"
+                  onClick={() => exhausted && navigate("/pricing")}
+                  title={exhausted ? "Upgrade to keep swiping" : "Daily swipes remaining"}
+                >
+                  {used} / 10 swipes today
                 </Badge>
               )}
             </div>

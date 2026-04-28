@@ -1,4 +1,4 @@
-import { Check, Infinity as InfinityIcon, Sparkles, ArrowLeft } from "lucide-react";
+import { Check, Sparkles, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

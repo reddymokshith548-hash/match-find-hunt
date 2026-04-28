@@ -13,6 +13,8 @@ import { CompatibilityBreakdown } from "@/components/CompatibilityBreakdown";
 // MutualNDAModal removed - NDA flow is handled in ConnectionRequests
 import MatchFilters, { MatchFiltersState } from "@/components/MatchFilters";
 import { useRealtimeMatches } from "@/hooks/useRealtimeMatches";
+import { usePlan } from "@/hooks/usePlan";
+import { Lock } from "lucide-react";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();

@@ -65,6 +65,30 @@ export type Database = {
           },
         ]
       }
+      daily_swipe_counts: {
+        Row: {
+          count: number
+          created_at: string
+          id: string
+          swipe_date: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          id?: string
+          swipe_date?: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          id?: string
+          swipe_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       foundersync_history: {
         Row: {
           answers: Json
@@ -626,6 +650,42 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          id: string
+          plan: Database["public"]["Enums"]["plan_tier"]
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_interactions: {
         Row: {
           created_at: string | null
@@ -696,6 +756,11 @@ export type Database = {
         }[]
       }
       get_my_profile_id: { Args: never; Returns: string }
+      get_user_plan: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["plan_tier"]
+      }
+      increment_daily_swipe: { Args: { _user_id: string }; Returns: number }
       record_interaction: {
         Args: {
           p_from_profile_id: string
@@ -706,7 +771,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      plan_tier: "free" | "starter" | "pro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -833,6 +898,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      plan_tier: ["free", "starter", "pro"],
+    },
   },
 } as const

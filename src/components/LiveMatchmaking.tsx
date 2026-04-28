@@ -16,6 +16,7 @@ import { useRealtimeMatches } from "@/hooks/useRealtimeMatches";
 import { usePlan } from "@/hooks/usePlan";
 import { Lock } from "lucide-react";
 import { useDailySwipes } from "@/hooks/useDailySwipes";
+import UpgradeCTA from "@/components/UpgradeCTA";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();
@@ -522,6 +523,21 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
             </Button>
           </div>
         </div>
+
+        {!isPaid && (
+          <div className="mb-6">
+            <UpgradeCTA
+              variant="banner"
+              reason={
+                exhausted
+                  ? "You've used all your free swipes for today"
+                  : "Unlock unlimited swipes, advanced filters & deep compatibility"
+              }
+              swipesRemaining={remaining as number}
+              lockedFilters={4}
+            />
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">

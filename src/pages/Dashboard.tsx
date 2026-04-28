@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Users, MessageSquare, Calendar, Settings, LogOut, ExternalLink, Zap, User, Plus, Video, Search, Clock, MessageCircle, Sparkles } from 'lucide-react';
+import { Users, MessageSquare, Calendar, Settings, LogOut, ExternalLink, Zap, User, Plus, Video, Search, Clock, MessageCircle, Sparkles, Heart } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,6 +21,7 @@ import ConnectionRequests from '@/components/ConnectionRequests';
 import FounderSyncBanner from '@/components/FounderSyncBanner';
 import MessagesPanel from '@/components/MessagesPanel';
 import SparkRoomChat from '@/components/SparkRoomChat';
+import WhoLikedYou from '@/components/WhoLikedYou';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -61,7 +62,7 @@ interface SparkRoom {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
@@ -81,10 +82,32 @@ export default function Dashboard() {
   // Handle tab from URL query parameter
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['spark', 'matches', 'messages', 'opportunities'].includes(tabParam)) {
+    if (tabParam && ['spark', 'matches', 'likes', 'messages', 'opportunities'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
-  }, [searchParams]);
+
+    // Post-checkout success handler
+    const checkout = searchParams.get('checkout');
+    const planParam = searchParams.get('plan');
+    if (checkout === 'success') {
+      toast({
+        title: 'Payment received 🎉',
+        description: planParam
+          ? `Your ${planParam === 'pro' ? 'Pro' : 'Starter'} plan is being activated.`
+          : 'Your subscription is being activated.',
+      });
+      const next = new URLSearchParams(searchParams);
+      next.delete('checkout');
+      next.delete('plan');
+      next.delete('session_id');
+      setSearchParams(next, { replace: true });
+    } else if (checkout === 'cancelled') {
+      toast({ title: 'Checkout cancelled', description: 'No charges were made.' });
+      const next = new URLSearchParams(searchParams);
+      next.delete('checkout');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams, toast]);
 
   useEffect(() => {
     if (user) {
@@ -405,7 +428,7 @@ export default function Dashboard() {
       <main className="flex-1 overflow-hidden">
         <div className="container mx-auto px-4 py-6 h-full flex flex-col overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
-            <TabsList className="grid w-full grid-cols-4 lg:w-fit shrink-0 mb-6">
+            <TabsList className="grid w-full grid-cols-5 lg:w-fit shrink-0 mb-6">
             <TabsTrigger value="spark" className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
               <span className="hidden sm:inline">Spark Match</span>
@@ -413,6 +436,10 @@ export default function Dashboard() {
             <TabsTrigger value="matches" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Matches</span>
+            </TabsTrigger>
+            <TabsTrigger value="likes" className="flex items-center gap-2">
+              <Heart className="h-4 w-4" />
+              <span className="hidden sm:inline">Likes</span>
             </TabsTrigger>
             <TabsTrigger value="messages" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
@@ -433,6 +460,11 @@ export default function Dashboard() {
           <TabsContent value="matches" className="flex-1 min-h-0 overflow-y-auto space-y-6">
             <ConnectionRequests />
             <LiveMatchmaking />
+          </TabsContent>
+
+          {/* Who Liked You */}
+          <TabsContent value="likes" className="flex-1 min-h-0 overflow-y-auto space-y-6">
+            <WhoLikedYou />
           </TabsContent>
 
           {/* Messages - Embedded directly */}

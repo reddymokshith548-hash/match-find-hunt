@@ -1,5 +1,5 @@
-import { Check, Sparkles, ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { Check, Sparkles, ArrowLeft, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/accordion";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useCheckout } from "@/hooks/useCheckout";
+import { usePlan } from "@/hooks/usePlan";
 
 type PlanKey = "monthly" | "halfyear";
 
@@ -43,14 +45,29 @@ const PRO_EXTRA_FEATURES = [
 const Pricing = () => {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<PlanKey>("halfyear");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { startCheckout, loading } = useCheckout();
+  const { plan: currentPlan } = usePlan();
 
-  const handleSubscribe = (plan: PlanKey) => {
-    toast.info("Payments coming soon", {
-      description:
-        plan === "halfyear"
-          ? "The ₹999 / 6-month plan will be available once checkout is wired up."
-          : "The ₹499 / 1-month plan will be available once checkout is wired up.",
-    });
+  useEffect(() => {
+    const status = searchParams.get("checkout");
+    if (status === "cancelled") {
+      toast.info("Checkout cancelled", {
+        description: "No charges were made. You can upgrade anytime.",
+      });
+      const next = new URLSearchParams(searchParams);
+      next.delete("checkout");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  const handleSubscribe = (planKey: PlanKey) => {
+    const stripePlan = planKey === "halfyear" ? "pro" : "starter";
+    if (currentPlan === stripePlan || (currentPlan === "pro" && stripePlan === "starter")) {
+      toast.info("You're already on this plan");
+      return;
+    }
+    void startCheckout(stripePlan);
   };
 
   return (

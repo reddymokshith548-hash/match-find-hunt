@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePlan } from "@/hooks/usePlan";
 import UpgradeCTA from "@/components/UpgradeCTA";
 import { formatDistanceToNow } from "date-fns";
-import { recordLike } from "@/lib/connectionHelpers";
+import { createConnectionRequest } from "@/lib/connectionHelpers";
 import { toast } from "sonner";
 
 interface IncomingLike {
@@ -38,6 +38,7 @@ export default function WhoLikedYou() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [myProfileId, setMyProfileId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -53,18 +54,33 @@ export default function WhoLikedYou() {
   };
 
   useEffect(() => {
-    if (user) load();
+    if (!user) return;
+    load();
+    supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setMyProfileId(data?.id ?? null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleLikeBack = async (like: IncomingLike) => {
+    if (!myProfileId) {
+      toast.error("Profile not ready", { description: "Try refreshing the page." });
+      return;
+    }
     setActingId(like.id);
     try {
-      await recordLike(like.id);
-      toast.success("It's a match!", {
-        description: `You and ${like.name} liked each other.`,
-      });
-      await load();
+      const result = await createConnectionRequest(myProfileId, like.id);
+      if (!result.success) {
+        toast.info(result.error ?? "Couldn't send request");
+      } else {
+        toast.success("It's a match!", {
+          description: `You and ${like.name} can now sign the NDA to start chatting.`,
+        });
+        await load();
+      }
     } catch (e: any) {
       toast.error("Couldn't like back", { description: e?.message ?? "Try again." });
     } finally {

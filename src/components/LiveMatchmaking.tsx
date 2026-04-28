@@ -575,11 +575,12 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                           className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background"
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (!requirePaid("Deep compatibility breakdown")) return;
                             setSelectedMatch(profile);
                             setShowBreakdown(true);
                           }}
                         >
-                          <BarChart3 className="w-3.5 h-3.5" />
+                          {isPaid ? <BarChart3 className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                         </Button>
                       )}
                       <Badge className={`font-semibold ${profile.phase === 'phase2' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>

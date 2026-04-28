@@ -15,6 +15,7 @@ import MatchFilters, { MatchFiltersState } from "@/components/MatchFilters";
 import { useRealtimeMatches } from "@/hooks/useRealtimeMatches";
 import { usePlan } from "@/hooks/usePlan";
 import { Lock } from "lucide-react";
+import { useDailySwipes } from "@/hooks/useDailySwipes";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();

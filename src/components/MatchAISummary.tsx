@@ -54,7 +54,7 @@ export default function MatchAISummary({
   onOpenDeepBreakdown,
 }: MatchAISummaryProps) {
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
+  const goPricing = useGoToPricing();
   const { plan, isPaid, isPro } = usePlan();
 
   // Deterministic fallback / Free-tier teaser
@@ -132,7 +132,7 @@ export default function MatchAISummary({
               className="w-full h-7 text-[11px]"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate("/pricing");
+                goPricing();
               }}
             >
               <Lock className="w-3 h-3 mr-1" />

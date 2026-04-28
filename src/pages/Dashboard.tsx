@@ -114,11 +114,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
-      fetchUserProfile();
-      fetchMatches();
-      fetchOpportunities();
-      fetchSparkRooms();
-      checkFounderSyncStatus();
+      // Profile is the only fetch the dashboard shell waits on. Everything else
+      // loads in the background so the UI paints fast.
+      fetchUserProfile().finally(() => setLoading(false));
+      void fetchMatches();
+      void fetchOpportunities();
+      void fetchSparkRooms();
+      void checkFounderSyncStatus();
     }
   }, [user]);
 
@@ -206,8 +208,6 @@ export default function Dashboard() {
       setOpportunities(data || []);
     } catch (error) {
       console.error('Error fetching opportunities:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -222,30 +222,35 @@ export default function Dashboard() {
 
       if (roomsError) throw roomsError;
 
-      // Get member counts and check if user is a member
-      const roomsWithCounts = await Promise.all(
-        (roomsData || []).map(async (room) => {
-          const { count } = await supabase
-            .from('spark_room_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('room_id', room.id);
+      const rooms = roomsData || [];
+      const roomIds = rooms.map((r) => r.id);
 
-          const { data: memberData } = await supabase
-            .from('spark_room_members')
-            .select('id')
-            .eq('room_id', room.id)
-            .eq('user_id', user?.id)
-            .maybeSingle();
+      // Batch member lookups into 2 queries instead of 2 * N round-trips.
+      const [{ data: allMembers }, { data: myMemberships }] = await Promise.all([
+        supabase
+          .from('spark_room_members')
+          .select('room_id')
+          .in('room_id', roomIds.length ? roomIds : ['00000000-0000-0000-0000-000000000000']),
+        supabase
+          .from('spark_room_members')
+          .select('room_id')
+          .eq('user_id', user.id)
+          .in('room_id', roomIds.length ? roomIds : ['00000000-0000-0000-0000-000000000000']),
+      ]);
 
-          return {
-            ...room,
-            member_count: count || 0,
-            is_member: !!memberData,
-          };
-        })
+      const counts = new Map<string, number>();
+      (allMembers || []).forEach((m: any) => {
+        counts.set(m.room_id, (counts.get(m.room_id) || 0) + 1);
+      });
+      const mine = new Set((myMemberships || []).map((m: any) => m.room_id));
+
+      setSparkRooms(
+        rooms.map((room) => ({
+          ...room,
+          member_count: counts.get(room.id) || 0,
+          is_member: mine.has(room.id),
+        }))
       );
-
-      setSparkRooms(roomsWithCounts);
     } catch (error) {
       console.error('Error fetching rooms:', error);
     }

@@ -17,24 +17,27 @@ import { toast } from "sonner";
 type PlanKey = "monthly" | "halfyear";
 
 const FREE_FEATURES = [
-  { icon: InfinityIcon, label: "Unlimited patent-style profile browsing" },
-  { icon: Check, label: "10 swipes per day + basic matching" },
+  { icon: Check, label: "10 swipes per day" },
+  { icon: Check, label: "Basic FounderSync matches" },
   { icon: Check, label: "FounderSync personality test (full 30 questions)" },
   { icon: Check, label: "Browse Spark Rooms (read-only)" },
   { icon: Check, label: "Chat with mutual matches (after Mutual NDA)" },
 ];
 
-const PRO_FEATURES = [
+const STARTER_FEATURES = [
+  "Unlimited Spark Rooms (create + message)",
+  "Verified badge on your profile",
+  "Read receipts & typing indicators",
+  "Priority support",
+];
+
+const PRO_EXTRA_FEATURES = [
   "Unlimited swipes & matches per day",
   "FounderSync Intelligence Engine — deep compatibility breakdown",
   "Priority placement in the matchmaking queue",
   "See who liked you",
   "Advanced match filters (stage, role, skills, location)",
   "AI match summaries on every profile",
-  "Unlimited Spark Rooms (create + message)",
-  "Verified badge on your profile",
-  "Read receipts & typing indicators",
-  "Priority support",
 ];
 
 const Pricing = () => {
@@ -115,7 +118,7 @@ const Pricing = () => {
                     Everything in Free, plus:
                   </p>
                   <ul className="space-y-3">
-                    {PRO_FEATURES.slice(0, 6).map((feature) => (
+                    {STARTER_FEATURES.map((feature) => (
                       <li key={feature} className="flex items-start gap-3 text-sm">
                         <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                         <span>{feature}</span>
@@ -180,7 +183,7 @@ const Pricing = () => {
                     Everything in Starter, plus:
                   </p>
                   <ul className="space-y-3">
-                    {PRO_FEATURES.map((feature) => (
+                    {PRO_EXTRA_FEATURES.map((feature) => (
                       <li key={feature} className="flex items-start gap-3 text-sm">
                         <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                         <span>{feature}</span>

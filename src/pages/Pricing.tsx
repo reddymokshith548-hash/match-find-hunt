@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useCheckout } from "@/hooks/useCheckout";
 import { usePlan } from "@/hooks/usePlan";
@@ -44,6 +44,8 @@ const PRO_EXTRA_FEATURES = [
 
 const Pricing = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPath = (location.state as { from?: string } | null)?.from;
   const [selected, setSelected] = useState<PlanKey>("promonth");
   const [searchParams, setSearchParams] = useSearchParams();
   const { startCheckout, loading } = useCheckout();
@@ -81,7 +83,15 @@ const Pricing = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (fromPath && fromPath !== "/pricing") {
+                navigate(fromPath);
+              } else if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate("/dashboard");
+              }
+            }}
             className="mb-6 -ml-2"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

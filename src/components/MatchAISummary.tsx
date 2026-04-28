@@ -7,8 +7,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useNavigate } from "react-router-dom";
 import { usePlan } from "@/hooks/usePlan";
+import { useGoToPricing } from "@/hooks/useGoToPricing";
 
 interface TraitData {
   thinking_style?: string;

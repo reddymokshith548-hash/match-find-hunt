@@ -16,6 +16,7 @@ import { useRealtimeMatches } from "@/hooks/useRealtimeMatches";
 import { usePlan } from "@/hooks/usePlan";
 import { Lock } from "lucide-react";
 import { useDailySwipes } from "@/hooks/useDailySwipes";
+import UpgradeCTA from "@/components/UpgradeCTA";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();

@@ -354,6 +354,13 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         description: `Connection request sent to ${targetProfile.name}. They'll be notified!`
       });
       removeMatch(targetProfile.id, "right");
+    } else if (result.swipeLimitReached) {
+      toast({
+        title: "Daily swipe limit reached",
+        description: "You've used all 10 swipes today. Upgrade to keep swiping.",
+        variant: "destructive",
+      });
+      navigate("/pricing");
     } else if (result.alreadyExists) {
       toast({
         title: "Already connected",

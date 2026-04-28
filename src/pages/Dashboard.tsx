@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useGoToPricing } from '@/hooks/useGoToPricing';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,7 @@ interface SparkRoom {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const goPricing = useGoToPricing();
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
@@ -409,7 +411,7 @@ export default function Dashboard() {
               <User className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">My Profile</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/pricing')}>
+            <Button variant="ghost" size="sm" onClick={() => goPricing()}>
               <Sparkles className="h-4 w-4 mr-2 text-primary" />
               <span className="hidden sm:inline">Pricing</span>
             </Button>

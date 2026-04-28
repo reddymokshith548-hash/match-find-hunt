@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useGoToPricing } from "@/hooks/useGoToPricing";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +95,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [generatingSummaryFor, setGeneratingSummaryFor] = useState<string | null>(null);
   const { isPaid } = usePlan();
   const { used, remaining, exhausted, refresh: refreshSwipes } = useDailySwipes();
+  const goPricing = useGoToPricing();
 
   const requirePaid = (featureLabel: string) => {
     if (isPaid) return true;
@@ -101,7 +103,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       title: `${featureLabel} is a paid feature`,
       description: "Upgrade to Starter or Pro to unlock it.",
     });
-    navigate("/pricing");
+    goPricing();
     return false;
   };
   
@@ -369,7 +371,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         description: "You've used all 10 swipes today. Upgrade to keep swiping.",
         variant: "destructive",
       });
-      navigate("/pricing");
+      goPricing();
     } else if (result.alreadyExists) {
       toast({
         title: "Already connected",
@@ -399,7 +401,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         description: "You've used all 10 swipes today. Upgrade to keep swiping.",
         variant: "destructive",
       });
-      navigate("/pricing");
+      goPricing();
       refreshSwipes();
       return;
     }
@@ -487,7 +489,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                 <Badge
                   variant={exhausted ? "destructive" : "outline"}
                   className="text-xs cursor-pointer"
-                  onClick={() => exhausted && navigate("/pricing")}
+                  onClick={() => exhausted && goPricing()}
                   title={exhausted ? "Upgrade to keep swiping" : "Daily swipes remaining"}
                 >
                   {used} / 10 swipes today

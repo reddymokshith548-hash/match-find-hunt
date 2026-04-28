@@ -43,7 +43,7 @@ export default function MatchFilters({
   isPaid = true,
 }: MatchFiltersProps) {
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
+  const goPricing = useGoToPricing();
 
   // Per-field Pro gates. Compatibility slider stays free.
   const PAID_FIELDS = ['phase', 'skills'] as const;
@@ -55,7 +55,7 @@ export default function MatchFilters({
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        navigate('/pricing');
+        goPricing();
       }}
       className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20 transition"
       title="Upgrade to Pro to unlock"
@@ -208,7 +208,7 @@ export default function MatchFilters({
                 variant="hero"
                 size="sm"
                 className="w-full"
-                onClick={() => navigate('/pricing')}
+                onClick={() => goPricing()}
               >
                 <Lock className="w-3.5 h-3.5 mr-1.5" />
                 Upgrade to unlock all filters

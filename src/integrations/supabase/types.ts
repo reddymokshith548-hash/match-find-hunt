@@ -738,6 +738,7 @@ export type Database = {
         Args: { user_a: string; user_b: string }
         Returns: number
       }
+      get_incoming_likes_count: { Args: { _user_id: string }; Returns: number }
       get_matchmaking_candidates: {
         Args: { exclude_interacted?: boolean; limit_count?: number }
         Returns: {
@@ -761,6 +762,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["plan_tier"]
       }
       increment_daily_swipe: { Args: { _user_id: string }; Returns: number }
+      my_incoming_likes_count: { Args: never; Returns: number }
       record_interaction: {
         Args: {
           p_from_profile_id: string

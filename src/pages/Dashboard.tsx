@@ -428,7 +428,7 @@ export default function Dashboard() {
       <main className="flex-1 overflow-hidden">
         <div className="container mx-auto px-4 py-6 h-full flex flex-col overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
-            <TabsList className="grid w-full grid-cols-4 lg:w-fit shrink-0 mb-6">
+            <TabsList className="grid w-full grid-cols-5 lg:w-fit shrink-0 mb-6">
             <TabsTrigger value="spark" className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
               <span className="hidden sm:inline">Spark Match</span>
@@ -436,6 +436,10 @@ export default function Dashboard() {
             <TabsTrigger value="matches" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Matches</span>
+            </TabsTrigger>
+            <TabsTrigger value="likes" className="flex items-center gap-2">
+              <Heart className="h-4 w-4" />
+              <span className="hidden sm:inline">Likes</span>
             </TabsTrigger>
             <TabsTrigger value="messages" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
@@ -456,6 +460,11 @@ export default function Dashboard() {
           <TabsContent value="matches" className="flex-1 min-h-0 overflow-y-auto space-y-6">
             <ConnectionRequests />
             <LiveMatchmaking />
+          </TabsContent>
+
+          {/* Who Liked You */}
+          <TabsContent value="likes" className="flex-1 min-h-0 overflow-y-auto space-y-6">
+            <WhoLikedYou />
           </TabsContent>
 
           {/* Messages - Embedded directly */}

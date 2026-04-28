@@ -89,6 +89,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [generatingSummaryFor, setGeneratingSummaryFor] = useState<string | null>(null);
   const { isPaid } = usePlan();
+  const { used, remaining, exhausted, refresh: refreshSwipes } = useDailySwipes();
 
   const requirePaid = (featureLabel: string) => {
     if (isPaid) return true;

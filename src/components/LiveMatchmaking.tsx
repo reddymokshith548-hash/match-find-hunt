@@ -474,6 +474,16 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                   Live
                 </Badge>
               )}
+              {!isPaid && (
+                <Badge
+                  variant={exhausted ? "destructive" : "outline"}
+                  className="text-xs cursor-pointer"
+                  onClick={() => exhausted && navigate("/pricing")}
+                  title={exhausted ? "Upgrade to keep swiping" : "Daily swipes remaining"}
+                >
+                  {used} / 10 swipes today
+                </Badge>
+              )}
             </div>
             <p className="text-muted-foreground">
               {useIntelligenceEngine 

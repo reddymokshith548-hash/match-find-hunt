@@ -20,6 +20,7 @@ import Messages from "./pages/Messages";
 import SparkRooms from "./pages/SparkRooms";
 import Profile from "./pages/Profile";
 import Pricing from "./pages/Pricing";
+import WhoLikedYouPage from "./pages/WhoLikedYouPage";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const App = () => (
         <Route path="/spark-rooms" element={<ProtectedRoute><SparkRooms /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/who-liked-you" element={<ProtectedRoute><WhoLikedYouPage /></ProtectedRoute>} />
               <Route path="/auth" element={<Navigate to="/login" />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

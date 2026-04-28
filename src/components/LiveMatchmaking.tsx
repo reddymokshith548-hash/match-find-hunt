@@ -497,26 +497,15 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {isPaid ? (
-              <MatchFilters 
-                filters={filters} 
-                onFiltersChange={setFilters}
-                availableSkills={[
-                  'React', 'Python', 'Marketing', 'Sales', 'Product', 'Design',
-                  'AI/ML', 'Growth', 'Finance', 'DevOps', 'Business Strategy', 'JavaScript'
-                ]}
-              />
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => requirePaid("Advanced match filters")}
-                title="Upgrade to unlock advanced filters"
-              >
-                <Lock className="w-4 h-4 mr-2" />
-                Filters
-              </Button>
-            )}
+            <MatchFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              isPaid={isPaid}
+              availableSkills={[
+                'React', 'Python', 'Marketing', 'Sales', 'Product', 'Design',
+                'AI/ML', 'Growth', 'Finance', 'DevOps', 'Business Strategy', 'JavaScript'
+              ]}
+            />
             <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm">
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               Refresh

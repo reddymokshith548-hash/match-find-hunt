@@ -1,10 +1,10 @@
 import { Sparkles, Lock, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { usePlan } from "@/hooks/usePlan";
+import { useGoToPricing } from "@/hooks/useGoToPricing";
 
 export interface UpgradeCTAProps {
   /** Short reason this CTA is showing — e.g. "Daily swipes used up" */
@@ -36,7 +36,7 @@ export default function UpgradeCTA({
   className,
   ctaLabel,
 }: UpgradeCTAProps) {
-  const navigate = useNavigate();
+  const goPricing = useGoToPricing();
   const { isPaid, plan } = usePlan();
 
   if (isPaid) return null;
@@ -64,7 +64,6 @@ export default function UpgradeCTA({
     });
   }
 
-  const goPricing = () => navigate("/pricing");
   const label = ctaLabel ?? (plan === "free" ? "Upgrade to unlock" : "See plans");
 
   if (variant === "inline") {

@@ -14,9 +14,11 @@ const corsHeaders = {
  *
  * Request body: { plan: "starter" | "pro", success_path?: string, cancel_path?: string }
  */
-const PLAN_PRICES: Record<string, { amount: number; interval: "month" | "year" | "one_time"; label: string }> = {
-  starter: { amount: 49900, interval: "month", label: "Lexach Starter (1 month)" },
-  pro:     { amount: 99900, interval: "one_time", label: "Lexach Pro (6 months)" },
+type PriceKey = "starter" | "pro_monthly" | "pro_halfyear";
+const PLAN_PRICES: Record<PriceKey, { amount: number; interval: "month" | "year" | "one_time"; label: string }> = {
+  starter:      { amount:  49900, interval: "month",    label: "Lexach Starter (1 month)" },
+  pro_monthly:  { amount:  99000, interval: "month",    label: "Lexach Pro (1 month)" },
+  pro_halfyear: { amount: 299000, interval: "one_time", label: "Lexach Pro (6 months)" },
 };
 
 serve(async (req) => {
@@ -40,7 +42,13 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const plan = String(body.plan ?? "");
-    if (!PLAN_PRICES[plan]) return json({ error: "invalid_plan" }, 400);
+    const cycle = String(body.cycle ?? "monthly");
+    const priceKey: PriceKey | null =
+      plan === "starter" ? "starter"
+      : plan === "pro" && cycle === "halfyear" ? "pro_halfyear"
+      : plan === "pro" ? "pro_monthly"
+      : null;
+    if (!priceKey) return json({ error: "invalid_plan" }, 400);
 
     const origin = req.headers.get("origin") ?? "";
     const successPath = typeof body.success_path === "string" ? body.success_path : "/dashboard";
@@ -57,7 +65,7 @@ serve(async (req) => {
       }, 501);
     }
 
-    const price = PLAN_PRICES[plan];
+    const price = PLAN_PRICES[priceKey];
     const params = new URLSearchParams();
     params.set("mode", price.interval === "one_time" ? "payment" : "subscription");
     params.set("success_url", successUrl);
@@ -66,6 +74,7 @@ serve(async (req) => {
     params.set("client_reference_id", userId);
     params.set("metadata[user_id]", userId);
     params.set("metadata[plan]", plan);
+    params.set("metadata[cycle]", cycle);
     params.append("line_items[0][quantity]", "1");
     params.append("line_items[0][price_data][currency]", "inr");
     params.append("line_items[0][price_data][product_data][name]", price.label);

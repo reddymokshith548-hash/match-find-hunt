@@ -148,12 +148,15 @@ const Pricing = () => {
                   variant="outline"
                   size="lg"
                   className="w-full"
+                  disabled={loading === "starter"}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSubscribe("monthly");
                   }}
                 >
-                  Get Started
+                  {loading === "starter" ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Redirecting…</>
+                  ) : currentPlan === "starter" ? "Current plan" : "Get Started"}
                 </Button>
               </div>
             </Card>
@@ -213,12 +216,15 @@ const Pricing = () => {
                   variant="hero"
                   size="lg"
                   className="w-full"
+                  disabled={loading === "pro"}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSubscribe("halfyear");
                   }}
                 >
-                  Upgrade to Pro
+                  {loading === "pro" ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Redirecting…</>
+                  ) : currentPlan === "pro" ? "Current plan" : "Upgrade to Pro"}
                 </Button>
               </div>
             </Card>

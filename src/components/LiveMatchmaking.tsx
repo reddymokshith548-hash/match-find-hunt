@@ -87,6 +87,17 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [selectedMatch, setSelectedMatch] = useState<MatchProfile | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [generatingSummaryFor, setGeneratingSummaryFor] = useState<string | null>(null);
+  const { isPaid } = usePlan();
+
+  const requirePaid = (featureLabel: string) => {
+    if (isPaid) return true;
+    toast({
+      title: `${featureLabel} is a paid feature`,
+      description: "Upgrade to Starter or Pro to unlock it.",
+    });
+    navigate("/pricing");
+    return false;
+  };
   
   // Filters state
   const [filters, setFilters] = useState<MatchFiltersState>({

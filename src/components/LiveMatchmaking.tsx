@@ -372,8 +372,19 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   // NDA modal removed from connect flow - only shows when trying to chat
 
   const handlePass = async (targetProfileId: string) => {
-    if (user) {
-      await recordPass(user.id, targetProfileId);
+    if (!profileId) {
+      removeMatch(targetProfileId, "left");
+      return;
+    }
+    const result = await recordPass(profileId, targetProfileId);
+    if (result.swipeLimitReached) {
+      toast({
+        title: "Daily swipe limit reached",
+        description: "You've used all 10 swipes today. Upgrade to keep swiping.",
+        variant: "destructive",
+      });
+      navigate("/pricing");
+      return;
     }
     removeMatch(targetProfileId, "left");
   };

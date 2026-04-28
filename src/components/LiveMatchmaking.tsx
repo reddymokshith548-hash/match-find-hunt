@@ -17,6 +17,7 @@ import { usePlan } from "@/hooks/usePlan";
 import { Lock } from "lucide-react";
 import { useDailySwipes } from "@/hooks/useDailySwipes";
 import UpgradeCTA from "@/components/UpgradeCTA";
+import MatchAISummary from "@/components/MatchAISummary";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();
@@ -85,6 +86,8 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [viewerSkills, setViewerSkills] = useState<string[]>([]);
+  const [viewerInterests, setViewerInterests] = useState<string[]>([]);
   const [useIntelligenceEngine, setUseIntelligenceEngine] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchProfile | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -128,7 +131,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     const fetchProfile = async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, skills, interests")
         .eq("user_id", user.id)
         .single();
 
@@ -138,6 +141,8 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       }
 
       setProfileId(data?.id || null);
+      setViewerSkills(Array.isArray(data?.skills) ? data!.skills : []);
+      setViewerInterests(Array.isArray(data?.interests) ? data!.interests : []);
 
       // Check if user has completed FounderSync
       const { data: fsData } = await supabase
@@ -497,26 +502,15 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {isPaid ? (
-              <MatchFilters 
-                filters={filters} 
-                onFiltersChange={setFilters}
-                availableSkills={[
-                  'React', 'Python', 'Marketing', 'Sales', 'Product', 'Design',
-                  'AI/ML', 'Growth', 'Finance', 'DevOps', 'Business Strategy', 'JavaScript'
-                ]}
-              />
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => requirePaid("Advanced match filters")}
-                title="Upgrade to unlock advanced filters"
-              >
-                <Lock className="w-4 h-4 mr-2" />
-                Filters
-              </Button>
-            )}
+            <MatchFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              isPaid={isPaid}
+              availableSkills={[
+                'React', 'Python', 'Marketing', 'Sales', 'Product', 'Design',
+                'AI/ML', 'Growth', 'Finance', 'DevOps', 'Business Strategy', 'JavaScript'
+              ]}
+            />
             <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm">
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               Refresh
@@ -685,44 +679,31 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                     </CardHeader>
 
                     <CardContent className="pt-0 space-y-4">
-                      {/* AI Summary Box - Show when available */}
-                      {profile.ai_summary ? (
-                        <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
-                          <div className="flex items-start gap-2">
-                            <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-foreground leading-relaxed">
-                              {profile.ai_summary}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          {/* Bio when no AI summary */}
-                          {profile.bio && (
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {profile.bio.length > 100 ? `${profile.bio.substring(0, 100)}...` : profile.bio}
-                            </p>
-                          )}
-                          {/* Generate AI Summary button */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                            disabled={generatingSummaryFor === profile.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleGenerateAISummary(profile);
-                            }}
-                          >
-                            {generatingSummaryFor === profile.id ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Wand2 className="w-4 h-4 mr-2" />
-                            )}
-                            Generate AI Summary
-                          </Button>
-                        </>
-                      )}
+                      <MatchAISummary
+                        matchId={profile.id}
+                        matchName={profileName}
+                        matchScore={matchScore}
+                        bio={profile.bio}
+                        aiSummary={profile.ai_summary}
+                        viewerSkills={viewerSkills}
+                        candidateSkills={profileSkills}
+                        viewerInterests={viewerInterests}
+                        candidateInterests={profileInterests}
+                        viewerTraits={profile.viewer_traits}
+                        candidateTraits={profile.candidate_traits}
+                        hasFounderSyncTraits={
+                          profile.phase === "phase2" &&
+                          !!profile.viewer_traits &&
+                          !!profile.candidate_traits
+                        }
+                        generating={generatingSummaryFor === profile.id}
+                        onGenerateSummary={() => handleGenerateAISummary(profile)}
+                        onOpenDeepBreakdown={() => {
+                          if (!requirePaid("Deep compatibility breakdown")) return;
+                          setSelectedMatch(profile);
+                          setShowBreakdown(true);
+                        }}
+                      />
                       
                       <div className="flex flex-wrap gap-2">
                         {profileSkills.slice(0, 3).map((skill, i) => (

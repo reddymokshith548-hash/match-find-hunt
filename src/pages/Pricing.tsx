@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useCheckout } from "@/hooks/useCheckout";
 import { usePlan } from "@/hooks/usePlan";
 
-type PlanKey = "monthly" | "halfyear";
+type PlanKey = "monthly" | "promonth" | "halfyear";
 
 const FREE_FEATURES = [
   { icon: Check, label: "10 swipes per day" },
@@ -31,7 +31,6 @@ const STARTER_FEATURES = [
   "Unlimited Spark Rooms (create + message)",
   "Verified badge on your profile",
   "Read receipts & typing indicators",
-  "Priority support",
 ];
 
 const PRO_EXTRA_FEATURES = [
@@ -40,11 +39,12 @@ const PRO_EXTRA_FEATURES = [
   "See who liked you",
   "Advanced match filters (stage, role, skills, location)",
   "AI match summaries on every profile",
+  "Priority support",
 ];
 
 const Pricing = () => {
   const navigate = useNavigate();
-  const [selected, setSelected] = useState<PlanKey>("halfyear");
+  const [selected, setSelected] = useState<PlanKey>("promonth");
   const [searchParams, setSearchParams] = useSearchParams();
   const { startCheckout, loading } = useCheckout();
   const { plan: currentPlan } = usePlan();
@@ -62,12 +62,13 @@ const Pricing = () => {
   }, [searchParams, setSearchParams]);
 
   const handleSubscribe = (planKey: PlanKey) => {
-    const stripePlan = planKey === "halfyear" ? "pro" : "starter";
+    // Both Pro tiles map to "pro" tier. The 6-month tile sets a longer billing cycle server-side.
+    const stripePlan = planKey === "monthly" ? "starter" : "pro";
     if (currentPlan === stripePlan || (currentPlan === "pro" && stripePlan === "starter")) {
       toast.info("You're already on this plan");
       return;
     }
-    void startCheckout(stripePlan);
+    void startCheckout(stripePlan, planKey === "halfyear" ? "halfyear" : "monthly");
   };
 
   return (
@@ -104,11 +105,11 @@ const Pricing = () => {
 
         {/* Plans */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="grid md:grid-cols-2 gap-6 lg:gap-8 mt-8">
+          <div className="grid md:grid-cols-3 gap-6 lg:gap-6 mt-8">
             {/* Monthly Plan */}
             <Card
               variant="profile"
-              className={`relative p-8 cursor-pointer transition-all ${
+              className={`relative p-7 cursor-pointer transition-all ${
                 selected === "monthly"
                   ? "ring-2 ring-primary/40 shadow-lg"
                   : "hover:ring-1 hover:ring-border"
@@ -119,7 +120,7 @@ const Pricing = () => {
                 <div>
                   <h3 className="text-2xl font-bold mb-2">Starter</h3>
                   <p className="text-sm text-muted-foreground">
-                    Try Pro for a month. Cancel anytime.
+                    Get started. Cancel anytime.
                   </p>
                 </div>
 
@@ -161,39 +162,31 @@ const Pricing = () => {
               </div>
             </Card>
 
-            {/* 6-Month Plan (recommended) */}
+            {/* Pro · 1 Month (recommended) */}
             <Card
               variant="profile"
-              className={`relative p-8 cursor-pointer transition-all bg-gradient-to-br from-primary/5 via-background to-background ${
-                selected === "halfyear"
+              className={`relative p-7 cursor-pointer transition-all bg-gradient-to-br from-primary/5 via-background to-background ${
+                selected === "promonth"
                   ? "ring-2 ring-primary shadow-2xl shadow-primary/20"
                   : "hover:ring-1 hover:ring-primary/40"
               }`}
-              onClick={() => setSelected("halfyear")}
+              onClick={() => setSelected("promonth")}
             >
               <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground shadow-md">
-                Best Value · Save 67%
+                Most Popular
               </Badge>
 
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-2xl font-bold mb-2">Pro · 6 Months</h3>
+                  <h3 className="text-2xl font-bold mb-2">Pro · 1 Month</h3>
                   <p className="text-sm text-muted-foreground">
-                    Everything in Starter — at one-third the price.
+                    Everything in Starter, plus deep matching.
                   </p>
                 </div>
 
-                <div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg text-muted-foreground line-through">
-                      ₹2,994
-                    </span>
-                    <span className="text-5xl font-bold tracking-tight">₹999</span>
-                    <span className="text-muted-foreground">/ 6 months</span>
-                  </div>
-                  <p className="text-xs text-primary mt-1 font-medium">
-                    Just ₹166/month — billed once
-                  </p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-bold tracking-tight">₹990</span>
+                  <span className="text-muted-foreground">/ month</span>
                 </div>
 
                 <div className="h-px bg-border" />
@@ -219,12 +212,77 @@ const Pricing = () => {
                   disabled={loading === "pro"}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleSubscribe("halfyear");
+                    handleSubscribe("promonth");
                   }}
                 >
                   {loading === "pro" ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Redirecting…</>
                   ) : currentPlan === "pro" ? "Current plan" : "Upgrade to Pro"}
+                </Button>
+              </div>
+            </Card>
+
+            {/* Pro · 6 Months (best value) */}
+            <Card
+              variant="profile"
+              className={`relative p-7 cursor-pointer transition-all ${
+                selected === "halfyear"
+                  ? "ring-2 ring-primary/60 shadow-xl"
+                  : "hover:ring-1 hover:ring-primary/30"
+              }`}
+              onClick={() => setSelected("halfyear")}
+            >
+              <Badge variant="secondary" className="absolute -top-3 left-1/2 -translate-x-1/2 shadow-md">
+                Best Value · Save 50%
+              </Badge>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-2xl font-bold mb-2">Pro · 6 Months</h3>
+                  <p className="text-sm text-muted-foreground">
+                    All Pro features, half the monthly cost.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg text-muted-foreground line-through">₹5,940</span>
+                    <span className="text-5xl font-bold tracking-tight">₹2,990</span>
+                  </div>
+                  <p className="text-xs text-primary mt-1 font-medium">
+                    Just ₹498/month — billed once for 6 months
+                  </p>
+                </div>
+
+                <div className="h-px bg-border" />
+
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                    Includes everything in Pro:
+                  </p>
+                  <ul className="space-y-3">
+                    {PRO_EXTRA_FEATURES.map((feature) => (
+                      <li key={feature} className="flex items-start gap-3 text-sm">
+                        <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full border-primary/40"
+                  disabled={loading === "pro"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSubscribe("halfyear");
+                  }}
+                >
+                  {loading === "pro" ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Redirecting…</>
+                  ) : "Get 6 Months"}
                 </Button>
               </div>
             </Card>

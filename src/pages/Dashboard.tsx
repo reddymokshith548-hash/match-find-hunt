@@ -22,6 +22,7 @@ import FounderSyncBanner from '@/components/FounderSyncBanner';
 import MessagesPanel from '@/components/MessagesPanel';
 import SparkRoomChat from '@/components/SparkRoomChat';
 import WhoLikedYou from '@/components/WhoLikedYou';
+import WhoLikedYouTile from '@/components/WhoLikedYouTile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -459,6 +460,7 @@ export default function Dashboard() {
           {/* Live AI Matchmaking */}
           <TabsContent value="matches" className="flex-1 min-h-0 overflow-y-auto space-y-6">
             <ConnectionRequests />
+            <WhoLikedYouTile />
             <LiveMatchmaking />
           </TabsContent>
 

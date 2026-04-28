@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Filter, X, SlidersHorizontal } from 'lucide-react';
+import { Filter, X, SlidersHorizontal, Lock } from 'lucide-react';
 
 export interface MatchFiltersState {
   minCompatibility: number;
@@ -26,6 +27,8 @@ interface MatchFiltersProps {
   filters: MatchFiltersState;
   onFiltersChange: (filters: MatchFiltersState) => void;
   availableSkills?: string[];
+  /** When false, paid filter fields are visible but disabled with a Pro lock badge. */
+  isPaid?: boolean;
 }
 
 const COMMON_SKILLS = [
@@ -37,8 +40,30 @@ export default function MatchFilters({
   filters,
   onFiltersChange,
   availableSkills = COMMON_SKILLS,
+  isPaid = true,
 }: MatchFiltersProps) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Per-field Pro gates. Compatibility slider stays free.
+  const PAID_FIELDS = ['phase', 'skills'] as const;
+  type PaidField = typeof PAID_FIELDS[number];
+  const isLocked = (field: PaidField) => !isPaid;
+
+  const ProLockBadge = () => (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        navigate('/pricing');
+      }}
+      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20 transition"
+      title="Upgrade to Pro to unlock"
+    >
+      <Lock className="w-2.5 h-2.5" />
+      Pro
+    </button>
+  );
   
   const activeFiltersCount = 
     (filters.minCompatibility > 0 ? 1 : 0) +
@@ -128,8 +153,15 @@ export default function MatchFilters({
 
           {/* Match Phase */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Match Type</label>
-            <Select value={filters.phase} onValueChange={handlePhaseChange}>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Match Type</label>
+              {isLocked('phase') && <ProLockBadge />}
+            </div>
+            <Select
+              value={filters.phase}
+              onValueChange={handlePhaseChange}
+              disabled={isLocked('phase')}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="All matches" />
               </SelectTrigger>
@@ -147,14 +179,17 @@ export default function MatchFilters({
 
           {/* Skills Filter */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Skills</label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Skills</label>
+              {isLocked('skills') && <ProLockBadge />}
+            </div>
+            <div className={`flex flex-wrap gap-1.5 ${isLocked('skills') ? 'opacity-50 pointer-events-none' : ''}`}>
               {availableSkills.slice(0, 8).map(skill => (
                 <Badge
                   key={skill}
                   variant={filters.skills.includes(skill) ? "default" : "outline"}
                   className="cursor-pointer text-xs transition-colors"
-                  onClick={() => toggleSkill(skill)}
+                  onClick={() => !isLocked('skills') && toggleSkill(skill)}
                 >
                   {skill}
                 </Badge>
@@ -166,6 +201,20 @@ export default function MatchFilters({
               </p>
             )}
           </div>
+
+          {!isPaid && (
+            <div className="pt-3 border-t">
+              <Button
+                variant="hero"
+                size="sm"
+                className="w-full"
+                onClick={() => navigate('/pricing')}
+              >
+                <Lock className="w-3.5 h-3.5 mr-1.5" />
+                Upgrade to unlock all filters
+              </Button>
+            </div>
+          )}
 
           {/* Active Filters Summary */}
           {activeFiltersCount > 0 && (

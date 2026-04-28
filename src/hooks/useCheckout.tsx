@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export type CheckoutPlan = "starter" | "pro";
+export type BillingCycle = "monthly" | "halfyear";
 
 /**
  * Calls the create-checkout edge function and redirects the browser to the
@@ -12,12 +13,13 @@ export type CheckoutPlan = "starter" | "pro";
 export function useCheckout() {
   const [loading, setLoading] = useState<CheckoutPlan | null>(null);
 
-  const startCheckout = useCallback(async (plan: CheckoutPlan) => {
+  const startCheckout = useCallback(async (plan: CheckoutPlan, cycle: BillingCycle = "monthly") => {
     setLoading(plan);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           plan,
+          cycle,
           success_path: "/dashboard",
           cancel_path: "/pricing",
         },

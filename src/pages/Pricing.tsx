@@ -19,12 +19,13 @@ type PlanKey = "monthly" | "halfyear";
 const FREE_FEATURES = [
   { icon: Check, label: "10 swipes per day" },
   { icon: Check, label: "Basic FounderSync matches" },
-  { icon: Check, label: "FounderSync personality test (full 30 questions)" },
   { icon: Check, label: "Browse Spark Rooms (read-only)" },
   { icon: Check, label: "Chat with mutual matches (after Mutual NDA)" },
 ];
 
 const STARTER_FEATURES = [
+  "Unlimited swipes & matches per day",
+  "FounderSync personality test (full 30 questions)",
   "Unlimited Spark Rooms (create + message)",
   "Verified badge on your profile",
   "Read receipts & typing indicators",
@@ -32,7 +33,6 @@ const STARTER_FEATURES = [
 ];
 
 const PRO_EXTRA_FEATURES = [
-  "Unlimited swipes & matches per day",
   "FounderSync Intelligence Engine — deep compatibility breakdown",
   "Priority placement in the matchmaking queue",
   "See who liked you",

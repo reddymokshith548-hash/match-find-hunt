@@ -13,6 +13,8 @@ import { CompatibilityBreakdown } from "@/components/CompatibilityBreakdown";
 // MutualNDAModal removed - NDA flow is handled in ConnectionRequests
 import MatchFilters, { MatchFiltersState } from "@/components/MatchFilters";
 import { useRealtimeMatches } from "@/hooks/useRealtimeMatches";
+import { usePlan } from "@/hooks/usePlan";
+import { Lock } from "lucide-react";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();
@@ -85,6 +87,17 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [selectedMatch, setSelectedMatch] = useState<MatchProfile | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [generatingSummaryFor, setGeneratingSummaryFor] = useState<string | null>(null);
+  const { isPaid } = usePlan();
+
+  const requirePaid = (featureLabel: string) => {
+    if (isPaid) return true;
+    toast({
+      title: `${featureLabel} is a paid feature`,
+      description: "Upgrade to Starter or Pro to unlock it.",
+    });
+    navigate("/pricing");
+    return false;
+  };
   
   // Filters state
   const [filters, setFilters] = useState<MatchFiltersState>({
@@ -450,14 +463,26 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <MatchFilters 
-              filters={filters} 
-              onFiltersChange={setFilters}
-              availableSkills={[
-                'React', 'Python', 'Marketing', 'Sales', 'Product', 'Design',
-                'AI/ML', 'Growth', 'Finance', 'DevOps', 'Business Strategy', 'JavaScript'
-              ]}
-            />
+            {isPaid ? (
+              <MatchFilters 
+                filters={filters} 
+                onFiltersChange={setFilters}
+                availableSkills={[
+                  'React', 'Python', 'Marketing', 'Sales', 'Product', 'Design',
+                  'AI/ML', 'Growth', 'Finance', 'DevOps', 'Business Strategy', 'JavaScript'
+                ]}
+              />
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => requirePaid("Advanced match filters")}
+                title="Upgrade to unlock advanced filters"
+              >
+                <Lock className="w-4 h-4 mr-2" />
+                Filters
+              </Button>
+            )}
             <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm">
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               Refresh
@@ -550,11 +575,12 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                           className="h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background"
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (!requirePaid("Deep compatibility breakdown")) return;
                             setSelectedMatch(profile);
                             setShowBreakdown(true);
                           }}
                         >
-                          <BarChart3 className="w-3.5 h-3.5" />
+                          {isPaid ? <BarChart3 className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                         </Button>
                       )}
                       <Badge className={`font-semibold ${profile.phase === 'phase2' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>

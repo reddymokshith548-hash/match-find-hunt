@@ -134,7 +134,7 @@ const WireframeLoader = ({ onComplete, duration = 3000 }: WireframeLoaderProps) 
           x1="14%" y1="14%"
           x2={`calc(50% - ${RETICLE_HALF_W}px)`}
           y2={`calc(50% - ${RETICLE_HALF_H}px)`}
-          stroke="#9ca3af" strokeWidth="1"
+          stroke="#4b5563" strokeWidth="1"
           style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.8s ease-out 1.5s forwards" }}
         />
         {/* Lower-right diagonal: from bottom-right corner of reticle to percentage label */}
@@ -142,7 +142,7 @@ const WireframeLoader = ({ onComplete, duration = 3000 }: WireframeLoaderProps) 
           x1={`calc(50% + ${RETICLE_HALF_W}px)`}
           y1={`calc(50% + ${RETICLE_HALF_H}px)`}
           x2="86%" y2="86%"
-          stroke="#9ca3af" strokeWidth="1"
+          stroke="#4b5563" strokeWidth="1"
           style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.8s ease-out 1.5s forwards" }}
         />
 
@@ -151,35 +151,35 @@ const WireframeLoader = ({ onComplete, duration = 3000 }: WireframeLoaderProps) 
         <line
           x1="50%" y1={`calc(50% - ${RETICLE_HALF_H}px)`}
           x2="50%" y2="0%"
-          stroke="#d1d5db" strokeWidth="1"
+          stroke="#6b7280" strokeWidth="1"
           style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.7s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
         />
         {/* Vertical DOWN: from bottom-center of reticle down to y=100% */}
         <line
           x1="50%" y1={`calc(50% + ${RETICLE_HALF_H}px)`}
           x2="50%" y2="100%"
-          stroke="#d1d5db" strokeWidth="1"
+          stroke="#6b7280" strokeWidth="1"
           style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.7s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
         />
-        {/* Horizontal LEFT: from left-center of reticle to x=0 */}
+        {/* Horizontal LEFT: from left-center of reticle, stops at the diagonal endpoint (14%) */}
         <line
           x1={`calc(50% - ${RETICLE_HALF_W}px)`} y1="50%"
-          x2="0%" y2="50%"
-          stroke="#d1d5db" strokeWidth="1"
+          x2="14%" y2="50%"
+          stroke="#6b7280" strokeWidth="1"
           style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.7s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
         />
-        {/* Horizontal RIGHT: from right-center of reticle to x=100% */}
+        {/* Horizontal RIGHT: from right-center of reticle, stops at the diagonal endpoint (86%) */}
         <line
           x1={`calc(50% + ${RETICLE_HALF_W}px)`} y1="50%"
-          x2="100%" y2="50%"
-          stroke="#d1d5db" strokeWidth="1"
+          x2="86%" y2="50%"
+          stroke="#6b7280" strokeWidth="1"
           style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.7s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
         />
 
         {/* Outer frame */}
         <rect
           x="6%" y="6%" width="88%" height="88%"
-          fill="none" stroke="#d1d5db" strokeWidth="1"
+          fill="none" stroke="#6b7280" strokeWidth="1"
           style={{ opacity: 0, animation: "wf-fade 0.5s ease-out 2.4s forwards" }}
         />
       </svg>

@@ -135,7 +135,7 @@ const WireframeLoader = ({ onComplete, duration = 3000 }: WireframeLoaderProps) 
           x2={`calc(50% - ${RETICLE_HALF_W}px)`}
           y2={`calc(50% - ${RETICLE_HALF_H}px)`}
           stroke="#9ca3af" strokeWidth="1"
-          style={{ strokeDasharray: 1500, strokeDashoffset: 1500, animation: "wf-draw 0.7s ease-out 1.5s forwards" }}
+          style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.8s ease-out 1.5s forwards" }}
         />
         {/* Lower-right diagonal: from bottom-right corner of reticle to percentage label */}
         <line
@@ -143,37 +143,37 @@ const WireframeLoader = ({ onComplete, duration = 3000 }: WireframeLoaderProps) 
           y1={`calc(50% + ${RETICLE_HALF_H}px)`}
           x2="86%" y2="86%"
           stroke="#9ca3af" strokeWidth="1"
-          style={{ strokeDasharray: 1500, strokeDashoffset: 1500, animation: "wf-draw 0.7s ease-out 1.5s forwards" }}
+          style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.8s ease-out 1.5s forwards" }}
         />
 
         {/* Cross grid lines — extend from reticle edges to screen edges */}
         {/* Vertical UP: from top-center of reticle up to y=0 */}
         <line
           x1="50%" y1={`calc(50% - ${RETICLE_HALF_H}px)`}
-          x2="50%" y2={`calc(50% - ${RETICLE_HALF_H}px)`}
+          x2="50%" y2="0%"
           stroke="#d1d5db" strokeWidth="1"
-          style={{ animation: "wf-cross-up 0.9s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
+          style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.7s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
         />
         {/* Vertical DOWN: from bottom-center of reticle down to y=100% */}
         <line
           x1="50%" y1={`calc(50% + ${RETICLE_HALF_H}px)`}
-          x2="50%" y2={`calc(50% + ${RETICLE_HALF_H}px)`}
+          x2="50%" y2="100%"
           stroke="#d1d5db" strokeWidth="1"
-          style={{ animation: "wf-cross-down 0.9s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
+          style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.7s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
         />
         {/* Horizontal LEFT: from left-center of reticle to x=0 */}
         <line
           x1={`calc(50% - ${RETICLE_HALF_W}px)`} y1="50%"
-          x2={`calc(50% - ${RETICLE_HALF_W}px)`} y2="50%"
+          x2="0%" y2="50%"
           stroke="#d1d5db" strokeWidth="1"
-          style={{ animation: "wf-cross-left 0.9s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
+          style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.7s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
         />
         {/* Horizontal RIGHT: from right-center of reticle to x=100% */}
         <line
           x1={`calc(50% + ${RETICLE_HALF_W}px)`} y1="50%"
-          x2={`calc(50% + ${RETICLE_HALF_W}px)`} y2="50%"
+          x2="100%" y2="50%"
           stroke="#d1d5db" strokeWidth="1"
-          style={{ animation: "wf-cross-right 0.9s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
+          style={{ strokeDasharray: 2000, strokeDashoffset: 2000, animation: "wf-draw 0.7s cubic-bezier(0.65,0,0.35,1) 1.7s forwards" }}
         />
 
         {/* Outer frame */}
@@ -224,19 +224,6 @@ const WireframeLoader = ({ onComplete, duration = 3000 }: WireframeLoaderProps) 
         @keyframes wf-bracket-br {
           from { top: 40px; left: 120px; opacity: 1; }
           to   { top: 70px; left: 200px; opacity: 1; }
-        }
-        /* Cross grid lines — extend outward from reticle edges to screen edges */
-        @keyframes wf-cross-up {
-          to { y2: 0%; }
-        }
-        @keyframes wf-cross-down {
-          to { y2: 100%; }
-        }
-        @keyframes wf-cross-left {
-          to { x2: 0%; }
-        }
-        @keyframes wf-cross-right {
-          to { x2: 100%; }
         }
         @keyframes wf-draw {
           to { stroke-dashoffset: 0; }

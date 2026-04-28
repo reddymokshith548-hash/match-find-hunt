@@ -55,6 +55,20 @@ serve(async (req) => {
     }
     const plan = (planData as string) || "free";
 
+    // SECURITY: Free users must NEVER receive liker profile fields, even if a
+    // tampered client passes flags. We short-circuit BEFORE any profile fetch.
+    if (plan !== "starter" && plan !== "pro") {
+      const { data: countData } = await admin.rpc("get_incoming_likes_count", {
+        _user_id: userId,
+      });
+      return json({
+        plan: "free",
+        total: (countData as number) ?? 0,
+        likes: [],            // hard-coded empty — no PII can leak
+        upgrade_required: true,
+      });
+    }
+
     // Likes received (exclude ones the viewer already liked back)
     const { data: incoming, error: likesErr } = await admin
       .from("user_interactions")
@@ -85,15 +99,6 @@ serve(async (req) => {
     const pendingLikerIds = likerUserIds.filter((id) => !likedBack.has(id));
 
     const totalCount = pendingLikerIds.length;
-
-    if (plan === "free") {
-      return json({
-        plan,
-        total: totalCount,
-        likes: [], // hidden until upgrade
-        upgrade_required: true,
-      });
-    }
 
     if (totalCount === 0) {
       return json({ plan, total: 0, likes: [], upgrade_required: false });

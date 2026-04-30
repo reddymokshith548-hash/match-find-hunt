@@ -526,6 +526,14 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
                 'AI/ML', 'Growth', 'Finance', 'DevOps', 'Business Strategy', 'JavaScript'
               ]}
             />
+            <Button
+              onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+              variant="outline"
+              size="sm"
+              title={viewMode === "grid" ? "Switch to compact list" : "Switch to grid"}
+            >
+              {viewMode === "grid" ? <ListIcon className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+            </Button>
             <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm">
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               Refresh
@@ -584,10 +592,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         )}
 
         {loading && matches.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />
-            <p className="text-muted-foreground">Finding your perfect matches...</p>
-          </div>
+          viewMode === "grid" ? <MatchesSkeleton count={6} /> : <ListSkeleton count={6} />
         )}
 
         {!loading && filteredMatches.length === 0 && matches.length > 0 && (
@@ -610,7 +615,7 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
           </div>
         )}
 
-        {filteredMatches.length > 0 && (
+        {filteredMatches.length > 0 && viewMode === "grid" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMatches.map((profile, index) => {
               // Null safety checks for profile data
@@ -768,6 +773,16 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
             })}
           </div>
         )}
+
+        {filteredMatches.length > 0 && viewMode === "list" && (
+          <CompactMatchList
+            matches={filteredMatches}
+            onOpenFull={handleViewProfile}
+            onPeek={(p) => setPeekProfile(p)}
+            onConnect={handleConnect}
+            onPass={handlePass}
+          />
+        )}
       </div>
 
       {/* Compatibility Breakdown Modal */}
@@ -783,9 +798,120 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
         />
       )}
 
+      <ProfilePeekDialog
+        profile={peekProfile}
+        open={!!peekProfile}
+        onOpenChange={(v) => !v && setPeekProfile(null)}
+        onOpenFull={(id) => { setPeekProfile(null); handleViewProfile(id); }}
+        onConnect={(p) => { setPeekProfile(null); handleConnect(p as MatchProfile); }}
+      />
+
       {/* NDA Modal removed - NDA is only required when trying to chat, not on connect */}
     </section>
   );
 };
 
 export default LiveMatchmaking;
+
+/* -------------------------------------------------------------------------- */
+/* Compact list view: smaller typography, denser rows, easier to scan on small */
+/* screens. Click → full profile. Long-press → peek dialog.                    */
+/* -------------------------------------------------------------------------- */
+interface CompactListProps {
+  matches: MatchProfile[];
+  onOpenFull: (id: string) => void;
+  onPeek: (p: MatchProfile) => void;
+  onConnect: (p: MatchProfile) => void;
+  onPass: (id: string) => void;
+}
+
+const CompactRow = ({
+  profile,
+  onOpenFull,
+  onPeek,
+  onConnect,
+  onPass,
+}: { profile: MatchProfile } & Omit<CompactListProps, "matches">) => {
+  const handlers = useLongPress({
+    onLongPress: () => onPeek(profile),
+    onClick: () => onOpenFull(profile.id),
+    delay: 450,
+  });
+
+  const score = profile.match_score || 0;
+  const skills = profile.skills || [];
+
+  return (
+    <div
+      {...handlers}
+      className="select-none flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/40 transition-colors cursor-pointer"
+    >
+      <Avatar className="h-11 w-11 shrink-0">
+        <AvatarImage src={profile.profile_pic_url} alt={profile.name} />
+        <AvatarFallback className="text-xs">{(profile.name || "?").charAt(0)}</AvatarFallback>
+      </Avatar>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium truncate">{profile.name || "Unknown"}</p>
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+            {Math.round(score)}%
+          </Badge>
+          {profile.phase === "phase2" && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+              <Brain className="w-2.5 h-2.5 mr-0.5" /> FS
+            </Badge>
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground truncate">
+          {profile.role || profile.type || "User"}
+          {profile.location ? ` · ${profile.location}` : ""}
+        </p>
+        {skills.length > 0 && (
+          <div className="flex gap-1 mt-1 overflow-hidden">
+            {skills.slice(0, 3).map((s, i) => (
+              <span
+                key={i}
+                className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground truncate max-w-[80px]"
+              >
+                {s}
+              </span>
+            ))}
+            {skills.length > 3 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                +{skills.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onPass(profile.id)} title="Pass">
+          <X className="w-4 h-4" />
+        </Button>
+        <Button size="icon" variant="hero" className="h-8 w-8" onClick={() => onConnect(profile)} title="Connect">
+          <Heart className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+const CompactMatchList = ({ matches, onOpenFull, onPeek, onConnect, onPass }: CompactListProps) => (
+  <div className="space-y-2">
+    <p className="text-[11px] text-muted-foreground px-1">
+      Tip: tap to open full profile · long-press for a quick peek
+    </p>
+    {matches.map((p) => (
+      <CompactRow
+        key={p.id}
+        profile={p}
+        onOpenFull={onOpenFull}
+        onPeek={onPeek}
+        onConnect={onConnect}
+        onPass={onPass}
+      />
+    ))}
+  </div>
+);

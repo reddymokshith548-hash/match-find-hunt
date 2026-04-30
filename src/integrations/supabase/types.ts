@@ -710,11 +710,50 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_list_user_plans: {
+        Args: { _search?: string }
+        Returns: {
+          current_period_end: string
+          email: string
+          name: string
+          plan: Database["public"]["Enums"]["plan_tier"]
+          status: string
+          user_id: string
+        }[]
+      }
+      admin_set_user_plan: {
+        Args: {
+          _plan: Database["public"]["Enums"]["plan_tier"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       can_access_connection: {
         Args: { _connection_id: string }
         Returns: boolean
@@ -761,6 +800,13 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["plan_tier"]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       increment_daily_swipe: { Args: { _user_id: string }; Returns: number }
       my_incoming_likes_count: { Args: never; Returns: number }
       record_interaction: {
@@ -773,6 +819,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       plan_tier: "free" | "starter" | "pro"
     }
     CompositeTypes: {
@@ -901,6 +948,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       plan_tier: ["free", "starter", "pro"],
     },
   },

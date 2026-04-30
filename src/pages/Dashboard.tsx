@@ -561,7 +561,7 @@ export default function Dashboard() {
 
           {/* Who Liked You */}
           <TabsContent value="likes" className="flex-1 min-h-0 overflow-y-auto space-y-6">
-            <WhoLikedYou />
+            {loadingMatches ? <ListSkeleton count={5} /> : <WhoLikedYou />}
           </TabsContent>
 
           {/* Messages - Embedded directly */}
@@ -571,6 +571,9 @@ export default function Dashboard() {
 
           {/* Opportunities with integrated Spark Rooms */}
           <TabsContent value="opportunities" className="flex-1 min-h-0 overflow-y-auto space-y-6">
+            {loadingOpportunities && opportunities.length === 0 ? (
+              <OpportunitiesSkeleton />
+            ) : (
             {/* Opportunities Section */}
             <div>
               <h2 className="font-bold text-3xl mb-4">Upcoming Opportunities</h2>

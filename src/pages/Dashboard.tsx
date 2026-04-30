@@ -574,6 +574,7 @@ export default function Dashboard() {
             {loadingOpportunities && opportunities.length === 0 ? (
               <OpportunitiesSkeleton />
             ) : (
+            <>
             {/* Opportunities Section */}
             <div>
               <h2 className="font-bold text-3xl mb-4">Upcoming Opportunities</h2>
@@ -767,6 +768,8 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+            </>
+            )}
           </TabsContent>
         </Tabs>
         </div>

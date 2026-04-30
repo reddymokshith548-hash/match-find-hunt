@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,29 +17,10 @@ type Row = {
 };
 
 export default function AdminPlans() {
-  const { user, loading: authLoading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (error) {
-        setIsAdmin(false);
-        return;
-      }
-      setIsAdmin(!!data);
-    })();
-  }, [user]);
 
   const fetchRows = async (q?: string) => {
     setLoading(true);
@@ -56,8 +36,8 @@ export default function AdminPlans() {
   };
 
   useEffect(() => {
-    if (isAdmin) fetchRows();
-  }, [isAdmin]);
+    fetchRows();
+  }, []);
 
   const setPlan = async (userId: string, plan: "free" | "pro") => {
     setUpdatingId(userId);
@@ -76,33 +56,8 @@ export default function AdminPlans() {
     );
   };
 
-  if (authLoading || isAdmin === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!user) return <Navigate to="/login" />;
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <div className="max-w-md text-center space-y-2">
-          <h1 className="text-2xl font-bold">Admins only</h1>
-          <p className="text-sm text-muted-foreground">
-            Your account doesn't have admin access. Add yourself to{" "}
-            <code className="px-1 py-0.5 bg-muted rounded">user_roles</code> with
-            role <code className="px-1 py-0.5 bg-muted rounded">admin</code> in
-            Supabase to unlock this page.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background">
+    <AdminLayout>
       <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-4">
         <div>
           <h1 className="text-2xl font-bold">Beta — Plan Management</h1>
@@ -194,6 +149,6 @@ export default function AdminPlans() {
           })}
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

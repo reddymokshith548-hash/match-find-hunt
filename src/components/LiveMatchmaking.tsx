@@ -89,12 +89,17 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [matches, setMatches] = useState<MatchProfile[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Default to loading=true so the skeleton renders immediately on mount,
+  // before fetchMatches even gets a chance to flip it.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [viewerSkills, setViewerSkills] = useState<string[]>([]);
   const [viewerInterests, setViewerInterests] = useState<string[]>([]);
   const [useIntelligenceEngine, setUseIntelligenceEngine] = useState(false);
+  // Gate the initial match fetch until we know which engine to use, so users
+  // never see legacy RPC results flicker in before FounderSync results arrive.
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchProfile | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [generatingSummaryFor, setGeneratingSummaryFor] = useState<string | null>(null);
@@ -144,29 +149,34 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     if (!user) return;
 
     const fetchProfile = async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, skills, interests")
-        .eq("user_id", user.id)
-        .single();
+      // Run profile + FounderSync detection in parallel so we don't block
+      // the first match fetch waiting on two sequential round-trips.
+      const [profileRes, fsRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, skills, interests")
+          .eq("user_id", user.id)
+          .single(),
+        supabase
+          .from("foundersync_results")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
 
-      if (error) {
-        console.error("Failed to fetch profile:", error);
+      if (profileRes.error) {
+        console.error("Failed to fetch profile:", profileRes.error);
+        // Even on error, unblock the fetch so the user sees something.
+        setProfileLoaded(true);
         return;
       }
 
+      const data = profileRes.data;
       setProfileId(data?.id || null);
       setViewerSkills(Array.isArray(data?.skills) ? data!.skills : []);
       setViewerInterests(Array.isArray(data?.interests) ? data!.interests : []);
-
-      // Check if user has completed FounderSync
-      const { data: fsData } = await supabase
-        .from("foundersync_results")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      setUseIntelligenceEngine(!!fsData);
+      setUseIntelligenceEngine(!!fsRes.data);
+      setProfileLoaded(true);
     };
 
     fetchProfile();
@@ -311,10 +321,12 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   };
 
   useEffect(() => {
-    if (user) {
+    // Wait until we know whether to use FounderSync, otherwise we'd fetch
+    // RPC matches first and replace them moments later when the flag flips.
+    if (user && profileLoaded) {
       fetchMatches();
     }
-  }, [user, useIntelligenceEngine]);
+  }, [user, profileLoaded, useIntelligenceEngine]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -832,26 +844,52 @@ const CompactRow = ({
   onConnect,
   onPass,
 }: { profile: MatchProfile } & Omit<CompactListProps, "matches">) => {
-  const handlers = useLongPress({
+  const { progress, pressing, ...handlers } = useLongPress({
     onLongPress: () => onPeek(profile),
     onClick: () => onOpenFull(profile.id),
-    delay: 450,
+    delay: 500,
+    haptic: true,
   });
 
   const score = profile.match_score || 0;
   const skills = profile.skills || [];
+  const showFill = pressing && progress > 0.05;
 
   return (
     <div
       {...handlers}
-      className="select-none flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/40 transition-colors cursor-pointer"
+      className={`relative overflow-hidden select-none flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/40 transition-all cursor-pointer ${
+        pressing ? "scale-[0.985]" : ""
+      }`}
+      style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
     >
+      {/* Long-press fill: a soft primary wash that grows from left to right */}
+      <div
+        aria-hidden
+        className="absolute inset-y-0 left-0 bg-primary/15 pointer-events-none transition-opacity"
+        style={{
+          width: `${Math.round(progress * 100)}%`,
+          opacity: showFill ? 1 : 0,
+          transition: pressing ? "width 60ms linear" : "opacity 200ms ease",
+        }}
+      />
+      {/* Top progress bar — clearer signal that "something is happening" */}
+      <div
+        aria-hidden
+        className="absolute top-0 left-0 h-0.5 bg-primary pointer-events-none"
+        style={{
+          width: `${Math.round(progress * 100)}%`,
+          opacity: showFill ? 1 : 0,
+          transition: pressing ? "width 60ms linear" : "opacity 200ms ease",
+        }}
+      />
+
       <Avatar className="h-11 w-11 shrink-0">
         <AvatarImage src={profile.profile_pic_url} alt={profile.name} />
         <AvatarFallback className="text-xs">{(profile.name || "?").charAt(0)}</AvatarFallback>
       </Avatar>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 relative">
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium truncate">{profile.name || "Unknown"}</p>
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">

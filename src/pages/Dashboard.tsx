@@ -475,19 +475,19 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className="border-b bg-card shadow-sm shrink-0">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-2xl gradient-text font-bold text-[#59b0bf]">Lexach</h1>
+        <div className="container mx-auto px-3 py-2 flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            <h1 className="text-lg gradient-text font-bold text-[#59b0bf]">Lexach</h1>
             <div className="hidden md:flex items-center space-x-2">
-              <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all" onClick={() => setProfileEditorOpen(true)}>
+              <Avatar className="h-7 w-7 cursor-pointer hover:ring-2 hover:ring-primary transition-all" onClick={() => setProfileEditorOpen(true)}>
                 <AvatarImage src={profile?.profile_pic_url} />
-                <AvatarFallback>{profile?.name?.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="text-xs">{profile?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium">Welcome, {profile?.name}</span>
+              <span className="text-xs font-medium">Welcome, {profile?.name}</span>
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             <ThemeToggle />
             <NotificationCenter />
             <Button
@@ -496,25 +496,26 @@ export default function Dashboard() {
               onClick={handleRefreshDashboard}
               disabled={refreshing}
               title="Refresh dashboard data"
+              className="h-8 px-2"
             >
-              <RefreshCw className={`h-4 w-4 sm:mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <RefreshCw className={`h-4 w-4 sm:mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline text-xs">Refresh</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
-              <User className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">My Profile</span>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} className="h-8 px-2">
+              <User className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline text-xs">My Profile</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => goPricing()}>
-              <Sparkles className="h-4 w-4 mr-2 text-primary" />
-              <span className="hidden sm:inline">Pricing</span>
+            <Button variant="ghost" size="sm" onClick={() => goPricing()} className="h-8 px-2">
+              <Sparkles className="h-4 w-4 sm:mr-1.5 text-primary" />
+              <span className="hidden sm:inline text-xs">Pricing</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>
-              <Settings className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Settings</span>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/settings')} className="h-8 px-2">
+              <Settings className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline text-xs">Settings</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Logout</span>
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 px-2">
+              <LogOut className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline text-xs">Logout</span>
             </Button>
           </div>
         </div>

@@ -72,6 +72,17 @@ export async function createConnectionRequest(
 
     if (createError) throw createError;
 
+    // Notify any listening UI (e.g. ConnectionRequests panel) to refresh
+    // immediately. Realtime usually does this, but a direct event guarantees
+    // the Sent tab updates the moment the row is inserted.
+    try {
+      window.dispatchEvent(
+        new CustomEvent('connections:changed', {
+          detail: { kind: 'created', connectionId: newConnection.id },
+        })
+      );
+    } catch {}
+
     // 3. Fetch Profile Data for Notification
     const { data: fromProfile } = await supabase
       .from('profiles')

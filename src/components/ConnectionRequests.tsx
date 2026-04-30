@@ -123,6 +123,21 @@ export default function ConnectionRequests() {
     }
   }, [user]);
 
+  // Listen for client-side connection change events (sent from helpers when a
+  // request is created/cancelled). This guarantees the Sent tab refreshes
+  // immediately even if Realtime is delayed or disconnected.
+  useEffect(() => {
+    if (!user) return;
+    const handler = () => fetchProfileAndRequests();
+    window.addEventListener('connections:changed', handler);
+    // Also refetch when the tab regains focus.
+    window.addEventListener('focus', handler);
+    return () => {
+      window.removeEventListener('connections:changed', handler);
+      window.removeEventListener('focus', handler);
+    };
+  }, [user]);
+
   const fetchProfileAndRequests = async () => {
     if (!user) return;
 

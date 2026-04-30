@@ -475,9 +475,9 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className="border-b bg-card shadow-sm shrink-0">
-        <div className="container mx-auto px-3 py-2 flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <h1 className="text-lg gradient-text font-bold text-[#59b0bf]">Lexach</h1>
+        <div className="container mx-auto px-2 sm:px-3 py-1 sm:py-2 flex justify-between items-center">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <h1 className="text-base sm:text-lg gradient-text font-bold text-[#59b0bf] leading-none">Lexach</h1>
             <div className="hidden md:flex items-center space-x-2">
               <Avatar className="h-7 w-7 cursor-pointer hover:ring-2 hover:ring-primary transition-all" onClick={() => setProfileEditorOpen(true)}>
                 <AvatarImage src={profile?.profile_pic_url} />
@@ -486,8 +486,8 @@ export default function Dashboard() {
               <span className="text-xs font-medium">Welcome, {profile?.name}</span>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-1">
+
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <ThemeToggle />
             <NotificationCenter />
             <Button
@@ -496,24 +496,25 @@ export default function Dashboard() {
               onClick={handleRefreshDashboard}
               disabled={refreshing}
               title="Refresh dashboard data"
-              className="h-8 px-2"
+              aria-label="Refresh"
+              className="h-8 w-8 sm:w-auto px-0 sm:px-2"
             >
               <RefreshCw className={`h-4 w-4 sm:mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline text-xs">Refresh</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} className="h-8 px-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} aria-label="My Profile" title="My Profile" className="h-8 w-8 sm:w-auto px-0 sm:px-2">
               <User className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline text-xs">My Profile</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => goPricing()} className="h-8 px-2">
+            <Button variant="ghost" size="sm" onClick={() => goPricing()} aria-label="Pricing" title="Pricing" className="h-8 w-8 sm:w-auto px-0 sm:px-2">
               <Sparkles className="h-4 w-4 sm:mr-1.5 text-primary" />
               <span className="hidden sm:inline text-xs">Pricing</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/settings')} className="h-8 px-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/settings')} aria-label="Settings" title="Settings" className="h-8 w-8 sm:w-auto px-0 sm:px-2">
               <Settings className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline text-xs">Settings</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 px-2">
+            <Button variant="ghost" size="sm" onClick={handleSignOut} aria-label="Logout" title="Logout" className="h-8 w-8 sm:w-auto px-0 sm:px-2">
               <LogOut className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline text-xs">Logout</span>
             </Button>

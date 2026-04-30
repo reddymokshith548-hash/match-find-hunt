@@ -380,17 +380,56 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       return;
     }
 
+    // ---- Optimistic UI ---------------------------------------------------
+    // Stamp a temporary id so the Sent tab can render this request
+    // immediately, then reconcile (or roll back) once the server responds.
+    const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    try {
+      window.dispatchEvent(
+        new CustomEvent("connections:optimistic-sent", {
+          detail: {
+            tempId,
+            fromProfileId: profileId,
+            recipient: {
+              id: targetProfile.id,
+              name: targetProfile.name,
+              role: targetProfile.role || targetProfile.type,
+              profile_pic_url: targetProfile.profile_pic_url,
+              bio: targetProfile.bio,
+              location: targetProfile.location,
+              skills: targetProfile.skills || [],
+              interests: targetProfile.interests || [],
+            },
+          },
+        })
+      );
+    } catch {}
+
     const result = await createConnectionRequest(profileId, targetProfile.id);
 
     if (result.success && result.connectionId) {
+      // Reconcile the optimistic row with the real server-issued id.
+      try {
+        window.dispatchEvent(
+          new CustomEvent("connections:reconcile", {
+            detail: { tempId, realId: result.connectionId },
+          })
+        );
+      } catch {}
       // Instagram-like flow: Just send the request, no NDA yet
       toast({
-        title: "✅ Request Sent!",
-        description: `Connection request sent to ${targetProfile.name}. They'll be notified!`
+        title: "✅ Request Sent · Synced",
+        description: `${targetProfile.name} now appears in your Sent tab.`,
       });
       removeMatch(targetProfile.id, "right");
       refreshSwipes();
     } else if (result.swipeLimitReached) {
+      // Roll back the optimistic insert.
+      try {
+        window.dispatchEvent(
+          new CustomEvent("connections:rollback", { detail: { tempId } })
+        );
+      } catch {}
       toast({
         title: "Daily swipe limit reached",
         description: "You've used all 10 swipes today. Upgrade to keep swiping.",
@@ -398,12 +437,22 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
       });
       goPricing();
     } else if (result.alreadyExists) {
+      try {
+        window.dispatchEvent(
+          new CustomEvent("connections:rollback", { detail: { tempId } })
+        );
+      } catch {}
       toast({
         title: "Already connected",
         description: "You've already sent a connection request to this person",
         variant: "destructive"
       });
     } else {
+      try {
+        window.dispatchEvent(
+          new CustomEvent("connections:rollback", { detail: { tempId } })
+        );
+      } catch {}
       toast({
         title: "Error",
         description: result.error || "Failed to send connection request",

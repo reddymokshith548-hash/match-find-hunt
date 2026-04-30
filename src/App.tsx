@@ -21,6 +21,7 @@ import SparkRooms from "./pages/SparkRooms";
 import Profile from "./pages/Profile";
 import Pricing from "./pages/Pricing";
 import WhoLikedYouPage from "./pages/WhoLikedYouPage";
+import AdminPlans from "./pages/AdminPlans";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ const App = () => (
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/who-liked-you" element={<ProtectedRoute><WhoLikedYouPage /></ProtectedRoute>} />
+        <Route path="/admin/plans" element={<ProtectedRoute><AdminPlans /></ProtectedRoute>} />
               <Route path="/auth" element={<Navigate to="/login" />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

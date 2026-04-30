@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Users, MessageSquare, Calendar, Settings, LogOut, ExternalLink, Zap, User, Plus, Video, Search, Clock, MessageCircle, Sparkles, Heart } from 'lucide-react';
+import { Users, MessageSquare, Calendar, Settings, LogOut, ExternalLink, Zap, User, Plus, Video, Search, Clock, MessageCircle, Sparkles, Heart, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,6 +26,13 @@ import WhoLikedYou from '@/components/WhoLikedYou';
 import WhoLikedYouTile from '@/components/WhoLikedYouTile';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { formatDistanceToNow } from 'date-fns';
+import {
+  SparkSkeleton,
+  MatchesSkeleton,
+  ListSkeleton,
+  MessagesSkeleton,
+  OpportunitiesSkeleton,
+} from '@/components/dashboard/TabSkeletons';
 
 interface Profile {
   id: string;
@@ -106,6 +113,11 @@ export default function Dashboard() {
   const [createRoomDialogOpen, setCreateRoomDialogOpen] = useState(false);
   const [newRoom, setNewRoom] = useState({ name: '', description: '', topic: '', is_public: true });
   const [selectedRoom, setSelectedRoom] = useState<{ id: string; name: string } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  // Track per-section loading so each tab can show its own skeleton.
+  const [loadingMatches, setLoadingMatches] = useState(true);
+  const [loadingOpportunities, setLoadingOpportunities] = useState(true);
+  const [loadingRooms, setLoadingRooms] = useState(true);
 
   // Handle tab from URL query parameter
   useEffect(() => {
@@ -148,12 +160,44 @@ export default function Dashboard() {
       // Profile is the only fetch the dashboard shell waits on. Everything else
       // loads in the background so the UI paints fast.
       fetchUserProfile().finally(() => setLoading(false));
-      void fetchMatches();
-      void fetchOpportunities();
-      void fetchSparkRooms();
+      setLoadingMatches(true);
+      setLoadingOpportunities(true);
+      setLoadingRooms(true);
+      void fetchMatches().finally(() => setLoadingMatches(false));
+      void fetchOpportunities().finally(() => setLoadingOpportunities(false));
+      void fetchSparkRooms().finally(() => setLoadingRooms(false));
       void checkFounderSyncStatus();
     }
   }, [user]);
+
+  /**
+   * Force a full refresh: clear cached profile and re-run every dashboard
+   * fetcher. Per-section spinners flash so each tab feels responsive.
+   */
+  const handleRefreshDashboard = async () => {
+    if (!user || refreshing) return;
+    setRefreshing(true);
+    try {
+      sessionStorage.removeItem(`dash_profile_${user.id}`);
+    } catch {}
+    setLoadingMatches(true);
+    setLoadingOpportunities(true);
+    setLoadingRooms(true);
+    try {
+      await Promise.all([
+        fetchUserProfile(),
+        fetchMatches().finally(() => setLoadingMatches(false)),
+        fetchOpportunities().finally(() => setLoadingOpportunities(false)),
+        fetchSparkRooms().finally(() => setLoadingRooms(false)),
+        checkFounderSyncStatus(),
+      ]);
+      toast({ title: 'Dashboard refreshed' });
+    } catch {
+      toast({ title: 'Refresh failed', variant: 'destructive' });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Check if banner was previously dismissed in this session
   useEffect(() => {
@@ -446,6 +490,16 @@ export default function Dashboard() {
           <div className="flex items-center space-x-2">
             <ThemeToggle />
             <NotificationCenter />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefreshDashboard}
+              disabled={refreshing}
+              title="Refresh dashboard data"
+            >
+              <RefreshCw className={`h-4 w-4 sm:mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate('/profile')}>
               <User className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">My Profile</span>
@@ -507,7 +561,7 @@ export default function Dashboard() {
 
           {/* Who Liked You */}
           <TabsContent value="likes" className="flex-1 min-h-0 overflow-y-auto space-y-6">
-            <WhoLikedYou />
+            {loadingMatches ? <ListSkeleton count={5} /> : <WhoLikedYou />}
           </TabsContent>
 
           {/* Messages - Embedded directly */}
@@ -517,6 +571,10 @@ export default function Dashboard() {
 
           {/* Opportunities with integrated Spark Rooms */}
           <TabsContent value="opportunities" className="flex-1 min-h-0 overflow-y-auto space-y-6">
+            {loadingOpportunities && opportunities.length === 0 ? (
+              <OpportunitiesSkeleton />
+            ) : (
+            <>
             {/* Opportunities Section */}
             <div>
               <h2 className="font-bold text-3xl mb-4">Upcoming Opportunities</h2>
@@ -710,6 +768,8 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+            </>
+            )}
           </TabsContent>
         </Tabs>
         </div>

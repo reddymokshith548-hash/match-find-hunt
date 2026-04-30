@@ -710,6 +710,7 @@ export default function ConnectionRequests() {
           </TabsContent>
         </Tabs>
       </CardContent>
+      )}
 
       {/* NDA Modal for accepting connection or starting chat */}
       {selectedConnection && (

@@ -1,40 +1,83 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 
 interface Options {
   onLongPress: () => void;
   onClick?: () => void;
   delay?: number;
   moveThreshold?: number;
+  /** Called continuously with 0..1 progress while the user is pressing. */
+  onProgress?: (progress: number) => void;
+  /** Trigger a tactile vibration on supported devices when long-press fires. */
+  haptic?: boolean;
 }
 
 /**
  * Returns handlers that distinguish a tap (click) from a long-press.
- * Works for both mouse and touch. If the press exceeds `delay` ms without
- * significant movement, `onLongPress` fires and the subsequent click is suppressed.
+ * Works for both mouse and touch. While the user is holding, `progress`
+ * (0..1) is reported via state and `onProgress` so callers can render a
+ * visible indicator. When progress hits 1, `onLongPress` fires (with an
+ * optional haptic buzz) and the trailing click is suppressed.
  */
-export function useLongPress({ onLongPress, onClick, delay = 450, moveThreshold = 10 }: Options) {
+export function useLongPress({
+  onLongPress,
+  onClick,
+  delay = 450,
+  moveThreshold = 10,
+  onProgress,
+  haptic = true,
+}: Options) {
   const timer = useRef<number | null>(null);
+  const raf = useRef<number | null>(null);
+  const startTime = useRef<number>(0);
   const triggered = useRef(false);
   const start = useRef<{ x: number; y: number } | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [pressing, setPressing] = useState(false);
 
   const clear = useCallback(() => {
     if (timer.current !== null) {
       window.clearTimeout(timer.current);
       timer.current = null;
     }
-  }, []);
+    if (raf.current !== null) {
+      cancelAnimationFrame(raf.current);
+      raf.current = null;
+    }
+    setPressing(false);
+    setProgress(0);
+    onProgress?.(0);
+  }, [onProgress]);
+
+  const tick = useCallback(() => {
+    const elapsed = performance.now() - startTime.current;
+    const p = Math.min(1, elapsed / delay);
+    setProgress(p);
+    onProgress?.(p);
+    if (p < 1) {
+      raf.current = requestAnimationFrame(tick);
+    }
+  }, [delay, onProgress]);
 
   const begin = useCallback(
     (x: number, y: number) => {
       triggered.current = false;
       start.current = { x, y };
       clear();
+      setPressing(true);
+      startTime.current = performance.now();
+      raf.current = requestAnimationFrame(tick);
       timer.current = window.setTimeout(() => {
         triggered.current = true;
+        if (haptic && typeof navigator !== "undefined" && "vibrate" in navigator) {
+          try { navigator.vibrate?.(30); } catch {}
+        }
         onLongPress();
+        // Keep the indicator visible briefly so the user sees it completed.
+        setProgress(1);
+        onProgress?.(1);
       }, delay);
     },
-    [clear, delay, onLongPress]
+    [clear, delay, haptic, onLongPress, onProgress, tick]
   );
 
   const move = useCallback(
@@ -49,8 +92,9 @@ export function useLongPress({ onLongPress, onClick, delay = 450, moveThreshold 
 
   const end = useCallback(
     (e?: { preventDefault?: () => void }) => {
+      const wasTriggered = triggered.current;
       clear();
-      if (triggered.current) {
+      if (wasTriggered) {
         e?.preventDefault?.();
         return;
       }
@@ -64,7 +108,7 @@ export function useLongPress({ onLongPress, onClick, delay = 450, moveThreshold 
     triggered.current = false;
   }, [clear]);
 
-  return {
+  const handlers = {
     onMouseDown: (e: React.MouseEvent) => begin(e.clientX, e.clientY),
     onMouseMove: (e: React.MouseEvent) => move(e.clientX, e.clientY),
     onMouseUp: (e: React.MouseEvent) => end(e),
@@ -84,6 +128,8 @@ export function useLongPress({ onLongPress, onClick, delay = 450, moveThreshold 
       if (triggered.current) e.preventDefault();
     },
   };
+
+  return { ...handlers, progress, pressing };
 }
 
 export default useLongPress;

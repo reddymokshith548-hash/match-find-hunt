@@ -95,6 +95,9 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const [viewerSkills, setViewerSkills] = useState<string[]>([]);
   const [viewerInterests, setViewerInterests] = useState<string[]>([]);
   const [useIntelligenceEngine, setUseIntelligenceEngine] = useState(false);
+  // Gate the initial match fetch until we know which engine to use, so users
+  // never see legacy RPC results flicker in before FounderSync results arrive.
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchProfile | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [generatingSummaryFor, setGeneratingSummaryFor] = useState<string | null>(null);
@@ -144,29 +147,34 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
     if (!user) return;
 
     const fetchProfile = async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, skills, interests")
-        .eq("user_id", user.id)
-        .single();
+      // Run profile + FounderSync detection in parallel so we don't block
+      // the first match fetch waiting on two sequential round-trips.
+      const [profileRes, fsRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, skills, interests")
+          .eq("user_id", user.id)
+          .single(),
+        supabase
+          .from("foundersync_results")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
 
-      if (error) {
-        console.error("Failed to fetch profile:", error);
+      if (profileRes.error) {
+        console.error("Failed to fetch profile:", profileRes.error);
+        // Even on error, unblock the fetch so the user sees something.
+        setProfileLoaded(true);
         return;
       }
 
+      const data = profileRes.data;
       setProfileId(data?.id || null);
       setViewerSkills(Array.isArray(data?.skills) ? data!.skills : []);
       setViewerInterests(Array.isArray(data?.interests) ? data!.interests : []);
-
-      // Check if user has completed FounderSync
-      const { data: fsData } = await supabase
-        .from("foundersync_results")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      setUseIntelligenceEngine(!!fsData);
+      setUseIntelligenceEngine(!!fsRes.data);
+      setProfileLoaded(true);
     };
 
     fetchProfile();
@@ -311,10 +319,12 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   };
 
   useEffect(() => {
-    if (user) {
+    // Wait until we know whether to use FounderSync, otherwise we'd fetch
+    // RPC matches first and replace them moments later when the flag flips.
+    if (user && profileLoaded) {
       fetchMatches();
     }
-  }, [user, useIntelligenceEngine]);
+  }, [user, profileLoaded, useIntelligenceEngine]);
 
   useEffect(() => {
     const interval = setInterval(() => {

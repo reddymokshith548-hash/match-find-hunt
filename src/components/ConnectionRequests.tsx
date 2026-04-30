@@ -123,18 +123,73 @@ export default function ConnectionRequests() {
     }
   }, [user]);
 
-  // Listen for client-side connection change events (sent from helpers when a
-  // request is created/cancelled). This guarantees the Sent tab refreshes
-  // immediately even if Realtime is delayed or disconnected.
+  // Listen for client-side connection events. Optimistic events let the Sent
+  // tab update the instant the user taps Send; the server-confirmed event
+  // then refetches and reconciles. This keeps the UI snappy even if Realtime
+  // is delayed or temporarily disconnected.
   useEffect(() => {
     if (!user) return;
-    const handler = () => fetchProfileAndRequests();
-    window.addEventListener('connections:changed', handler);
-    // Also refetch when the tab regains focus.
-    window.addEventListener('focus', handler);
+    const refresh = () => fetchProfileAndRequests();
+
+    const onOptimisticSent = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.tempId || !detail?.recipient) return;
+      const optimistic: SentRequest = {
+        id: detail.tempId,
+        user1_id: detail.fromProfileId,
+        user2_id: detail.recipient.id,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        nda_signed_by_user1: false,
+        nda_signed_by_user2: false,
+        recipient: {
+          id: detail.recipient.id,
+          name: detail.recipient.name || 'Unknown',
+          role: detail.recipient.role || '',
+          profile_pic_url: detail.recipient.profile_pic_url,
+          bio: detail.recipient.bio,
+          location: detail.recipient.location,
+          skills: detail.recipient.skills || [],
+          interests: detail.recipient.interests || [],
+        },
+      };
+      // Prepend (avoid duplicate if a real row already exists for same recipient).
+      setSentRequests(prev => {
+        if (prev.some(r => r.recipient?.id === optimistic.recipient.id)) return prev;
+        return [optimistic, ...prev];
+      });
+      setActiveTab('sent');
+      setCollapsed(false);
+    };
+
+    const onReconcile = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.tempId) return;
+      // Swap the temp id for the real id; a refetch will fill in any
+      // server-side fields we don't know about yet.
+      setSentRequests(prev =>
+        prev.map(r => (r.id === detail.tempId ? { ...r, id: detail.realId || r.id } : r))
+      );
+      fetchProfileAndRequests();
+    };
+
+    const onRollback = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.tempId) return;
+      setSentRequests(prev => prev.filter(r => r.id !== detail.tempId));
+    };
+
+    window.addEventListener('connections:optimistic-sent', onOptimisticSent);
+    window.addEventListener('connections:reconcile', onReconcile);
+    window.addEventListener('connections:rollback', onRollback);
+    window.addEventListener('connections:changed', refresh);
+    window.addEventListener('focus', refresh);
     return () => {
-      window.removeEventListener('connections:changed', handler);
-      window.removeEventListener('focus', handler);
+      window.removeEventListener('connections:optimistic-sent', onOptimisticSent);
+      window.removeEventListener('connections:reconcile', onReconcile);
+      window.removeEventListener('connections:rollback', onRollback);
+      window.removeEventListener('connections:changed', refresh);
+      window.removeEventListener('focus', refresh);
     };
   }, [user]);
 

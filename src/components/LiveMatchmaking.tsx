@@ -844,26 +844,52 @@ const CompactRow = ({
   onConnect,
   onPass,
 }: { profile: MatchProfile } & Omit<CompactListProps, "matches">) => {
-  const handlers = useLongPress({
+  const { progress, pressing, ...handlers } = useLongPress({
     onLongPress: () => onPeek(profile),
     onClick: () => onOpenFull(profile.id),
-    delay: 450,
+    delay: 500,
+    haptic: true,
   });
 
   const score = profile.match_score || 0;
   const skills = profile.skills || [];
+  const showFill = pressing && progress > 0.05;
 
   return (
     <div
       {...handlers}
-      className="select-none flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/40 transition-colors cursor-pointer"
+      className={`relative overflow-hidden select-none flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/40 transition-all cursor-pointer ${
+        pressing ? "scale-[0.985]" : ""
+      }`}
+      style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
     >
+      {/* Long-press fill: a soft primary wash that grows from left to right */}
+      <div
+        aria-hidden
+        className="absolute inset-y-0 left-0 bg-primary/15 pointer-events-none transition-opacity"
+        style={{
+          width: `${Math.round(progress * 100)}%`,
+          opacity: showFill ? 1 : 0,
+          transition: pressing ? "width 60ms linear" : "opacity 200ms ease",
+        }}
+      />
+      {/* Top progress bar — clearer signal that "something is happening" */}
+      <div
+        aria-hidden
+        className="absolute top-0 left-0 h-0.5 bg-primary pointer-events-none"
+        style={{
+          width: `${Math.round(progress * 100)}%`,
+          opacity: showFill ? 1 : 0,
+          transition: pressing ? "width 60ms linear" : "opacity 200ms ease",
+        }}
+      />
+
       <Avatar className="h-11 w-11 shrink-0">
         <AvatarImage src={profile.profile_pic_url} alt={profile.name} />
         <AvatarFallback className="text-xs">{(profile.name || "?").charAt(0)}</AvatarFallback>
       </Avatar>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 relative">
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium truncate">{profile.name || "Unknown"}</p>
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">

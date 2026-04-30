@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Check, X, Users, Clock, Send, Inbox, Loader2, MessageCircle } from 'lucide-react';
+import { Check, X, Users, Clock, Send, Inbox, Loader2, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
@@ -74,11 +74,16 @@ export default function ConnectionRequests() {
     isInitiator: boolean;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('received');
+  // Collapsed by default to give the matches list more vertical room.
+  // Auto-expands when there is something actionable (received requests or a deep-link).
+  const [collapsed, setCollapsed] = useState<boolean>(true);
 
   // Handle deep-link to specific connection (for NDA signing from notifications)
   useEffect(() => {
     const connectionParam = searchParams.get('connection');
     if (connectionParam && profileId && !loading) {
+      // Deep-link → make sure the panel is open
+      setCollapsed(false);
       // Find the connection and open NDA modal
       const sentRequest = sentRequests.find(r => r.id === connectionParam);
       const receivedRequest = receivedRequests.find(r => r.id === connectionParam);
@@ -166,6 +171,10 @@ export default function ConnectionRequests() {
         return true;
       });
       setReceivedRequests(validReceived as ConnectionRequest[]);
+      // Auto-expand if there are received requests waiting on the user.
+      if ((validReceived || []).length > 0) {
+        setCollapsed(false);
+      }
 
       // Fetch sent requests (where this profile is user1)
       const { data: sent, error: sentError } = await supabase
@@ -403,12 +412,36 @@ export default function ConnectionRequests() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Connection Requests
+      <CardHeader
+        className="cursor-pointer select-none"
+        onClick={() => setCollapsed((c) => !c)}
+      >
+        <CardTitle className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Connection Requests
+            {totalReceived > 0 && (
+              <Badge variant="secondary" className="ml-1">{totalReceived} new</Badge>
+            )}
+            {totalSent > 0 && (
+              <Badge variant="outline" className="ml-1 text-xs">{totalSent} sent</Badge>
+            )}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCollapsed((c) => !c);
+            }}
+            aria-label={collapsed ? 'Expand connection requests' : 'Collapse connection requests'}
+          >
+            {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+          </Button>
         </CardTitle>
       </CardHeader>
+      {!collapsed && (
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2 mb-4">

@@ -19,6 +19,11 @@ import { Lock } from "lucide-react";
 import { useDailySwipes } from "@/hooks/useDailySwipes";
 import UpgradeCTA from "@/components/UpgradeCTA";
 import MatchAISummary from "@/components/MatchAISummary";
+import { LayoutGrid, List as ListIcon } from "lucide-react";
+import useLongPress from "@/hooks/useLongPress";
+import ProfilePeekDialog from "@/components/ProfilePeekDialog";
+import { MatchesSkeleton, ListSkeleton } from "@/components/dashboard/TabSkeletons";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const getSkillColorClass = (skill: string) => {
   const lowerSkill = skill.toLowerCase();
@@ -96,6 +101,14 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const { isPaid } = usePlan();
   const { used, remaining, exhausted, refresh: refreshSwipes } = useDailySwipes();
   const goPricing = useGoToPricing();
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    if (typeof window === "undefined") return "grid";
+    return (localStorage.getItem("lm_view_mode") as "grid" | "list") || "grid";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("lm_view_mode", viewMode); } catch {}
+  }, [viewMode]);
+  const [peekProfile, setPeekProfile] = useState<MatchProfile | null>(null);
 
   const requirePaid = (featureLabel: string) => {
     if (isPaid) return true;

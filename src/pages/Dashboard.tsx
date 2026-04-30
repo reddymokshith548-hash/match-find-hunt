@@ -72,11 +72,36 @@ export default function Dashboard() {
   const [matches, setMatches] = useState<Profile[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [sparkRooms, setSparkRooms] = useState<SparkRoom[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Hydrate profile from session cache so returning from /pricing feels instant.
+  const PROFILE_CACHE_KEY = user ? `dash_profile_${user.id}` : 'dash_profile';
+  const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  const readProfileCache = () => {
+    if (!user) return null;
+    try {
+      const raw = sessionStorage.getItem(`dash_profile_${user.id}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (Date.now() - parsed.t > PROFILE_CACHE_TTL_MS) return null;
+      return parsed.data;
+    } catch {
+      return null;
+    }
+  };
+  const [loading, setLoading] = useState(() => !readProfileCache());
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [showFounderSyncBanner, setShowFounderSyncBanner] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [activeTab, setActiveTab] = useState('spark');
+  const [activeTab, setActiveTabState] = useState(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    return t && ['spark', 'matches', 'likes', 'messages', 'opportunities'].includes(t) ? t : 'spark';
+  });
+  // Persist tab selection in the URL so back-from-pricing returns to the same tab.
+  const setActiveTab = (t: string) => {
+    setActiveTabState(t);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', t);
+    setSearchParams(next, { replace: true });
+  };
   const [roomSearchQuery, setRoomSearchQuery] = useState('');
   const [createRoomDialogOpen, setCreateRoomDialogOpen] = useState(false);
   const [newRoom, setNewRoom] = useState({ name: '', description: '', topic: '', is_public: true });
@@ -86,7 +111,7 @@ export default function Dashboard() {
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam && ['spark', 'matches', 'likes', 'messages', 'opportunities'].includes(tabParam)) {
-      setActiveTab(tabParam);
+      setActiveTabState(tabParam);
     }
 
     // Post-checkout success handler
@@ -114,6 +139,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
+      // Hydrate from cache instantly so the shell paints without waiting on network.
+      const cached = readProfileCache();
+      if (cached) {
+        setProfile(cached);
+        setLoading(false);
+      }
       // Profile is the only fetch the dashboard shell waits on. Everything else
       // loads in the background so the UI paints fast.
       fetchUserProfile().finally(() => setLoading(false));
@@ -176,6 +207,9 @@ export default function Dashboard() {
       }
 
       setProfile(data);
+      try {
+        sessionStorage.setItem(`dash_profile_${user.id}`, JSON.stringify({ t: Date.now(), data }));
+      } catch {}
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast({

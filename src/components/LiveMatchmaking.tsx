@@ -89,7 +89,9 @@ const LiveMatchmaking = ({ className = "" }: LiveMatchmakingProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [matches, setMatches] = useState<MatchProfile[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Default to loading=true so the skeleton renders immediately on mount,
+  // before fetchMatches even gets a chance to flip it.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [viewerSkills, setViewerSkills] = useState<string[]>([]);

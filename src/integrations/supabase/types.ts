@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       connections: {
         Row: {
           created_at: string | null
@@ -742,6 +769,21 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      admin_list_audit_log: {
+        Args: { _limit?: number }
+        Returns: {
+          action: string
+          actor_email: string
+          actor_name: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          target_email: string
+          target_name: string
+          target_user_id: string
+        }[]
       }
       admin_list_user_plans: {
         Args: { _search?: string }

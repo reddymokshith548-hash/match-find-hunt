@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Search, Crown, User as UserIcon } from "lucide-react";
+import { sendAdminEmail } from "@/lib/adminEmail";
 
 type Row = {
   user_id: string;
@@ -41,6 +42,8 @@ export default function AdminPlans() {
 
   const setPlan = async (userId: string, plan: "free" | "pro") => {
     setUpdatingId(userId);
+    const target = rows.find((r) => r.user_id === userId);
+    const wasFree = target?.plan !== "pro";
     const { error } = await supabase.rpc("admin_set_user_plan", {
       _user_id: userId,
       _plan: plan,
@@ -54,6 +57,20 @@ export default function AdminPlans() {
     setRows((prev) =>
       prev.map((r) => (r.user_id === userId ? { ...r, plan } : r))
     );
+
+    // Fire welcome email when upgrading free -> pro
+    if (plan === "pro" && wasFree && target?.email) {
+      try {
+        await sendAdminEmail({
+          template: "pro_upgrade",
+          to: target.email,
+          data: { name: target.name ?? undefined },
+        });
+        toast.success("Beta welcome email sent");
+      } catch (e) {
+        toast.error("Plan updated, but email failed to send");
+      }
+    }
   };
 
   return (

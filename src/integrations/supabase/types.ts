@@ -116,6 +116,57 @@ export type Database = {
         }
         Relationships: []
       }
+      email_recipients: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          kind: string
+          label: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          kind?: string
+          label?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          kind?: string
+          label?: string | null
+        }
+        Relationships: []
+      }
+      email_settings: {
+        Row: {
+          app_url: string
+          enabled: boolean
+          from_email: string
+          from_name: string
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          app_url?: string
+          enabled?: boolean
+          from_email?: string
+          from_name?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          app_url?: string
+          enabled?: boolean
+          from_email?: string
+          from_name?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       foundersync_history: {
         Row: {
           answers: Json

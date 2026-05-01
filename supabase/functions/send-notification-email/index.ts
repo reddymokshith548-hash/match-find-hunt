@@ -26,6 +26,8 @@ interface Payload {
     snippet?: string;
     score?: number;
   };
+  // When provided (preview mode), use this draft template instead of the saved one.
+  override?: { subject: string; html: string };
 }
 
 function escape(s: string) {

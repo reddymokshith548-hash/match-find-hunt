@@ -140,6 +140,30 @@ export type Database = {
         }
         Relationships: []
       }
+      email_send_log: {
+        Row: {
+          id: number
+          kind: string
+          ref_id: string | null
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: number
+          kind: string
+          ref_id?: string | null
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: number
+          kind?: string
+          ref_id?: string | null
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_settings: {
         Row: {
           app_url: string
@@ -399,6 +423,27 @@ export type Database = {
           ip_address?: string | null
           profile_id?: string
           signature_data?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          email_new_match: boolean
+          email_new_message: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          email_new_match?: boolean
+          email_new_message?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          email_new_match?: boolean
+          email_new_message?: boolean
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -927,6 +972,10 @@ export type Database = {
         Returns: boolean
       }
       increment_daily_swipe: { Args: { _user_id: string }; Returns: number }
+      invoke_notification_email: {
+        Args: { _kind: string; _payload: Json; _recipient_user_id: string }
+        Returns: undefined
+      }
       my_incoming_likes_count: { Args: never; Returns: number }
       record_interaction: {
         Args: {

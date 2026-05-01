@@ -8,8 +8,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Mail, MousePointerClick, Eye, TrendingUp, MessageSquare, Sparkles } from "lucide-react";
+import {
+  Loader2,
+  Mail,
+  MousePointerClick,
+  Eye,
+  TrendingUp,
+  MessageSquare,
+  Sparkles,
+  Save,
+  RotateCcw,
+} from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -310,14 +321,47 @@ export default function AdminNotifications() {
   );
 }
 
+const DEFAULT_MATCH_SUBJECT = "🤝 New co-founder match on Lexach ({{score}}%)";
+const DEFAULT_MESSAGE_SUBJECT = "💬 New message from {{sender_name}} on Lexach";
+
+const DEFAULT_MATCH_HTML = `<p>Hi {{recipient_name}},</p>
+<p>You just matched with <strong>{{other_name}}</strong> on Lexach with a <strong>{{score}}% compatibility score</strong>.</p>
+<p>Open your dashboard to view their profile, see your compatibility breakdown, and start a connection.</p>
+<p><a href="{{cta_url}}" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;">Open Lexach</a></p>
+{{tracking_pixel}}`;
+
+const DEFAULT_MESSAGE_HTML = `<p>Hi {{recipient_name}},</p>
+<p><strong>{{sender_name}}</strong> just sent you a message:</p>
+<blockquote style="margin:14px 0;padding:12px 16px;border-left:3px solid #6366f1;background:#f8fafc;color:#334155;border-radius:4px;">{{snippet}}</blockquote>
+<p>Reply right from your Lexach inbox.</p>
+<p><a href="{{cta_url}}" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;">Open chat</a></p>
+{{tracking_pixel}}`;
+
+function defaultsFor(kind: "new_match" | "new_message") {
+  return kind === "new_match"
+    ? { subject: DEFAULT_MATCH_SUBJECT, html: DEFAULT_MATCH_HTML }
+    : { subject: DEFAULT_MESSAGE_SUBJECT, html: DEFAULT_MESSAGE_HTML };
+}
+
 function NotificationTemplatesPreview() {
   const [kind, setKind] = useState<"new_match" | "new_message">("new_match");
+
+  // Sample data
   const [recipientName, setRecipientName] = useState("Alex");
   const [otherName, setOtherName] = useState("Jordan Lee");
   const [senderName, setSenderName] = useState("Jordan Lee");
   const [snippet, setSnippet] = useState("Hey! Loved your bio — mind sharing more about your traction so far?");
   const [score, setScore] = useState(87);
 
+  // Editable template (subject + html)
+  const [draftSubject, setDraftSubject] = useState("");
+  const [draftHtml, setDraftHtml] = useState("");
+  const [savedSubject, setSavedSubject] = useState<string | null>(null);
+  const [savedHtml, setSavedHtml] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [savingTpl, setSavingTpl] = useState(false);
+
+  // Preview output
   const [html, setHtml] = useState("");
   const [subject, setSubject] = useState("");
   const [loading, setLoading] = useState(false);
@@ -325,15 +369,29 @@ function NotificationTemplatesPreview() {
   const [testEmail, setTestEmail] = useState("");
   const [sending, setSending] = useState(false);
 
+  const sample = () =>
+    kind === "new_match"
+      ? { recipient_name: recipientName, other_name: otherName, score }
+      : { recipient_name: recipientName, sender_name: senderName, snippet };
+
+  const buildOverride = () => {
+    if (!editing) return undefined;
+    if (!draftSubject.trim() || !draftHtml.trim()) return undefined;
+    return { subject: draftSubject, html: draftHtml };
+  };
+
   const renderPreview = async () => {
     setLoading(true);
     setHtml("");
-    const sample =
-      kind === "new_match"
-        ? { recipient_name: recipientName, other_name: otherName, score }
-        : { recipient_name: recipientName, sender_name: senderName, snippet };
     const { data, error } = await supabase.functions.invoke("send-notification-email", {
-      body: { kind, mode: "preview", recipient_user_id: null, payload: {}, sample },
+      body: {
+        kind,
+        mode: "preview",
+        recipient_user_id: null,
+        payload: {},
+        sample: sample(),
+        override: buildOverride(),
+      },
     });
     setLoading(false);
     if (error) {
@@ -346,6 +404,63 @@ function NotificationTemplatesPreview() {
     }
   };
 
+  const loadTemplate = async (k: "new_match" | "new_message") => {
+    const { data } = await supabase
+      .from("email_templates")
+      .select("subject,html")
+      .eq("kind", k)
+      .maybeSingle();
+    if (data) {
+      setSavedSubject(data.subject);
+      setSavedHtml(data.html);
+      setDraftSubject(data.subject);
+      setDraftHtml(data.html);
+    } else {
+      const d = defaultsFor(k);
+      setSavedSubject(null);
+      setSavedHtml(null);
+      setDraftSubject(d.subject);
+      setDraftHtml(d.html);
+    }
+  };
+
+  const saveTemplate = async () => {
+    if (!draftSubject.trim() || !draftHtml.trim()) {
+      toast.error("Subject and HTML are required");
+      return;
+    }
+    setSavingTpl(true);
+    const { error } = await supabase
+      .from("email_templates")
+      .upsert({ kind, subject: draftSubject, html: draftHtml }, { onConflict: "kind" });
+    setSavingTpl(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setSavedSubject(draftSubject);
+    setSavedHtml(draftHtml);
+    toast.success("Template saved — live for next email");
+    void renderPreview();
+  };
+
+  const resetToDefault = async () => {
+    const d = defaultsFor(kind);
+    setDraftSubject(d.subject);
+    setDraftHtml(d.html);
+    if (savedSubject !== null) {
+      const { error } = await supabase.from("email_templates").delete().eq("kind", kind);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      setSavedSubject(null);
+      setSavedHtml(null);
+      toast.success("Reverted to default template");
+    }
+    void renderPreview();
+  };
+
   const sendTest = async () => {
     const email = testEmail.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -353,12 +468,16 @@ function NotificationTemplatesPreview() {
       return;
     }
     setSending(true);
-    const sample =
-      kind === "new_match"
-        ? { recipient_name: recipientName, other_name: otherName, score }
-        : { recipient_name: recipientName, sender_name: senderName, snippet };
     const { data, error } = await supabase.functions.invoke("send-notification-email", {
-      body: { kind, mode: "test", test_email: email, recipient_user_id: null, payload: {}, sample },
+      body: {
+        kind,
+        mode: "test",
+        test_email: email,
+        recipient_user_id: null,
+        payload: {},
+        sample: sample(),
+        override: buildOverride(),
+      },
     });
     setSending(false);
     if (error || !data?.ok) {
@@ -369,12 +488,18 @@ function NotificationTemplatesPreview() {
   };
 
   useEffect(() => {
-    void renderPreview();
+    void loadTemplate(kind).then(() => renderPreview());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind]);
 
+  const isCustom = savedSubject !== null;
+  const dirty =
+    editing &&
+    (draftSubject !== (savedSubject ?? defaultsFor(kind).subject) ||
+      draftHtml !== (savedHtml ?? defaultsFor(kind).html));
+
   return (
-    <div className="grid lg:grid-cols-[320px_1fr] gap-4">
+    <div className="grid lg:grid-cols-[360px_1fr] gap-4">
       <div className="space-y-4">
         <Card>
           <CardHeader>
@@ -385,7 +510,10 @@ function NotificationTemplatesPreview() {
               <Button
                 size="sm"
                 variant={kind === "new_match" ? "default" : "outline"}
-                onClick={() => setKind("new_match")}
+                onClick={() => {
+                  setEditing(false);
+                  setKind("new_match");
+                }}
                 className="gap-1"
               >
                 <Sparkles className="h-3.5 w-3.5" /> Match
@@ -393,11 +521,22 @@ function NotificationTemplatesPreview() {
               <Button
                 size="sm"
                 variant={kind === "new_message" ? "default" : "outline"}
-                onClick={() => setKind("new_message")}
+                onClick={() => {
+                  setEditing(false);
+                  setKind("new_message");
+                }}
                 className="gap-1"
               >
                 <MessageSquare className="h-3.5 w-3.5" /> Message
               </Button>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Status:</span>
+              {isCustom ? (
+                <Badge variant="default" className="text-[10px]">Custom</Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px]">Default</Badge>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -460,29 +599,96 @@ function NotificationTemplatesPreview() {
               type="email"
             />
             <Button onClick={sendTest} disabled={sending || !testEmail.trim()} size="sm" className="w-full gap-1">
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Mail className="h-4 w-4" />
-              )}
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
               Send test email
             </Button>
             <p className="text-[11px] text-muted-foreground">
-              Uses the current sender configured in Email Settings.
+              While editing, the test uses your unsaved draft. Otherwise the saved/default template.
             </p>
           </CardContent>
         </Card>
       </div>
 
       <Card className="overflow-hidden">
-        <CardHeader className="border-b">
-          <CardTitle className="text-base flex items-center justify-between gap-2">
+        <CardHeader className="border-b flex-row items-center justify-between gap-2 space-y-0">
+          <CardTitle className="text-base flex items-center gap-2 truncate">
             <span className="truncate">{subject || "Preview"}</span>
             <Badge variant="outline">{kind}</Badge>
+            {dirty && <Badge className="text-[10px]">Unsaved</Badge>}
           </CardTitle>
+          <div className="flex gap-2">
+            {!editing ? (
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="gap-1">
+                Edit template
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setDraftSubject(savedSubject ?? defaultsFor(kind).subject);
+                    setDraftHtml(savedHtml ?? defaultsFor(kind).html);
+                    setEditing(false);
+                    void renderPreview();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" variant="outline" onClick={resetToDefault} className="gap-1">
+                  <RotateCcw className="h-3.5 w-3.5" /> Reset
+                </Button>
+                <Button size="sm" onClick={saveTemplate} disabled={savingTpl} className="gap-1">
+                  {savingTpl ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  Save
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-0 bg-muted/30">
-          {loading ? (
+          {editing ? (
+            <div className="p-4 space-y-3 bg-background">
+              <div>
+                <Label>Subject line</Label>
+                <Input
+                  value={draftSubject}
+                  onChange={(e) => setDraftSubject(e.target.value)}
+                  className="font-mono text-sm"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label>HTML body</Label>
+                  <Button size="sm" variant="ghost" onClick={renderPreview} className="text-xs h-7">
+                    <Eye className="h-3.5 w-3.5 mr-1" /> Refresh preview
+                  </Button>
+                </div>
+                <Textarea
+                  value={draftHtml}
+                  onChange={(e) => setDraftHtml(e.target.value)}
+                  rows={16}
+                  className="font-mono text-xs"
+                />
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  Available variables:{" "}
+                  <code>{`{{recipient_name}}`}</code>, <code>{`{{other_name}}`}</code>,{" "}
+                  <code>{`{{sender_name}}`}</code>, <code>{`{{snippet}}`}</code>,{" "}
+                  <code>{`{{score}}`}</code>, <code>{`{{cta_url}}`}</code>,{" "}
+                  <code>{`{{app_url}}`}</code>, <code>{`{{tracking_pixel}}`}</code>.
+                </p>
+              </div>
+              <div className="border-t pt-3">
+                <div className="text-xs text-muted-foreground mb-2">Live preview</div>
+                <iframe
+                  title="Draft preview"
+                  className="w-full bg-white border rounded-md"
+                  style={{ height: 480, border: "1px solid hsl(var(--border))" }}
+                  srcDoc={html}
+                />
+              </div>
+            </div>
+          ) : loading ? (
             <div className="p-12 flex justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>

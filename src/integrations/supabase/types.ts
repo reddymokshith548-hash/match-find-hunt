@@ -236,6 +236,30 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: {
+          html: string
+          kind: string
+          subject: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          html: string
+          kind: string
+          subject: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          html?: string
+          kind?: string
+          subject?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       foundersync_history: {
         Row: {
           answers: Json

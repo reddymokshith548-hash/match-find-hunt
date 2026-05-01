@@ -172,7 +172,7 @@ export default function SwipeCard({ profile, onSwipeLeft, onSwipeRight, style }:
 
         <CardContent className="p-0 h-full flex flex-col">
           {/* Profile Image */}
-          <div className="relative h-2/3 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
+          <div className="relative h-2/5 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
             {profile.profile_pic_url ? (
               <img
                 src={profile.profile_pic_url}
@@ -182,8 +182,8 @@ export default function SwipeCard({ profile, onSwipeLeft, onSwipeRight, style }:
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <Avatar className="w-48 h-48">
-                  <AvatarFallback className="text-6xl">{profile.name?.charAt(0)}</AvatarFallback>
+                <Avatar className="w-28 h-28">
+                  <AvatarFallback className="text-4xl">{profile.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
               </div>
             )}
@@ -192,15 +192,15 @@ export default function SwipeCard({ profile, onSwipeLeft, onSwipeRight, style }:
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             
             {/* Name and Role */}
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-              <h2 className="text-3xl font-bold mb-1">{profile.name}</h2>
-              <div className="flex items-center gap-2 text-lg mb-2">
-                <Briefcase className="w-5 h-5" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+              <h2 className="text-2xl font-bold mb-0.5">{profile.name}</h2>
+              <div className="flex items-center gap-2 text-sm mb-1">
+                <Briefcase className="w-4 h-4" />
                 <span>{profile.role}</span>
               </div>
               {profile.location && (
-                <div className="flex items-center gap-2 text-sm opacity-90">
-                  <MapPin className="w-4 h-4" />
+                <div className="flex items-center gap-2 text-xs opacity-90">
+                  <MapPin className="w-3.5 h-3.5" />
                   <span>{profile.location}</span>
                 </div>
               )}
@@ -208,7 +208,7 @@ export default function SwipeCard({ profile, onSwipeLeft, onSwipeRight, style }:
           </div>
 
           {/* Profile Details */}
-          <div className="h-1/3 p-6 overflow-y-auto">
+          <div className="h-3/5 p-5 overflow-y-auto">
             {profile.bio && (
               <p className="text-sm mb-4 leading-relaxed">{profile.bio}</p>
             )}

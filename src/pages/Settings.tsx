@@ -380,6 +380,43 @@ export default function Settings() {
         {/* Profile Settings */}
         <Card>
           <CardHeader>
+            <CardTitle>Email notifications</CardTitle>
+            <CardDescription>
+              Choose which transactional emails you want to receive from Lexach.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <Label className="text-sm font-medium">New co-founder match</Label>
+                <p className="text-xs text-muted-foreground">
+                  Get an email when you match with a new high-compatibility founder.
+                </p>
+              </div>
+              <Switch
+                checked={emailNewMatch}
+                disabled={savingPrefs}
+                onCheckedChange={(v) => updateNotificationPref('email_new_match', v)}
+              />
+            </div>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <Label className="text-sm font-medium">New chat message</Label>
+                <p className="text-xs text-muted-foreground">
+                  Get notified when someone messages you (skipped while you're online; max one per conversation every 30&nbsp;minutes).
+                </p>
+              </div>
+              <Switch
+                checked={emailNewMessage}
+                disabled={savingPrefs}
+                onCheckedChange={(v) => updateNotificationPref('email_new_message', v)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Profile Settings</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">

@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Upload, Save, Sparkles, Check } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +25,11 @@ export default function Settings() {
   const [showFounderSync, setShowFounderSync] = useState(false);
   const [founderSyncCompleted, setFounderSyncCompleted] = useState(false);
   const [founderSyncResults, setFounderSyncResults] = useState<any>(null);
+
+  // Notification preferences
+  const [emailNewMatch, setEmailNewMatch] = useState(true);
+  const [emailNewMessage, setEmailNewMessage] = useState(true);
+  const [savingPrefs, setSavingPrefs] = useState(false);
 
   // Profile fields
   const [name, setName] = useState('');
@@ -43,6 +49,7 @@ export default function Settings() {
     if (user) {
       fetchProfile();
       fetchFounderSyncResults();
+      fetchNotificationPrefs();
     }
   }, [user]);
 
@@ -102,6 +109,47 @@ export default function Settings() {
       }
     } catch (error) {
       console.error('Error fetching FounderSync results:', error);
+    }
+  };
+
+  const fetchNotificationPrefs = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('notification_preferences')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (data) {
+      setEmailNewMatch(data.email_new_match);
+      setEmailNewMessage(data.email_new_message);
+    }
+  };
+
+  const updateNotificationPref = async (
+    field: 'email_new_match' | 'email_new_message',
+    value: boolean,
+  ) => {
+    if (!user) return;
+    if (field === 'email_new_match') setEmailNewMatch(value);
+    else setEmailNewMessage(value);
+    setSavingPrefs(true);
+    const { error } = await supabase
+      .from('notification_preferences')
+      .upsert(
+        {
+          user_id: user.id,
+          email_new_match: field === 'email_new_match' ? value : emailNewMatch,
+          email_new_message: field === 'email_new_message' ? value : emailNewMessage,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      );
+    setSavingPrefs(false);
+    if (error) {
+      toast({ title: 'Could not save', description: error.message, variant: 'destructive' });
+      // revert
+      if (field === 'email_new_match') setEmailNewMatch(!value);
+      else setEmailNewMessage(!value);
     }
   };
 
@@ -330,6 +378,43 @@ export default function Settings() {
         </Card>
 
         {/* Profile Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Email notifications</CardTitle>
+            <CardDescription>
+              Choose which transactional emails you want to receive from Lexach.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <Label className="text-sm font-medium">New co-founder match</Label>
+                <p className="text-xs text-muted-foreground">
+                  Get an email when you match with a new high-compatibility founder.
+                </p>
+              </div>
+              <Switch
+                checked={emailNewMatch}
+                disabled={savingPrefs}
+                onCheckedChange={(v) => updateNotificationPref('email_new_match', v)}
+              />
+            </div>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <Label className="text-sm font-medium">New chat message</Label>
+                <p className="text-xs text-muted-foreground">
+                  Get notified when someone messages you (skipped while you're online; max one per conversation every 30&nbsp;minutes).
+                </p>
+              </div>
+              <Switch
+                checked={emailNewMessage}
+                disabled={savingPrefs}
+                onCheckedChange={(v) => updateNotificationPref('email_new_message', v)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Profile Settings</CardTitle>

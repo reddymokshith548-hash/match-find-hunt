@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/((?!_vercel|assets|.*\\..*).*)", "destination": "/index.html" }
+  ]
+}

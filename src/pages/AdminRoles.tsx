@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { sendAdminEmail } from "@/lib/adminEmail";
 import {
   Loader2,
   Search,
@@ -120,6 +121,7 @@ export default function AdminRoles() {
   const performToggle = async (p: PendingAction) => {
     const key = `${p.userId}:${p.role}`;
     setBusyKey(key);
+    const target = rows.find((r) => r.user_id === p.userId);
     const fn = p.hasRole ? "admin_revoke_role" : "admin_grant_role";
     const { error } = await supabase.rpc(fn, { _user_id: p.userId, _role: p.role });
     setBusyKey(null);
@@ -139,6 +141,19 @@ export default function AdminRoles() {
       })
     );
     fetchAudit();
+
+    // Notify the user of the role change
+    if (target?.email) {
+      try {
+        await sendAdminEmail({
+          template: p.hasRole ? "role_revoked" : "role_granted",
+          to: target.email,
+          data: { name: target.name ?? undefined, role: p.role },
+        });
+      } catch {
+        toast.error("Role updated, but notification email failed");
+      }
+    }
   };
 
   return (

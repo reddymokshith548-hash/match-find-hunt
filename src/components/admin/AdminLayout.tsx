@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation, Navigate } from "react-router-dom";
-import { Loader2, Crown, ShieldCheck, LogOut } from "lucide-react";
+import { Loader2, Crown, ShieldCheck, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdminGuard } from "@/hooks/useAdminGuard";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 const tabs = [
   { to: "/admin/plans", label: "Plans", icon: Crown },
   { to: "/admin/roles", label: "Roles", icon: ShieldCheck },
+  { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

@@ -116,6 +116,45 @@ export type Database = {
         }
         Relationships: []
       }
+      email_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          ip: string | null
+          kind: string
+          message_id: string
+          ref_id: string | null
+          url: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          ip?: string | null
+          kind: string
+          message_id: string
+          ref_id?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip?: string | null
+          kind?: string
+          message_id?: string
+          ref_id?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       email_recipients: {
         Row: {
           created_at: string
@@ -144,6 +183,7 @@ export type Database = {
         Row: {
           id: number
           kind: string
+          message_id: string | null
           ref_id: string | null
           sent_at: string
           user_id: string
@@ -151,6 +191,7 @@ export type Database = {
         Insert: {
           id?: number
           kind: string
+          message_id?: string | null
           ref_id?: string | null
           sent_at?: string
           user_id: string
@@ -158,6 +199,7 @@ export type Database = {
         Update: {
           id?: number
           kind?: string
+          message_id?: string | null
           ref_id?: string | null
           sent_at?: string
           user_id?: string
@@ -902,6 +944,30 @@ export type Database = {
           name: string
           roles: Database["public"]["Enums"]["app_role"][]
           user_id: string
+        }[]
+      }
+      admin_notification_email_stats: {
+        Args: { _kind?: string; _since?: string }
+        Returns: {
+          click_rate: number
+          clicked: number
+          conversion_rate: number
+          converted: number
+          kind: string
+          open_rate: number
+          opened: number
+          sent: number
+        }[]
+      }
+      admin_notification_email_timeseries: {
+        Args: { _since?: string }
+        Returns: {
+          clicked: number
+          converted: number
+          day: string
+          kind: string
+          opened: number
+          sent: number
         }[]
       }
       admin_revoke_role: {

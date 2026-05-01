@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+const TRACK_BASE = `${Deno.env.get("SUPABASE_URL")}/functions/v1/email-track`;
 
 type Kind = "new_match" | "new_message";
 
@@ -14,6 +15,17 @@ interface Payload {
   kind: Kind;
   recipient_user_id: string;
   payload: Record<string, unknown>;
+  // Optional: when set, function bypasses preference/cooldown checks and
+  // either returns the rendered HTML (preview) or sends to a custom address (test).
+  mode?: "preview" | "test";
+  test_email?: string;
+  sample?: {
+    recipient_name?: string;
+    other_name?: string;
+    sender_name?: string;
+    snippet?: string;
+    score?: number;
+  };
 }
 
 function escape(s: string) {
@@ -24,6 +36,19 @@ function escape(s: string) {
     .replace(/"/g, "&quot;");
 }
 
+function buildTrackingUrls(messageId: string, userId: string, kind: Kind, refId: string | null) {
+  const q = (extra: Record<string, string> = {}) => {
+    const p = new URLSearchParams({ m: messageId, u: userId, k: kind });
+    if (refId) p.set("r", refId);
+    for (const [k, v] of Object.entries(extra)) p.set(k, v);
+    return p.toString();
+  };
+  return {
+    pixel: `${TRACK_BASE}/open?${q()}`,
+    click: (dest: string) => `${TRACK_BASE}/click?${q({ d: dest })}`,
+  };
+}
+
 function baseLayout(opts: {
   appUrl: string;
   title: string;
@@ -31,8 +56,9 @@ function baseLayout(opts: {
   bodyHtml: string;
   ctaLabel?: string;
   ctaUrl?: string;
+  trackingPixelUrl?: string;
 }) {
-  const { appUrl, title, preheader, bodyHtml, ctaLabel, ctaUrl } = opts;
+  const { appUrl, title, preheader, bodyHtml, ctaLabel, ctaUrl, trackingPixelUrl } = opts;
   return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>${title}</title></head>
 <body style="margin:0;padding:0;background:#f6f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f172a;">
 <span style="display:none;visibility:hidden;opacity:0;height:0;width:0;overflow:hidden;">${preheader}</span>
@@ -54,12 +80,14 @@ function baseLayout(opts: {
     </table>
   </td></tr>
 </table>
+${trackingPixelUrl ? `<img src="${trackingPixelUrl}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;" />` : ""}
 </body></html>`;
 }
 
-function renderMatch(name: string, otherName: string, score: number, appUrl: string) {
+function renderMatch(name: string, otherName: string, score: number, appUrl: string, tracking?: ReturnType<typeof buildTrackingUrls>) {
   const safeName = escape(name);
   const safeOther = escape(otherName);
+  const dest = `${appUrl}/dashboard`;
   return {
     subject: `🤝 New co-founder match on Lexach (${score}%)`,
     html: baseLayout({
@@ -67,7 +95,8 @@ function renderMatch(name: string, otherName: string, score: number, appUrl: str
       title: "You have a new match",
       preheader: `${otherName} matched with you on Lexach (${score}% compatible).`,
       ctaLabel: "Open Lexach",
-      ctaUrl: `${appUrl}/dashboard`,
+      ctaUrl: tracking ? tracking.click(dest) : dest,
+      trackingPixelUrl: tracking?.pixel,
       bodyHtml: `
         <p>Hi ${safeName},</p>
         <p>You just matched with <strong>${safeOther}</strong> on Lexach with a <strong>${score}% compatibility score</strong>.</p>
@@ -77,10 +106,11 @@ function renderMatch(name: string, otherName: string, score: number, appUrl: str
   };
 }
 
-function renderMessage(name: string, senderName: string, snippet: string, appUrl: string) {
+function renderMessage(name: string, senderName: string, snippet: string, appUrl: string, tracking?: ReturnType<typeof buildTrackingUrls>) {
   const safeName = escape(name);
   const safeSender = escape(senderName);
   const safeSnippet = escape(snippet || "(no preview available)");
+  const dest = `${appUrl}/messages`;
   return {
     subject: `💬 New message from ${senderName} on Lexach`,
     html: baseLayout({
@@ -88,7 +118,8 @@ function renderMessage(name: string, senderName: string, snippet: string, appUrl
       title: `New message from ${senderName}`,
       preheader: `${senderName}: ${snippet}`,
       ctaLabel: "Open chat",
-      ctaUrl: `${appUrl}/messages`,
+      ctaUrl: tracking ? tracking.click(dest) : dest,
+      trackingPixelUrl: tracking?.pixel,
       bodyHtml: `
         <p>Hi ${safeName},</p>
         <p><strong>${safeSender}</strong> just sent you a message:</p>
@@ -105,8 +136,33 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    const body = (await req.json()) as Payload;
     const internal = req.headers.get("x-internal-trigger") === "lexach-db-trigger";
-    if (!internal) {
+    const isPreviewOrTest = body?.mode === "preview" || body?.mode === "test";
+
+    // Preview/test calls must come from an authenticated admin.
+    let isAdmin = false;
+    if (isPreviewOrTest) {
+      const authHeader = req.headers.get("Authorization") || "";
+      const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      if (token) {
+        const supabaseUrl0 = Deno.env.get("SUPABASE_URL")!;
+        const serviceKey0 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const admin0 = createClient(supabaseUrl0, serviceKey0);
+        const { data: u } = await admin0.auth.getUser(token);
+        if (u?.user) {
+          const { data: role } = await admin0
+            .from("user_roles").select("role")
+            .eq("user_id", u.user.id).eq("role", "admin").maybeSingle();
+          isAdmin = !!role;
+        }
+      }
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else if (!internal) {
       return new Response(JSON.stringify({ error: "forbidden" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -114,7 +170,7 @@ Deno.serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY_1") ?? Deno.env.get("RESEND_API_KEY");
-    if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
+    if ((!LOVABLE_API_KEY || !RESEND_API_KEY) && body?.mode !== "preview") {
       return new Response(JSON.stringify({ ok: false, error: "missing email creds" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -124,8 +180,7 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
 
-    const body = (await req.json()) as Payload;
-    if (!body?.kind || !body?.recipient_user_id) {
+    if (!body?.kind || (!body?.recipient_user_id && !isPreviewOrTest)) {
       return new Response(JSON.stringify({ error: "bad request" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -134,107 +189,135 @@ Deno.serve(async (req) => {
     // Settings
     const { data: settings } = await admin
       .from("email_settings").select("*").eq("id", true).maybeSingle();
-    if (!settings || settings.enabled === false) {
+    if ((!settings || settings.enabled === false) && body?.mode !== "preview") {
       return new Response(JSON.stringify({ ok: true, skipped: "emails_disabled" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const fromName = settings.from_name ?? "Lexach";
-    const fromEmail = settings.from_email ?? "onboarding@resend.dev";
-    const appUrl = settings.app_url ?? "https://lexach.vercel.app";
-    const replyTo = (settings.reply_to as string | null | undefined)?.trim() || undefined;
+    const fromName = settings?.from_name ?? "Lexach";
+    const fromEmail = settings?.from_email ?? "onboarding@resend.dev";
+    const appUrl = settings?.app_url ?? "https://lexach.vercel.app";
+    const replyTo = (settings?.reply_to as string | null | undefined)?.trim() || undefined;
 
-    // Recipient profile + email
-    const { data: profile } = await admin
-      .from("profiles").select("name,last_active")
-      .eq("user_id", body.recipient_user_id).maybeSingle();
-    const { data: userRow } = await admin.auth.admin.getUserById(body.recipient_user_id);
-    const recipientEmail = userRow?.user?.email;
-    if (!recipientEmail) {
-      return new Response(JSON.stringify({ ok: true, skipped: "no_email" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const recipientName = profile?.name ?? "there";
+    // Recipient profile + email (skipped for preview/test, where sample data is provided)
+    let recipientEmail: string | undefined;
+    let recipientName = body.sample?.recipient_name || "there";
+    let profile: { name?: string | null; last_active?: string | null } | null = null;
 
-    // Preferences
-    const { data: prefs } = await admin
-      .from("notification_preferences").select("*")
-      .eq("user_id", body.recipient_user_id).maybeSingle();
-    if (body.kind === "new_match" && prefs && prefs.email_new_match === false) {
-      return new Response(JSON.stringify({ ok: true, skipped: "pref_off" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (body.kind === "new_message" && prefs && prefs.email_new_message === false) {
-      return new Response(JSON.stringify({ ok: true, skipped: "pref_off" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!isPreviewOrTest) {
+      const { data: p } = await admin
+        .from("profiles").select("name,last_active")
+        .eq("user_id", body.recipient_user_id).maybeSingle();
+      profile = p;
+      const { data: userRow } = await admin.auth.admin.getUserById(body.recipient_user_id);
+      recipientEmail = userRow?.user?.email;
+      if (!recipientEmail) {
+        return new Response(JSON.stringify({ ok: true, skipped: "no_email" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      recipientName = profile?.name ?? "there";
+
+      // Preferences
+      const { data: prefs } = await admin
+        .from("notification_preferences").select("*")
+        .eq("user_id", body.recipient_user_id).maybeSingle();
+      if (body.kind === "new_match" && prefs && prefs.email_new_match === false) {
+        return new Response(JSON.stringify({ ok: true, skipped: "pref_off" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (body.kind === "new_message" && prefs && prefs.email_new_message === false) {
+        return new Response(JSON.stringify({ ok: true, skipped: "pref_off" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else if (body.mode === "test") {
+      recipientEmail = (body.test_email || "").trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+        return new Response(JSON.stringify({ error: "invalid test_email" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     let subject = "";
     let html = "";
     let refId: string | null = null;
+    // Generate a message_id up-front so the tracking pixel & links can reference it
+    const messageId = crypto.randomUUID();
+    const trackUserId = body.recipient_user_id || "00000000-0000-0000-0000-000000000000";
 
     if (body.kind === "new_match") {
-      const score = Number((body.payload as any)?.score ?? 0);
-      if (score < 60) {
+      const score = Number((body.payload as any)?.score ?? body.sample?.score ?? 0);
+      if (!isPreviewOrTest && score < 60) {
         return new Response(JSON.stringify({ ok: true, skipped: "low_score" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      let otherName = body.sample?.other_name || "a new founder";
       const otherUserId = (body.payload as any)?.other_user_id as string | undefined;
-      let otherName = "a new founder";
-      if (otherUserId) {
+      if (!isPreviewOrTest && otherUserId) {
         const { data: other } = await admin
           .from("profiles").select("name").eq("user_id", otherUserId).maybeSingle();
         if (other?.name) otherName = other.name;
       }
       refId = ((body.payload as any)?.match_id as string) ?? null;
-      const r = renderMatch(recipientName, otherName, score, appUrl);
+      const tracking = buildTrackingUrls(messageId, trackUserId, "new_match", refId);
+      const r = renderMatch(recipientName, otherName, score || 75, appUrl, tracking);
       subject = r.subject; html = r.html;
     } else if (body.kind === "new_message") {
-      // Online cooldown: skip if active in last 2 minutes
-      if (profile?.last_active) {
-        const last = new Date(profile.last_active).getTime();
-        if (Date.now() - last < 2 * 60 * 1000) {
-          return new Response(JSON.stringify({ ok: true, skipped: "recipient_online" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
-      // 30-min per-conversation cooldown
       const connectionId = (body.payload as any)?.connection_id as string | undefined;
-      if (connectionId) {
-        const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-        const { data: recent } = await admin
-          .from("email_send_log")
-          .select("id")
-          .eq("user_id", body.recipient_user_id)
-          .eq("kind", "new_message")
-          .eq("ref_id", connectionId)
-          .gte("sent_at", since)
-          .limit(1);
-        if (recent && recent.length > 0) {
-          return new Response(JSON.stringify({ ok: true, skipped: "cooldown" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+      if (!isPreviewOrTest) {
+        // Online cooldown: skip if active in last 2 minutes
+        if (profile?.last_active) {
+          const last = new Date(profile.last_active).getTime();
+          if (Date.now() - last < 2 * 60 * 1000) {
+            return new Response(JSON.stringify({ ok: true, skipped: "recipient_online" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
         }
-        refId = connectionId;
+        // 30-min per-conversation cooldown
+        if (connectionId) {
+          const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+          const { data: recent } = await admin
+            .from("email_send_log")
+            .select("id")
+            .eq("user_id", body.recipient_user_id)
+            .eq("kind", "new_message")
+            .eq("ref_id", connectionId)
+            .gte("sent_at", since)
+            .limit(1);
+          if (recent && recent.length > 0) {
+            return new Response(JSON.stringify({ ok: true, skipped: "cooldown" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
       }
+      if (connectionId) refId = connectionId;
+      let senderName = body.sample?.sender_name || "Someone";
       const senderUserId = (body.payload as any)?.sender_user_id as string | undefined;
-      let senderName = "Someone";
-      if (senderUserId) {
+      if (!isPreviewOrTest && senderUserId) {
         const { data: s } = await admin
           .from("profiles").select("name").eq("user_id", senderUserId).maybeSingle();
         if (s?.name) senderName = s.name;
       }
-      const snippet = String((body.payload as any)?.snippet ?? "");
-      const r = renderMessage(recipientName, senderName, snippet, appUrl);
+      const snippet = String((body.payload as any)?.snippet ?? body.sample?.snippet ?? "");
+      const tracking = buildTrackingUrls(messageId, trackUserId, "new_message", refId);
+      const r = renderMessage(recipientName, senderName, snippet, appUrl, tracking);
       subject = r.subject; html = r.html;
     } else {
       return new Response(JSON.stringify({ error: "unknown kind" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Preview mode: return rendered HTML without sending
+    if (body.mode === "preview") {
+      return new Response(JSON.stringify({ ok: true, preview: true, subject, html }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -247,7 +330,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: `${fromName} <${fromEmail}>`,
-        to: [recipientEmail],
+        to: [recipientEmail!],
         reply_to: replyTo,
         subject,
         html,
@@ -262,13 +345,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    await admin.from("email_send_log").insert({
-      user_id: body.recipient_user_id,
-      kind: body.kind,
-      ref_id: refId,
-    });
+    if (body.mode !== "test") {
+      await admin.from("email_send_log").insert({
+        user_id: body.recipient_user_id,
+        kind: body.kind,
+        ref_id: refId,
+        message_id: messageId,
+      });
+    }
 
-    return new Response(JSON.stringify({ ok: true, id: result.id }), {
+    return new Response(JSON.stringify({ ok: true, id: result.id, message_id: messageId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

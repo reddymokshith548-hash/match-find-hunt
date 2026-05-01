@@ -323,6 +323,54 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Apply custom DB template (or preview override) if available.
+    // Templates use {{placeholders}} that map to the variables we computed.
+    {
+      const score = Number((body.payload as any)?.score ?? body.sample?.score ?? 75);
+      const otherName =
+        body.kind === "new_match"
+          ? (body.sample?.other_name ?? "")
+          : "";
+      const senderName =
+        body.kind === "new_message"
+          ? (body.sample?.sender_name ?? "")
+          : "";
+      const snippet =
+        String((body.payload as any)?.snippet ?? body.sample?.snippet ?? "");
+      const cta = body.kind === "new_match" ? `${appUrl}/dashboard` : `${appUrl}/messages`;
+      const tracking = buildTrackingUrls(messageId, trackUserId, body.kind, refId);
+      const ctaUrl = tracking.click(cta);
+      const trackingPixelTag = `<img src="${tracking.pixel}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;" />`;
+
+      const vars: Record<string, string | number> = {
+        recipient_name: escape(recipientName),
+        other_name: escape(otherName || ""),
+        sender_name: escape(senderName || ""),
+        snippet: escape(snippet),
+        score,
+        app_url: appUrl,
+        cta_url: ctaUrl,
+        tracking_pixel: trackingPixelTag,
+      };
+
+      let tpl: { subject: string; html: string } | null = null;
+      if (body.override && body.override.subject && body.override.html) {
+        tpl = body.override;
+      } else {
+        const { data: row } = await admin
+          .from("email_templates")
+          .select("subject,html")
+          .eq("kind", body.kind)
+          .maybeSingle();
+        if (row?.subject && row?.html) tpl = { subject: row.subject, html: row.html };
+      }
+
+      if (tpl) {
+        subject = applyVars(tpl.subject, vars);
+        html = applyVars(tpl.html, vars);
+      }
+    }
+
     // Preview mode: return rendered HTML without sending
     if (body.mode === "preview") {
       return new Response(JSON.stringify({ ok: true, preview: true, subject, html }), {

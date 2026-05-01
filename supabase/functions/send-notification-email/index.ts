@@ -49,6 +49,13 @@ function buildTrackingUrls(messageId: string, userId: string, kind: Kind, refId:
   };
 }
 
+function applyVars(template: string, vars: Record<string, string | number>) {
+  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => {
+    const v = vars[key];
+    return v === undefined || v === null ? "" : String(v);
+  });
+}
+
 function baseLayout(opts: {
   appUrl: string;
   title: string;

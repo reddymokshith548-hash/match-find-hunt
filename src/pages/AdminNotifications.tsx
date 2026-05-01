@@ -8,8 +8,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Mail, MousePointerClick, Eye, TrendingUp, MessageSquare, Sparkles } from "lucide-react";
+import {
+  Loader2,
+  Mail,
+  MousePointerClick,
+  Eye,
+  TrendingUp,
+  MessageSquare,
+  Sparkles,
+  Save,
+  RotateCcw,
+} from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,

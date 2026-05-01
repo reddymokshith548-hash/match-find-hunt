@@ -166,6 +166,7 @@ Deno.serve(async (req) => {
     const fromName = settings?.from_name ?? "Lexach";
     const fromEmail = settings?.from_email ?? "onboarding@resend.dev";
     const appUrl = settings?.app_url ?? "https://lexach.vercel.app";
+    const replyTo = (settings?.reply_to as string | null | undefined)?.trim() || undefined;
 
     const rendered = render(body.template, body.data ?? {}, appUrl);
 
@@ -197,6 +198,7 @@ Deno.serve(async (req) => {
         to: [body.to],
         cc: cc.length ? cc : undefined,
         bcc: bcc.length ? bcc : undefined,
+        reply_to: replyTo,
         subject: rendered.subject,
         html: rendered.html,
       }),

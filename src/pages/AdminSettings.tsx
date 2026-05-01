@@ -21,6 +21,7 @@ type Settings = {
   from_name: string;
   from_email: string;
   app_url: string;
+  reply_to: string | null;
 };
 
 type Recipient = {
@@ -48,6 +49,8 @@ export default function AdminSettings() {
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [previewSubject, setPreviewSubject] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [testingTpl, setTestingTpl] = useState<AdminEmailTemplate | null>(null);
+  const [testEmail, setTestEmail] = useState("");
 
   const load = async () => {
     const [s, r] = await Promise.all([
@@ -72,6 +75,7 @@ export default function AdminSettings() {
         from_name: settings.from_name,
         from_email: settings.from_email,
         app_url: settings.app_url,
+        reply_to: settings.reply_to?.trim() ? settings.reply_to.trim() : null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", true);
@@ -81,6 +85,31 @@ export default function AdminSettings() {
       return;
     }
     toast.success("Settings saved");
+  };
+
+  const sendTest = async (tpl: AdminEmailTemplate) => {
+    const email = testEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Enter a valid test email address");
+      return;
+    }
+    setTestingTpl(tpl);
+    try {
+      const res = await sendAdminEmail({
+        template: tpl,
+        to: email,
+        data: { name: "Alex", role: "moderator" },
+      });
+      if ("skipped" in res && res.skipped) {
+        toast.error("Email sending is disabled — turn it on above.");
+      } else {
+        toast.success(`Test email sent to ${email}`);
+      }
+    } catch (e) {
+      toast.error("Test send failed — check edge function logs");
+    } finally {
+      setTestingTpl(null);
+    }
   };
 
   const addRecipient = async () => {
@@ -197,6 +226,17 @@ export default function AdminSettings() {
                 onChange={(e) => setSettings({ ...settings, app_url: e.target.value })}
               />
             </div>
+            <div className="sm:col-span-2">
+              <Label>Reply-To (optional)</Label>
+              <Input
+                placeholder="hello@lexach.com"
+                value={settings.reply_to ?? ""}
+                onChange={(e) => setSettings({ ...settings, reply_to: e.target.value })}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                When a recipient hits Reply, their reply goes here instead of the From address.
+              </p>
+            </div>
           </div>
 
           <div className="flex justify-end">
@@ -265,20 +305,47 @@ export default function AdminSettings() {
           <div>
             <div className="font-semibold">Email templates</div>
             <p className="text-xs text-muted-foreground">
-              Preview the rendered HTML for each notification.
+              Preview the rendered HTML, or send a real test to your inbox.
             </p>
           </div>
+
+          <div className="flex gap-2 items-center">
+            <Input
+              placeholder="your@email.com (for test sends)"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              type="email"
+            />
+          </div>
+
           <div className="grid sm:grid-cols-3 gap-2">
             {TEMPLATES.map((t) => (
-              <Button
-                key={t.value}
-                variant="outline"
-                className="justify-start gap-2 h-auto py-3"
-                onClick={() => openPreview(t.value)}
-              >
-                <Eye className="h-4 w-4 shrink-0" />
-                <span className="text-left text-sm">{t.label}</span>
-              </Button>
+              <div key={t.value} className="border rounded-md p-3 space-y-2">
+                <div className="text-sm font-medium">{t.label}</div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1 flex-1"
+                    onClick={() => openPreview(t.value)}
+                  >
+                    <Eye className="h-3.5 w-3.5" /> Preview
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-1 flex-1"
+                    disabled={testingTpl === t.value || !testEmail.trim()}
+                    onClick={() => sendTest(t.value)}
+                  >
+                    {testingTpl === t.value ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Mail className="h-3.5 w-3.5" />
+                    )}
+                    Test
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         </section>

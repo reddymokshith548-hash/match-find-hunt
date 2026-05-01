@@ -147,6 +147,7 @@ export type Database = {
           from_email: string
           from_name: string
           id: boolean
+          reply_to: string | null
           updated_at: string
         }
         Insert: {
@@ -155,6 +156,7 @@ export type Database = {
           from_email?: string
           from_name?: string
           id?: boolean
+          reply_to?: string | null
           updated_at?: string
         }
         Update: {
@@ -163,6 +165,7 @@ export type Database = {
           from_email?: string
           from_name?: string
           id?: boolean
+          reply_to?: string | null
           updated_at?: string
         }
         Relationships: []

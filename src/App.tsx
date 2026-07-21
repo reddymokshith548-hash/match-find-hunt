@@ -26,6 +26,7 @@ import AdminRoles from "./pages/AdminRoles";
 import AdminLogin from "./pages/AdminLogin";
 import AdminSettings from "./pages/AdminSettings";
 import AdminNotifications from "./pages/AdminNotifications";
+import AdminSecurityEvents from "./pages/AdminSecurityEvents";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ const App = () => (
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
         <Route path="/admin/notifications" element={<ProtectedRoute><AdminNotifications /></ProtectedRoute>} />
+        <Route path="/admin/security" element={<ProtectedRoute><AdminSecurityEvents /></ProtectedRoute>} />
               <Route path="/auth" element={<Navigate to="/login" />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

@@ -1108,6 +1108,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      client_log_auth_event: {
+        Args: { _details?: Json; _event_type: string }
+        Returns: undefined
+      }
       create_notification: {
         Args: {
           p_message: string

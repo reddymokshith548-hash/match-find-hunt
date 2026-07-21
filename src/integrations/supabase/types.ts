@@ -718,6 +718,42 @@ export type Database = {
         }
         Relationships: []
       }
+      security_events: {
+        Row: {
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          ip_hash: string | null
+          path: string | null
+          severity: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          ip_hash?: string | null
+          path?: string | null
+          severity?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          ip_hash?: string | null
+          path?: string | null
+          severity?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       skill_categories: {
         Row: {
           color_code: string
@@ -1031,6 +1067,26 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_security_events: {
+        Args: { _limit?: number; _severity?: string }
+        Returns: {
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          ip_hash: string | null
+          path: string | null
+          severity: string
+          user_agent: string | null
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "security_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_set_user_plan: {
         Args: {
           _plan: Database["public"]["Enums"]["plan_tier"]
@@ -1051,6 +1107,10 @@ export type Database = {
           _window_seconds?: number
         }
         Returns: boolean
+      }
+      client_log_auth_event: {
+        Args: { _details?: Json; _event_type: string }
+        Returns: undefined
       }
       create_notification: {
         Args: {
@@ -1104,6 +1164,18 @@ export type Database = {
       increment_daily_swipe: { Args: { _user_id: string }; Returns: number }
       invoke_notification_email: {
         Args: { _kind: string; _payload: Json; _recipient_user_id: string }
+        Returns: undefined
+      }
+      log_security_event: {
+        Args: {
+          _details?: Json
+          _event_type: string
+          _ip_hash?: string
+          _path?: string
+          _severity?: string
+          _user_agent?: string
+          _user_id?: string
+        }
         Returns: undefined
       }
       my_incoming_likes_count: { Args: never; Returns: number }

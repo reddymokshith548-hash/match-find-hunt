@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Globe, Phone, Mail, User } from "lucide-react";
 import { signUpSchema, type SignUpFormData } from "@/lib/validationSchemas";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
+
+const HCAPTCHA_SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY as string | undefined;
 const SignUp = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha | null>(null);
   const navigate = useNavigate();
   const {
     toast
@@ -58,6 +63,10 @@ const SignUp = () => {
   }, [navigate]);
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (HCAPTCHA_SITE_KEY && !captchaToken) {
+      toast({ title: "Verify you're human", description: "Please complete the CAPTCHA below.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       // Validate input data
@@ -77,16 +86,25 @@ const SignUp = () => {
           emailRedirectTo: redirectUrl,
           data: {
             full_name: validatedData.fullName
-          }
+          },
+          captchaToken: captchaToken ?? undefined,
         }
       });
-      if (error) throw error;
+      if (error) {
+        supabase.rpc("client_log_auth_event", {
+          _event_type: "signup_blocked",
+          _details: { email: validatedData.email, reason: error.message },
+        }).then(() => {});
+        throw error;
+      }
       toast({
         title: "Account Created!",
         description: "Please check your email to confirm your account."
       });
       navigate('/onboarding');
     } catch (error: any) {
+      captchaRef.current?.resetCaptcha();
+      setCaptchaToken(null);
       if (error.issues) {
         // Zod validation errors
         const firstError = error.issues[0];
@@ -209,6 +227,20 @@ const SignUp = () => {
             <Button type="submit" disabled={loading} size="lg" className="w-full hover-3d transition-all duration-300 bg-accent text-base">
               {loading ? "Creating account..." : "Get Started"}
             </Button>
+            {HCAPTCHA_SITE_KEY && (
+              <div className="flex justify-center pt-2">
+                <HCaptcha
+                  ref={captchaRef}
+                  sitekey={HCAPTCHA_SITE_KEY}
+                  onVerify={(t) => setCaptchaToken(t)}
+                  onExpire={() => setCaptchaToken(null)}
+                  onError={() => {
+                    setCaptchaToken(null);
+                    supabase.rpc("client_log_auth_event", { _event_type: "captcha_failed", _details: { page: "signup" } }).then(() => {});
+                  }}
+                />
+              </div>
+            )}
           </form>
 
           {/* Language Toggle (Optional) */}

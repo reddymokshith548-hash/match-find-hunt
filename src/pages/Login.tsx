@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +10,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Globe, Phone, Mail } from "lucide-react";
 import { loginSchema, type LoginFormData } from "@/lib/validationSchemas";
 import WireframeLoader from "@/components/WireframeLoader";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
+
+const HCAPTCHA_SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY as string | undefined;
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha | null>(null);
   const navigate = useNavigate();
   const {
     toast
@@ -35,6 +40,10 @@ const Login = () => {
   }, [navigate]);
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (HCAPTCHA_SITE_KEY && !captchaToken) {
+      toast({ title: "Verify you're human", description: "Please complete the CAPTCHA below.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       // Validate input data
@@ -46,9 +55,17 @@ const Login = () => {
         error
       } = await supabase.auth.signInWithPassword({
         email: validatedData.email,
-        password: validatedData.password
+        password: validatedData.password,
+        options: captchaToken ? { captchaToken } : undefined,
       });
-      if (error) throw error;
+      if (error) {
+        // Log failed login for admin monitoring (fire and forget)
+        supabase.rpc("client_log_auth_event", {
+          _event_type: "failed_login",
+          _details: { email: validatedData.email, reason: error.message },
+        }).then(() => {});
+        throw error;
+      }
       toast({
         title: "Welcome back!",
         description: "You've successfully signed in."
@@ -56,6 +73,9 @@ const Login = () => {
       setShowLoader(true);
       setTimeout(() => navigate('/dashboard'), 3200);
     } catch (error: any) {
+      // Reset captcha so the next attempt gets a fresh token
+      captchaRef.current?.resetCaptcha();
+      setCaptchaToken(null);
       if (error.issues) {
         // Zod validation errors
         const firstError = error.issues[0];
@@ -193,6 +213,20 @@ const Login = () => {
             <Button type="submit" className="w-full hover-3d transition-all duration-300 bg-primary" disabled={loading} size="lg">
               {loading ? "Signing in..." : "Sign In"}
             </Button>
+            {HCAPTCHA_SITE_KEY && (
+              <div className="flex justify-center pt-2">
+                <HCaptcha
+                  ref={captchaRef}
+                  sitekey={HCAPTCHA_SITE_KEY}
+                  onVerify={(t) => setCaptchaToken(t)}
+                  onExpire={() => setCaptchaToken(null)}
+                  onError={() => {
+                    setCaptchaToken(null);
+                    supabase.rpc("client_log_auth_event", { _event_type: "captcha_failed", _details: { page: "login" } }).then(() => {});
+                  }}
+                />
+              </div>
+            )}
           </form>
 
           <div className="text-center">

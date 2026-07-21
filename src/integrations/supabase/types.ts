@@ -688,6 +688,36 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          bucket: string
+          count: number
+          created_at: string
+          id: string
+          ip_hash: string | null
+          user_id: string | null
+          window_start: string
+        }
+        Insert: {
+          bucket: string
+          count?: number
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          user_id?: string | null
+          window_start?: string
+        }
+        Update: {
+          bucket?: string
+          count?: number
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          user_id?: string | null
+          window_start?: string
+        }
+        Relationships: []
+      }
       skill_categories: {
         Row: {
           color_code: string
@@ -1010,6 +1040,16 @@ export type Database = {
       }
       can_access_connection: {
         Args: { _connection_id: string }
+        Returns: boolean
+      }
+      check_rate_limit: {
+        Args: {
+          _bucket: string
+          _ip_hash: string
+          _limit: number
+          _user_id: string
+          _window_seconds?: number
+        }
         Returns: boolean
       }
       create_notification: {

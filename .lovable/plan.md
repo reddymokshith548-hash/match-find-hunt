@@ -1,79 +1,61 @@
-# Match & Message Email Notifications
+## Goal
 
-Send branded Lexach emails (via existing Resend setup) when a user gets a new co-founder match or a new chat message — without spamming.
+Swap the current Stripe stub for a working **Razorpay** checkout on `/pricing`. Zero setup fees, ~2% per successful transaction. Test mode works immediately; going live only needs the user to paste live keys later.
 
-## What gets sent
+## What changes
 
-1. **New Match email** — when a row is inserted into `matches`. Both users receive a branded email: "You have a new co-founder match on Lexach" with the other user's name + match score and a CTA to `lexach.vercel.app/dashboard`.
-2. **New Message email** — when a row is inserted into `messages`. The receiver gets "{Sender} sent you a message on Lexach" with a snippet (first ~120 chars, sanitized) and a CTA to `lexach.vercel.app/messages`.
+### 1. Secrets
+Request two secrets (Razorpay Dashboard → Settings → API Keys, "Generate Test Keys"):
+- `RAZORPAY_KEY_ID` (starts with `rzp_test_` or `rzp_live_`)
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET` (created later in Dashboard → Webhooks; used to verify activation callbacks)
 
-Both reuse the existing branded `baseLayout` already used for plan/role emails so styling stays consistent.
+### 2. Database migration
+Add a `payment_orders` table to track Razorpay orders → user → plan mapping so the webhook can activate the right subscription:
 
-## Anti-spam / quality rules
+- `id` (uuid), `user_id`, `razorpay_order_id` (unique), `razorpay_payment_id`, `plan` (starter | pro), `cycle` (monthly | halfyear), `amount_paise` (int), `status` (created | paid | failed), timestamps.
+- RLS: user can read their own orders; service_role full access (webhook writes).
 
-- **Per-user preferences**: new table `notification_preferences` (one row per user, defaults on) with toggles `email_new_match` and `email_new_message`. Users can flip them in `/settings`.
-- **Cooldown for messages**: only send a message email if the receiver has had no email for that conversation in the last 30 minutes (avoids one-email-per-line during active chat). Tracked in a small `email_send_log` table (`user_id, kind, ref_id, sent_at`).
-- **Skip if recipient is online**: if `profiles.last_active` is within the last 2 minutes for a message email, skip (they're already in the app).
-- **Match score floor**: only send match emails for matches with `final_score >= 60` (or `match_score` if final is null) to avoid noisy low-quality alerts.
-- **No self-emails** and no emails when the global `email_settings.enabled` is false.
+### 3. Edge functions
 
-## Technical plan
+**`create-razorpay-order`** (replaces the Stripe stub the button calls)
+- Auth: verify JWT, get user id + email.
+- Input: `{ plan: "starter" | "pro", cycle: "monthly" | "halfyear" }`.
+- Server-side price map (same as today): 499 / 990 / 2990 INR → paise.
+- Calls Razorpay `POST /v1/orders` with amount, currency `INR`, receipt, and notes (`user_id`, `plan`, `cycle`).
+- Inserts a row in `payment_orders` with `status='created'`.
+- Returns `{ order_id, amount, currency, key_id, name, description, prefill: { email } }` to the frontend.
 
-### 1. Database (one migration)
+**`razorpay-webhook`** (public, no JWT — Razorpay calls it)
+- Verifies `X-Razorpay-Signature` HMAC-SHA256 using `RAZORPAY_WEBHOOK_SECRET`.
+- On `payment.captured` (and `order.paid`): look up `payment_orders` by `razorpay_order_id`, mark `paid`, then upsert `subscriptions` for that user: `plan='pro'|'starter'`, `status='active'`, `current_period_end = now() + interval` (1 month for monthly, 6 months for halfyear).
+- On `payment.failed`: mark order `failed`. No subscription change.
+- Idempotent (safe to re-deliver).
 
-- Create `public.notification_preferences`:
-  - `user_id uuid PK references auth.users on delete cascade`
-  - `email_new_match boolean not null default true`
-  - `email_new_message boolean not null default true`
-  - `updated_at timestamptz default now()`
-  - RLS: owner can `select`/`insert`/`update` own row.
-- Create `public.email_send_log`:
-  - `id bigserial PK, user_id uuid, kind text, ref_id uuid, sent_at timestamptz default now()`
-  - Index on `(user_id, kind, ref_id, sent_at desc)`.
-  - RLS: only service role reads/writes (no client policies).
-
-### 2. New edge function: `send-notification-email`
-
-Public (verify_jwt = false) — invoked from DB triggers via `pg_net` with the service role key, and idempotent.
-
-Body: `{ kind: "new_match" | "new_message", recipient_user_id, payload: {...} }`.
-
-Logic:
-- Load `email_settings` (reuse existing row); abort if `enabled = false`.
-- Load recipient's `auth.users.email`, `profiles.name`, `profiles.last_active`, and `notification_preferences`.
-- Apply the rules above (pref off, online, cooldown, score floor) → return `{skipped: reason}`.
-- Render with new templates `new_match` and `new_message` reusing `baseLayout`.
-- Send through the existing Resend gateway with the verified `noreply@…` sender.
-- Insert into `email_send_log`.
-
-### 3. DB triggers (in same migration)
-
-- `AFTER INSERT ON public.matches` → for each side, call `net.http_post` to `send-notification-email` with `kind=new_match`.
-- `AFTER INSERT ON public.messages` → call it for `receiver_id` with `kind=new_message` and a sanitized snippet.
-
-Triggers use `SECURITY DEFINER` and read the function URL + service role key from a small `app_settings` row (or hardcode the project URL — already known).
+Both use CORS headers. `verify_jwt = false` set for the webhook in `supabase/config.toml`.
 
 ### 4. Frontend
 
-- Add a **Notifications** section to `src/pages/Settings.tsx` with two switches bound to `notification_preferences` (auto-create row on first load).
-- Add to `/admin/settings` a "Send test" picker for the two new templates so admins can preview.
-- Extend `email-templates` preview list in `AdminSettings.tsx` to include `new_match` and `new_message`.
+**`src/hooks/useCheckout.tsx`** (rewrite)
+- On click: call `create-razorpay-order` → receive order details.
+- Dynamically inject `https://checkout.razorpay.com/v1/checkout.js` once.
+- Open Razorpay Checkout modal with the returned options + a `handler` that navigates to `/dashboard?checkout=success&plan=…` (the webhook does the real activation — this is just UX).
+- `ondismiss` → navigate to `/pricing?checkout=cancelled`.
 
-### 5. Files touched
+**`src/pages/Pricing.tsx`** — no visible copy changes needed beyond removing any "Stripe" mentions; the button flow is identical.
 
-```text
-supabase/migrations/<new>.sql                        (new: tables, RLS, triggers)
-supabase/functions/send-notification-email/index.ts  (new)
-src/pages/Settings.tsx                               (add notification toggles)
-src/pages/AdminSettings.tsx                          (add 2 new test templates)
-src/lib/adminEmail.ts                                (extend template union)
-src/integrations/supabase/types.ts                   (auto-regenerated)
-```
+### 5. Cleanup
+- Leave `supabase/functions/create-checkout/` in place but unused (or delete it — user's call). Recommendation: delete to avoid confusion.
+- Update the FAQ line "Payments coming soon — Stripe" wording to just "Secure payments via Razorpay (UPI, cards, netbanking, wallets)".
 
-No changes needed to the existing `send-app-email` function or to admin/plans/roles flows.
+## Webhook URL to paste in Razorpay Dashboard
 
-## Out of scope
+`https://vagrjonewjbjeuotsrya.supabase.co/functions/v1/razorpay-webhook`
 
-- In-app push/web-push notifications (separate system).
-- Digest/daily-summary emails (would be marketing-style, not 1:1 transactional).
-- Editing the unsubscribe footer — Resend handles list-unsubscribe headers; we'll add a simple "Manage notifications" link to `/settings` in each email body.
+Subscribed events: `payment.captured`, `payment.failed`, `order.paid`.
+
+## Notes / non-goals
+
+- **One-time payments only** for now — the 6-month plan is a single ₹2,990 charge; the 1-month plans will also charge once and require the user to re-pay next month. True auto-renewing subscriptions (Razorpay Subscriptions + e-mandate) is a bigger add-on we can layer on later.
+- Live payments require the user to complete Razorpay KYC (PAN + bank account for individual) and swap test keys for live keys. No code changes needed at that point.
+- I'll ask for the API keys via the secure secret form only after you approve this plan.

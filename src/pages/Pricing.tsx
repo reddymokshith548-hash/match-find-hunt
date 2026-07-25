@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useCheckout } from "@/hooks/useCheckout";
 import { usePlan } from "@/hooks/usePlan";
 
-type PlanKey = "monthly" | "promonth" | "halfyear";
+type PlanKey = "monthly" | "promonth";
 
 const FREE_FEATURES = [
   { icon: Check, label: "10 swipes per day" },
@@ -64,13 +64,12 @@ const Pricing = () => {
   }, [searchParams, setSearchParams]);
 
   const handleSubscribe = (planKey: PlanKey) => {
-    // Both Pro tiles map to "pro" tier. The 6-month tile sets a longer billing cycle server-side.
     const stripePlan = planKey === "monthly" ? "starter" : "pro";
     if (currentPlan === stripePlan || (currentPlan === "pro" && stripePlan === "starter")) {
       toast.info("You're already on this plan");
       return;
     }
-    void startCheckout(stripePlan, planKey === "halfyear" ? "halfyear" : "monthly");
+    void startCheckout(stripePlan, "monthly");
   };
 
   return (
@@ -115,7 +114,7 @@ const Pricing = () => {
 
         {/* Plans */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="grid md:grid-cols-3 gap-6 lg:gap-6 mt-8">
+          <div className="grid md:grid-cols-2 gap-6 lg:gap-6 mt-8 max-w-4xl mx-auto">
             {/* Monthly Plan */}
             <Card
               variant="profile"
@@ -232,70 +231,6 @@ const Pricing = () => {
               </div>
             </Card>
 
-            {/* Pro · 6 Months (best value) */}
-            <Card
-              variant="profile"
-              className={`relative p-7 cursor-pointer transition-all ${
-                selected === "halfyear"
-                  ? "ring-2 ring-primary/60 shadow-xl"
-                  : "hover:ring-1 hover:ring-primary/30"
-              }`}
-              onClick={() => setSelected("halfyear")}
-            >
-              <Badge variant="secondary" className="absolute -top-3 left-1/2 -translate-x-1/2 shadow-md">
-                Best Value · Save 50%
-              </Badge>
-
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-2xl font-bold mb-2">Pro · 6 Months</h3>
-                  <p className="text-sm text-muted-foreground">
-                    All Pro features, half the monthly cost.
-                  </p>
-                </div>
-
-                <div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg text-muted-foreground line-through">₹5,940</span>
-                    <span className="text-5xl font-bold tracking-tight">₹2,990</span>
-                  </div>
-                  <p className="text-xs text-primary mt-1 font-medium">
-                    Just ₹498/month — billed once for 6 months
-                  </p>
-                </div>
-
-                <div className="h-px bg-border" />
-
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
-                    Includes everything in Pro:
-                  </p>
-                  <ul className="space-y-3">
-                    {PRO_EXTRA_FEATURES.map((feature) => (
-                      <li key={feature} className="flex items-start gap-3 text-sm">
-                        <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full border-primary/40"
-                  disabled={loading === "pro"}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSubscribe("halfyear");
-                  }}
-                >
-                  {loading === "pro" ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Redirecting…</>
-                  ) : "Get 6 Months"}
-                </Button>
-              </div>
-            </Card>
           </div>
 
           {/* Free tier reference */}

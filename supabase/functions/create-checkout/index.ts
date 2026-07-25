@@ -3,23 +3,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-/**
- * Creates a Stripe Checkout Session for the requested plan and returns the
- * hosted-checkout URL to redirect the user to. If STRIPE_SECRET_KEY isn't set
- * yet, returns 501 with a friendly message so the UI can fall back gracefully.
- *
- * Request body: { plan: "starter" | "pro", success_path?: string, cancel_path?: string }
- */
-type PriceKey = "starter" | "pro_monthly" | "pro_halfyear";
-const PLAN_PRICES: Record<PriceKey, { amount: number; interval: "month" | "year" | "one_time"; label: string }> = {
-  starter:      { amount:  49900, interval: "month",    label: "Lexach Starter (1 month)" },
-  pro_monthly:  { amount:  99000, interval: "month",    label: "Lexach Pro (1 month)" },
-  pro_halfyear: { amount: 299000, interval: "one_time", label: "Lexach Pro (6 months)" },
+// DODO Payments product IDs (test mode)
+const PRODUCT_IDS: Record<string, string> = {
+  starter: "pdt_0NjfmM1mFlczj3BrxvPkV",
+  pro:     "pdt_0Njfo8F2EyOs2kSEYrqTu",
 };
+
+const DODO_BASE = Deno.env.get("DODO_PAYMENTS_BASE_URL") ?? "https://test.dodopayments.com";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -30,7 +23,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const dodoKey = Deno.env.get("DODO_PAYMENTS_API_KEY");
 
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -42,64 +35,83 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const plan = String(body.plan ?? "");
-    const cycle = String(body.cycle ?? "monthly");
-    const priceKey: PriceKey | null =
-      plan === "starter" ? "starter"
-      : plan === "pro" && cycle === "halfyear" ? "pro_halfyear"
-      : plan === "pro" ? "pro_monthly"
-      : null;
-    if (!priceKey) return json({ error: "invalid_plan" }, 400);
+    const productId = PRODUCT_IDS[plan];
+    if (!productId) return json({ error: "invalid_plan" }, 400);
 
-    const origin = req.headers.get("origin") ?? "";
-    const successPath = typeof body.success_path === "string" ? body.success_path : "/dashboard";
-    const cancelPath  = typeof body.cancel_path  === "string" ? body.cancel_path  : "/pricing";
-    const successUrl = `${origin}${successPath}?checkout=success&plan=${plan}&session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl  = `${origin}${cancelPath}?checkout=cancelled`;
-
-    if (!stripeKey) {
-      // Stripe not enabled yet — surface a clear, actionable error to the UI.
+    if (!dodoKey) {
       return json({
         error: "checkout_not_configured",
-        message: "Payments aren't live yet. Add STRIPE_SECRET_KEY to enable checkout.",
-        plan,
+        message: "Payments aren't live yet. DODO_PAYMENTS_API_KEY is missing.",
       }, 501);
     }
 
-    const price = PLAN_PRICES[priceKey];
-    const params = new URLSearchParams();
-    params.set("mode", price.interval === "one_time" ? "payment" : "subscription");
-    params.set("success_url", successUrl);
-    params.set("cancel_url", cancelUrl);
-    if (email) params.set("customer_email", email);
-    params.set("client_reference_id", userId);
-    params.set("metadata[user_id]", userId);
-    params.set("metadata[plan]", plan);
-    params.set("metadata[cycle]", cycle);
-    params.append("line_items[0][quantity]", "1");
-    params.append("line_items[0][price_data][currency]", "inr");
-    params.append("line_items[0][price_data][product_data][name]", price.label);
-    params.append("line_items[0][price_data][unit_amount]", String(price.amount));
-    if (price.interval !== "one_time") {
-      params.append("line_items[0][price_data][recurring][interval]", price.interval);
-    }
+    const origin = req.headers.get("origin") ?? "";
+    const successPath = typeof body.success_path === "string" ? body.success_path : "/dashboard";
+    const returnUrl = `${origin}${successPath}?checkout=success&plan=${plan}`;
 
-    const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    // Load profile for name/address
+    const svc = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: profile } = await svc
+      .from("profiles").select("name, location").eq("user_id", userId).maybeSingle();
+
+    const customerName = profile?.name || (email ? email.split("@")[0] : "Lexach User");
+
+    // Create a subscription on Dodo Payments
+    const payload = {
+      product_id: productId,
+      quantity: 1,
+      payment_link: true,
+      return_url: returnUrl,
+      customer: {
+        email: email ?? "no-reply@lexach.com",
+        name: customerName,
+      },
+      billing: {
+        city: "NA",
+        country: "IN",
+        state: "NA",
+        street: "NA",
+        zipcode: "000000",
+      },
+      metadata: {
+        user_id: userId,
+        plan,
+      },
+    };
+
+    const res = await fetch(`${DODO_BASE}/subscriptions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${stripeKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${dodoKey}`,
+        "Content-Type": "application/json",
       },
-      body: params.toString(),
+      body: JSON.stringify(payload),
     });
-    const session = await stripeRes.json();
-    if (!stripeRes.ok) {
-      console.error("stripe error", session);
-      return json({ error: "stripe_error", details: session?.error?.message }, 502);
+    const data = await res.json();
+    if (!res.ok) {
+      console.error("dodo error", res.status, data);
+      return json({ error: "dodo_error", details: data?.message ?? JSON.stringify(data) }, 502);
     }
-    return json({ url: session.url, id: session.id, plan });
+
+    const url = data.payment_link ?? data.checkout_url ?? data.url;
+    const subscriptionId = data.subscription_id ?? data.id ?? null;
+
+    // Track pending order
+    await svc.from("payment_orders").insert({
+      user_id: userId,
+      plan,
+      provider: "dodo",
+      provider_order_id: subscriptionId,
+      amount: null,
+      currency: "INR",
+      status: "created",
+    });
+
+    if (!url) return json({ error: "no_payment_link", details: data }, 502);
+    return json({ url, id: subscriptionId, plan });
   } catch (e) {
     console.error("create-checkout error", e);
-    return json({ error: "internal_error" }, 500);
+    return json({ error: "internal_error", details: String(e) }, 500);
   }
 
   function json(body: unknown, status = 200) {

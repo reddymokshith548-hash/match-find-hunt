@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useCheckout } from "@/hooks/useCheckout";
 import { usePlan } from "@/hooks/usePlan";
 
-type PlanKey = "monthly" | "promonth" | "halfyear";
+type PlanKey = "monthly" | "promonth";
 
 const FREE_FEATURES = [
   { icon: Check, label: "10 swipes per day" },
@@ -64,13 +64,12 @@ const Pricing = () => {
   }, [searchParams, setSearchParams]);
 
   const handleSubscribe = (planKey: PlanKey) => {
-    // Both Pro tiles map to "pro" tier. The 6-month tile sets a longer billing cycle server-side.
     const stripePlan = planKey === "monthly" ? "starter" : "pro";
     if (currentPlan === stripePlan || (currentPlan === "pro" && stripePlan === "starter")) {
       toast.info("You're already on this plan");
       return;
     }
-    void startCheckout(stripePlan, planKey === "halfyear" ? "halfyear" : "monthly");
+    void startCheckout(stripePlan, "monthly");
   };
 
   return (
@@ -115,7 +114,7 @@ const Pricing = () => {
 
         {/* Plans */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="grid md:grid-cols-3 gap-6 lg:gap-6 mt-8">
+          <div className="grid md:grid-cols-2 gap-6 lg:gap-6 mt-8 max-w-4xl mx-auto">
             {/* Monthly Plan */}
             <Card
               variant="profile"

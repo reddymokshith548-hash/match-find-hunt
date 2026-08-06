@@ -28,16 +28,26 @@ export function useCheckout() {
       if (error) {
         // Edge function returned non-2xx
         const ctx = (error as { context?: Response }).context;
+        let title = "Couldn't start checkout";
         let message = "Checkout failed. Please try again.";
         try {
-          const body = await ctx?.json();
+          const body = await ctx?.clone().json();
+          console.error("create-checkout error body", ctx?.status, body);
           if (body?.error === "checkout_not_configured") {
+            title = "Payments not yet enabled";
             message = body.message ?? "Payments aren't live yet — check back soon.";
+          } else if (body?.error === "Unauthorized") {
+            title = "Please sign in again";
+            message = body.details ?? "Your session expired. Sign out and sign back in, then retry.";
           } else if (body?.details) {
-            message = body.details;
+            message = typeof body.details === "string" ? body.details : JSON.stringify(body.details);
+          } else if (body?.error) {
+            message = String(body.error);
           }
-        } catch { /* ignore */ }
-        toast.info("Payments not yet enabled", { description: message });
+        } catch {
+          message = `Checkout failed (HTTP ${ctx?.status ?? "?"}). Please try again.`;
+        }
+        toast.error(title, { description: message });
         return;
       }
 

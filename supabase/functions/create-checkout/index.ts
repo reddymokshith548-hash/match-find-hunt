@@ -25,13 +25,29 @@ serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const dodoKey = Deno.env.get("DODO_PAYMENTS_API_KEY");
 
+    const token = authHeader.replace("Bearer ", "");
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: claims } = await userClient.auth.getClaims(authHeader.replace("Bearer ", ""));
-    const userId = claims?.claims?.sub as string | undefined;
-    const email = claims?.claims?.email as string | undefined;
-    if (!userId) return json({ error: "Unauthorized" }, 401);
+
+    let userId: string | undefined;
+    let email: string | undefined;
+
+    const { data: userData, error: userErr } = await userClient.auth.getUser(token);
+    if (userData?.user) {
+      userId = userData.user.id;
+      email = userData.user.email ?? undefined;
+    } else {
+      console.warn("getUser failed, trying getClaims", userErr?.message);
+      const { data: claims } = await userClient.auth.getClaims(token);
+      userId = claims?.claims?.sub as string | undefined;
+      email = claims?.claims?.email as string | undefined;
+    }
+
+    if (!userId) {
+      console.error("unauthorized: could not resolve user from token");
+      return json({ error: "Unauthorized", details: "Session invalid — please sign out and sign in again." }, 401);
+    }
 
     const body = await req.json().catch(() => ({}));
     const plan = String(body.plan ?? "");

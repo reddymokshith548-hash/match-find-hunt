@@ -1,0 +1,18 @@
+title = "Lexach gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Supabase publishable (anon) keys are safe to commit; RLS protects data."
+paths = [
+  '''src/integrations/supabase/client\.ts''',
+  '''supabase/migrations/.*\.sql''',
+  '''\.bolt/supabase_discarded_migrations/.*\.sql''',
+  '''supabase/config\.toml''',
+  '''README\.md''',
+]
+regexes = [
+  # anon/publishable JWTs contain "role":"anon" (base64: cm9sZSI6ImFub24)
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9_-]*''',
+]

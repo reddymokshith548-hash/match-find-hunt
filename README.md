@@ -1,4 +1,4 @@
-# Welcome to your Lexach project
+# Welcome to Lexach project
 
 ## Project info
 

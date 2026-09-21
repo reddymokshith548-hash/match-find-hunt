@@ -240,7 +240,39 @@ blur-modal: 28px
 
 Glows must be attached to a meaningful node, line, score, active selection, or CTA. Do not blur text. Glass surfaces need an opaque fallback for unsupported backdrop filters.
 
-### 3.9 Z-index layers
+### 3.9 Glass and material specifications
+
+Glass is a **material for floating layers**, not a surface style for content. It is permitted only where a layer genuinely floats above changing scene content.
+
+#### Glass recipes
+
+| Material | Background | Backdrop filter | Border | Top highlight | Shadow |
+|---|---|---|---|---|---|
+| `glass-standard` | `rgba(14, 14, 20, 0.68)` | `blur(18px) saturate(1.15)` | `1px solid rgba(247,247,250,0.10)` | `inset 0 1px 0 rgba(247,247,250,0.10)` | `shadow-surface` |
+| `glass-strong` (navigation) | `rgba(9, 9, 13, 0.84)` | `blur(24px) saturate(1.2)` | `1px solid rgba(247,247,250,0.08)` | `inset 0 1px 0 rgba(247,247,250,0.08)` | `0 8px 32px rgba(0,0,0,0.36)` |
+| `glass-modal` | `rgba(9, 9, 13, 0.90)` | `blur(28px) saturate(1.2)` | `1px solid rgba(194,168,255,0.24)` | `inset 0 1px 0 rgba(247,247,250,0.12)` | `shadow-floating` |
+| `glass-signal` (active/fused state only) | `rgba(20, 20, 30, 0.72)` | `blur(18px)` | `1px solid rgba(89,243,213,0.52)` | `inset 0 1px 0 rgba(89,243,213,0.14)` | `glow-teal-sm` |
+
+Material rules:
+
+- Translucency range is `0.68–0.90` alpha. Never below `0.68`: text over glass must hold `4.5:1` contrast against the worst-case scene behind it.
+- Every glass surface must include the inset top highlight — it is what separates "glass" from "gray box."
+- Opaque fallback: `@supports not (backdrop-filter: blur(1px))` renders `surface-elevated` (`#0E0E14`) with the same border and shadow.
+- Maximum **one** glass layer visible per viewport region. Glass behind glass is forbidden.
+- Glass panels never exceed `480px` in their longest dimension except navigation and modals.
+- Radius must match the content it contains: `radius-lg` (12px) for product windows and dialogs; `radius-round` pill only for transient status chips.
+- Frosted content beneath glass must be non-essential: never place the only copy of an instruction, price, or score under a blurred region.
+
+#### When NOT to use glass
+
+- **Body-copy sections.** Editorial text sits on solid obsidian (`ink-900`/`ink-950`) with hairline borders — glass behind paragraphs kills scanning rhythm.
+- **Pricing plan columns and the comparison matrix.** These use solid elevated surfaces; glass is reserved for the single active/current-plan overlay.
+- **Repeated cards.** A grid or list of glass cards is explicitly banned (see visual exclusions in §2). If more than two glass panels would appear in one section, none of them may be glass.
+- **Data-dense tables, forms, and dashboard/application surfaces.** The product UI keeps solid surfaces for legibility and existing theme compatibility.
+- **Over gradients.** Glass over `gradient-brand` or busy constellation fields produces mud; place glass only over calm, dark, low-frequency backgrounds.
+- **Low-power/reduced-motion contexts.** If backdrop filters are disabled by capability heuristics, the opaque fallback is the final state — never degrade to translucent-without-blur.
+
+### 3.10 Z-index layers
 
 ```text
 z-base: 0
@@ -259,7 +291,7 @@ z-loader: 100
 
 Do not introduce arbitrary values outside this scale without documenting the collision being solved.
 
-### 3.10 Breakpoints
+### 3.11 Breakpoints
 
 ```text
 xs:  360px
